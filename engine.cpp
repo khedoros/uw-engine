@@ -24,17 +24,17 @@ bool capMouse = false;
 bool warping = false;
 
 //Rotation of the X and Y axes in degrees
-float viewRotX = 0.0;
-float viewRotY = 0.0;
+float viewRotX = -36.0;
+float viewRotY = -25.0;
 
 //Rotation of the X and Y axes in radians
 float xRad = 0.0;
 float yRad = 0.0;
 
 //(X, Y, Z) position of the camera
-float xPos = 0.0;
-float yPos = 0.0;
-float zPos = 0.0;
+float xPos = -5.0;
+float yPos = -5.0;
+float zPos = -8.0;
 
 //(X, Y, Z) vector describing where the camera is pointing
 float xComp = 0.0;
@@ -145,6 +145,7 @@ void click(int button, int state, int x, int y) {
     case 1: col = "blue";break;
     case 2: col = "red";break;
     case 3: col = "green";break;
+    case 4: col = "color_square";break;
     default: col = "lolwut";break;
     }
     std::cout<<"Saw "<<col<<" at ("<<x<<", "<<y<<")."<<std::endl;
@@ -181,6 +182,7 @@ void display(void)
    glRotatef(-1.0 * viewRotY, cos(viewRotX*M_PI/180.0), 0.0, sin(viewRotX*M_PI/180.0)); //Rotate pespective around camera's X axis
    
    glTranslatef(xPos, yPos, zPos); //Translate the world to where the camera expects it to be
+   //std::cout<<"("<<xPos<<", "<<yPos<<", "<<zPos<<")    ("<<viewRotX<<", "<<viewRotY<<")"<<std::endl;
 
    glPushMatrix();
       glTranslatef(0.0,0.0,5);
@@ -212,6 +214,7 @@ void display(void)
       glRotatef(-1.0 * viewRotX, 0.0, 1.0, 0.0); //Rotate around y to face camera
       glRotatef(viewRotY, 1.0, 0.0, 0.0); //Rotate around model's X axis to face camera
       //Define quad in modelspace
+      glStencilFunc(GL_ALWAYS, 4, -1);
       glBegin(GL_QUADS);
          glColor3f(0.0,0.0,0.0); glVertex3f(0.0,0.0,0.0);
          glColor3f(1.0,0.0,1.0); glVertex3f(1.0,0.0,0.0);

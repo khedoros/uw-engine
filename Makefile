@@ -30,7 +30,7 @@ convfile: convfile.cpp convfile.h util.cpp util.h UwText.cpp UwText.h
 	g++ convfile.cpp util.cpp UwText.cpp -std=c++11 -DSTAND_ALONE -o convfile
 
 engine: engine.cpp
-	g++ engine.cpp -lGL -lGLU -lglut -o engine
+	g++ engine.cpp -lGL -lGLU -lglut -lrt -o engine
 
 3dmodel: 3dmodel.cpp 3dmodel.h
 	g++ -std=c++11 3dmodel.cpp util.cpp -o 3dmodel
