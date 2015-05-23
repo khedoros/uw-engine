@@ -43,6 +43,60 @@ float zComp = 0.0;
 
 unsigned long count = 1;
 
+// Define our vertex structure.
+// // This holds the position of the vertices. Can also be used for
+// // anything that requires 3 float elements. i.e. colors.
+typedef struct {
+    GLfloat x, y, z;
+}Vertex3;
+
+// Our constant. Number of faces per cube.
+const GLuint NUMBER_FACES    =    12;
+// This is a variable for rotating the cube.
+GLfloat angle            =    0.0f;
+
+// Our vertex array! Holds the points for each corner of the cube.
+Vertex3 cube_verts[] = {
+    { -2.0f,  2.0f,  2.0f, },    //Frontface top left.        0
+    {  2.0f,  2.0f,  2.0f, },    //Frontface top right.        1
+    {  2.0f, -2.0f,  2.0f, },    //Frontface bottom right.    2
+    { -2.0f, -2.0f,  2.0f, },  //Frontface bottom left.    3
+
+    { -2.0f,  2.0f, -2.0f, },    //backface top left.        4
+    {  2.0f,  2.0f, -2.0f, },    //backface top right.        5
+    {  2.0f, -2.0f, -2.0f, },    //backface bottom right.    6
+    { -2.0f, -2.0f, -2.0f, }    //backface bottom left        7
+};
+
+// This is an array of colors. Each color defined by 3 floats. Order will map
+// directly to the corner described in the above array.
+Vertex3 vert_colors[] = {
+    {    1.0f,    0.0f,   0.0f,    },    
+    {    0.0f,    1.0f,   0.0f,    },
+    {    0.0f,    0.0f,    1.0f,    },
+    {    1.0f,    1.0f,    0.0f,    },
+    {    1.0f,    0.0f,    1.0f,    },
+    {    0.0f,    1.0f,    1.0f,    },
+    {    0.0f,    0.0f,    0.0f,    },
+    {    1.0f,    1.0f,    1.0f,    }
+};
+
+// These are the indexes into the above arrays to make our cube.
+GLuint cube_indexes[NUMBER_FACES * 3] = {
+    0, 3, 2,                    //Frontface. In counter clockwise order.
+    2, 1, 0,
+    5, 6, 7,                    //Backface.  In counter clockwise order.
+    7, 4, 5,
+    4, 0, 1,                    //Top face.    
+    1, 5, 4,
+    3, 7, 6,                    //Bottom face.
+    6, 2, 3,
+    4, 0, 3,                    //Left face.
+    3, 7, 4,
+    1, 2, 6,                    //Right face.
+    6, 5, 1
+};
+
 void kb(unsigned char key, int x, int y) {
     switch(key) {
     case 9: //tab
@@ -223,6 +277,21 @@ void display(void)
       glEnd();
    glPopMatrix();
 
+
+   glTranslatef(0.0f, 0.0f, -5.0f);        //Move the Cube 10 away from us!
+   glRotatef(angle, 1.0f, 0.77f, 0.0f);        //Spin the cube in X and Y axis.
+    
+   //Enable the vertex and color arrays.
+   glEnableClientState(GL_VERTEX_ARRAY);
+   glEnableClientState(GL_COLOR_ARRAY);
+
+   //Tell gl, what our arrays look like! 3 floats per vertex, 0 packing, and their addresses.
+   glVertexPointer(3, GL_FLOAT, 0, cube_verts);
+   glColorPointer(3, GL_FLOAT, 0, vert_colors);
+
+   //Do it! Draw triangles. With 12 faces times 3 indexes per face. 
+   glDrawElements(GL_TRIANGLES, NUMBER_FACES * 3, GL_UNSIGNED_INT, cube_indexes);
+
    glFlush ();
    glutPostRedisplay();
 /*
@@ -257,6 +326,12 @@ void reshape (int w, int h)
    yres = h;
 }
 
+void idle() {
+    angle += 0.4f;
+    if(angle >= 360.0f) angle -=360.0f;
+    glutPostRedisplay();
+}
+
 int main(int argc, char** argv)
 {
    glutInit(&argc, argv);
@@ -271,6 +346,7 @@ int main(int argc, char** argv)
    glutMotionFunc(mouse);
    glutPassiveMotionFunc(mouse);
    glutMouseFunc(click);
+   glutIdleFunc(idle);
    glutMainLoop();
    return 0;
 }
