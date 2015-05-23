@@ -1,4 +1,6 @@
 #include "lpfcut.h"
+#include<SFML/Graphics.hpp>
+
 
 Lpfcut::Lpfcut(bool rep/*= true*/) : repeat(rep) {
     file_id[4]=0;
@@ -305,14 +307,88 @@ bool Lpfcut::iterate_frame() {
     //std::cout<<"New page: "<<frame_page_index<<" record: "<<frame_record_index<<std::endl;
 }
 
-/*
+#ifdef STAND_ALONE
 int main(int argc, char *argv[]) {
     Lpfcut bob(false);
     bool success = bob.load(argv[1]);
     if(!success) {
-        cout<<"Blech, couldn't open file."<<endl;
+        std::cout<<"Blech, couldn't open file."<<std::endl;
         return 1;
     }
+    sf::RenderWindow window(sf::VideoMode(bob.width,bob.height,32), "Ultima Underworld Cutscene Viewer");
+    if(window.isOpen()) {
+        std::cout<<"Window opened successfully!"<<std::endl;
+    } else {
+        std::cout<<"Window could not be opened."<<std::endl;
+    }
 
-    
-  */  
+    std::vector<sf::Sprite> sprite;
+    std::vector<sf::Texture> tex;
+    sprite.resize(bob.rec_count-1);
+    tex.resize(bob.rec_count-1);
+    for(size_t i=0;i<sprite.size();++i) {
+        tex[i].create(bob.width,bob.height);
+//        tex[i].loadFromMemory(bob.getNextFrame(), bob.width * bob.height * 4);
+        const uint8_t* frame = bob.getNextFrame();
+        if(frame) tex[i].update(frame);
+        sprite[i] = sf::Sprite(tex[i]);
+        //sprite[i].move(10,32);
+        //if(tf.res != 0)
+        //    sprite[i].scale(480/tf.res,480/tf.res);
+        //else
+        //    sprite[i].scale(480/tf.xres,480/tf.yres);
+    }
+    int sprite_num=0;
+    bool redraw=true;
+    int xres = bob.width;
+    int yres = bob.height;
+    while(window.isOpen()) {
+        sf::Keyboard::Key key=sf::Keyboard::Unknown;
+        sf::Clock c;
+        sf::Event event;
+        while(window.pollEvent(event)) {
+            if(event.type == sf::Event::Closed) {
+                window.close();
+            }
+            else if(event.type == sf::Event::KeyPressed) {
+                key=event.key.code;
+                switch(key) {
+                    case sf::Keyboard::Q: window.close();
+                    default: break;
+                }
+                redraw=true;
+            }
+        }
+        if(redraw) {
+            if(key==sf::Keyboard::Left)
+                sprite_num--;
+            else if(key==sf::Keyboard::Right)
+                sprite_num++;
+            if(sprite_num == tex.size()) sprite_num = 0;
+            else if(sprite_num == -1) sprite_num = tex.size() - 1;
+
+            window.clear(sf::Color(0,255,0,255));
+            window.draw(sprite[sprite_num]);
+            sf::Font font;
+            if(!font.loadFromFile("FreeSans.ttf"))
+                std::cout<<"Couldn't load font."<<std::endl;
+            sf::Text t;
+            t.setPosition(0,0);
+            char buf[100];
+            sprintf(&buf[0],"Res: %d * %d, Index: %d",bob.width, bob.height, sprite_num);
+            std::cout<<buf<<std::endl;
+            t.setFont(font);
+            t.setString(buf);
+            t.setColor(sf::Color(255,255,255,255));
+            window.draw(t);
+            redraw=false;
+        }
+        window.display();
+        sf::Time t;
+        sf::sleep(sf::milliseconds(1000/60) - c.getElapsedTime());
+        c.restart();
+    }
+    return 0;
+}
+
+#endif
