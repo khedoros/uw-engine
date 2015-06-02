@@ -12,14 +12,14 @@ dro_parse: dro_parse.cpp ../util.h
 	g++ -Wall -I.. dro_parse.cpp -o dro_parse
 
 sine_gen: sine_gen.cpp sine_gen.h
-	g++ -Wall -DSTAND_ALONE -std=c++11 -I /home/khedoros/include -L /home/khedoros/lib sine_gen.cpp -lsfml-audio -lsfml-system -o sine_gen
+	g++ -Wall -DSTAND_ALONE -std=c++11 -I /home/khedoros/include -L /home/khedoros/lib64 sine_gen.cpp -lsfml-audio -lsfml-system -o sine_gen
 
 dro_play: dro_play.cpp sine_gen.cpp sine_gen.h ../util.h
-	g++ -Wall -std=c++11 dro_play.cpp sine_gen.cpp -I.. -L/usr/local/lib -lsfml-audio -lsfml-system -o dro_play
+	g++ -Wall -std=c++11 dro_play.cpp sine_gen.cpp -I.. -L/usr/local/lib64 -lsfml-audio -lsfml-system -o dro_play
 
 
 dro_play_g: dro_play.cpp sine_gen.cpp sine_gen.h ../util.h
-	g++ -g -O0 -Wall -std=c++11 dro_play.cpp sine_gen.cpp -I.. -L/usr/local/lib -lsfml-audio -lsfml-system -o dro_play
+	g++ -g -O0 -Wall -std=c++11 dro_play.cpp sine_gen.cpp -I.. -L/usr/local/lib64 -lsfml-audio -lsfml-system -o dro_play
 
 dro_analyze: dro_analyze.cpp ../util.h
 	g++ -Wall dro_analyze.cpp -I.. -o dro_analyze

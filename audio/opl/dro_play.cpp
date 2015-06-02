@@ -97,15 +97,23 @@ bool load(string fn) {
             if(time_between_reg != 0) {
                 size_t to_resize = (time_between_reg * OPL_SAMPLE_RATE) / 500;
                 if( to_resize % 2 == 1 ) to_resize++;
-                in_buffer.resize(to_resize);
-                opl->Update(&in_buffer[0], in_buffer.size()/2);
-                for(size_t j = 0;j<in_buffer.size();++j) {
+                if(in_buffer.size() < to_resize) {
+                    in_buffer.resize(to_resize);
+                }
+                else {
+                    in_buffer.clear();
+                }
+                opl->Update(&in_buffer[0], to_resize/2);
+                for(size_t j = 0;j<to_resize;++j) {
                     //65536: Range of the new data type. 10: largest number I've seen in the OPL emulator output
+                    if(out_buffer.size() == out_buffer.capacity()) {
+                        out_buffer.reserve(out_buffer.size() * 2);
+                    }
                     out_buffer.push_back(int16_t((in_buffer[j]*32768.0)/64.0));
                     if(in_buffer[j]>maxseen) maxseen = in_buffer[j];
                     if(in_buffer[j]<minseen) minseen = in_buffer[j];
                     if((in_buffer[j]*(32768.0/64.0))>32767 || (in_buffer[j]*(32768.0/64.0)) < -32768) {
-                        //cout<<in_buffer[j]<<" overflows a short variable."<<endl;
+                        cout<<in_buffer[j]<<" overflows a short variable.("<<(in_buffer[j]*(32768.0/64.0))<<")"<<endl;
                     }
                 }
             }
@@ -115,7 +123,7 @@ bool load(string fn) {
     }
     sf::SoundBuffer rendered;
     cout<<"Rendered "<<out_buffer.size()/2<<" stereo samples at rate: "<<OPL_SAMPLE_RATE<<". Should be "<<out_buffer.size()/(2*OPL_SAMPLE_RATE)<<" seconds long."<<endl;
-    bool status = rendered.loadFromSamples(static_cast<short *>(&out_buffer[0]), out_buffer.size(), 2, OPL_SAMPLE_RATE);
+    bool status = rendered.loadFromSamples(static_cast<int16_t *>(&out_buffer[0]), out_buffer.size(), 2, OPL_SAMPLE_RATE);
     if(!status) cout<<"Failed to load the samples. Bummer."<<endl;
     cout<<"SFML thinks it's "<<rendered.getDuration().asMilliseconds()<<" ms long."<<endl;
     cout<<"Minseen: "<<minseen<<" Maxseen: "<<maxseen<<endl;
