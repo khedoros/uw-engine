@@ -73,6 +73,9 @@ bool uw_patch_file::load(std::string fna, std::string fnm /*= ""*/) {
     binifstream ina, inm;
     //size_t filesizea, filesizem;
     ina.open(fna.c_str(),std::ios::binary);
+    if(!ina.is_open()) {
+        return false;
+    }
     ina.seekg(0,std::ios::end);
     //filesizea = ina.tellg();
     ina.seekg(0,std::ios::beg);

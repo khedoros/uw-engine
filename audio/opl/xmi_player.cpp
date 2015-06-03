@@ -36,9 +36,9 @@ int8_t opl_note_assignment[18] =    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-
 
 //Which patch and bank is each MIDI channel currently set to play
 //Initialize them to 0:0
-uint8_t bank_assignment[16] =  {0,0,0,0,0,0,0,0,0,127,0,0,0,0,0,0};
-uint8_t patch_assignment[16] = {0,68,48,95,78,41,3,110,122,36,0,0,0,0,0,0};
-uint8_t channel_volume[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint8_t bank_assignment[16] =  { 0,   0,   0,   0,   0,   0,   0,   0,   0, 127, 127, 127, 127, 127, 127, 127};
+uint8_t patch_assignment[16] = { 0,  68,  48,  95,  78,  41,   3, 110, 122,   0,   0,   0,   0,   0,   0,   0};
+uint8_t channel_volume[16] =   { 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0};
 
 const uint16_t voice_base[18] = {    0,     1,     2,    8,    9,  0xa, 0x10, 0x11, 0x12,
                                  0x100, 0x101, 0x102,0x108,0x109,0x10a,0x110,0x111,0x112};
@@ -211,7 +211,7 @@ bool copy_patch(uint8_t voice, uint8_t bank, uint8_t patch) {
             return true;
         }
     }
-    cout<<"Bank: "<<int(bank)<<" Patch: "<<int(patch)<<endl;
+    cout<<"Missing: Bank: "<<int(bank)<<" Patch: "<<int(patch)<<endl;
     return false;        
 }
 
@@ -266,12 +266,14 @@ int main(int argc, char* argv[]) {
     bool success = uwpf.load("uw.ad");
     if(!success) {
         cout<<"Couldn't load the patch file. Aborting."<<endl;
+        return 1;
     }
     //Load the music itself
     xmi xmifile;
     success = xmifile.load(argv[1]);
     if(!success) {
         cout<<"Couldn't load the xmi file. Aborting."<<endl;
+        return 1;
     }
 
     string output_file = "";
@@ -288,14 +290,19 @@ int main(int argc, char* argv[]) {
     //Look up the timbre->bank map in the xmi file
     pair<uint8_t,uint8_t> * p = xmifile.next_timbre();
     //size_t ch = 1;
+    int percussion_channel = 9;
     while(p != NULL) {
         //Store the expected bank for this timbre
         timbre_bank[p->second] = p->first;
         cout<<"Timbre: Bank: "<<int(p->first)<<" Patch: "<<int(p->second)<<endl;
-        //if(ch < 16) {
-            //patch_assignment[ch] = p->second;
-            //bank_assignment[ch++] = p->first;
-        //}
+        if(p->first == 127 && percussion_channel < 16) {
+            patch_assignment[percussion_channel++] = p->second;
+            cout<<"Gave channel "<<percussion_channel - 1<<" to perc patch "<<int(p->second)<<endl;
+            
+        }
+        else if(p->first == 127 && percussion_channel == 16) {
+            cout<<"Too many percussion instruments to give them each a channel"<<endl;
+        }
         p = xmifile.next_timbre();
     }
 
@@ -311,7 +318,7 @@ int main(int argc, char* argv[]) {
     uint8_t * v;
     uint32_t tick_count = xmifile.tick_count();
 
-    //pre-allocate the space for the music. Takes roughly 12MB/minute to store
+    //pre-allocate the space for the music. Takes roughly 12MB/minute to store at 44.1KHz
     cout<<"Building a sound output buffer of "<<dec<<2* tick_count * int(OPL_SAMPLE_RATE / TICK_RATE)<<" bytes"<<endl;
     sample_buffer.resize(2 * tick_count * int(OPL_SAMPLE_RATE / TICK_RATE), 0);
 
@@ -350,10 +357,36 @@ int main(int argc, char* argv[]) {
             //Look up the voice playing the note, and the block+f_num values
             channel = e->get_channel();
             v = e->get_data();
-            midi_num = v[1];
+            midi_num = 0;
+            if(channel == 9) {
+                bool found = false;
+                uint8_t voice = v[1];
+                for(int i=9;i<16;++i) {
+                    if(patch_assignment[i] == voice) {
+                        channel = i;
+                        break;
+                    }
+                }
+                for(auto it = uwpf.bank_data.begin(); it != uwpf.bank_data.end(); ++it) {
+                    if(it->bank == bank_assignment[channel] && it->patch == patch_assignment[channel]) {
+                        uw_patch_file::opl2_patch pat = it->ad_patchdatastruct;
+                        midi_num = pat.transpose;
+                        found = true;
+                    }
+                }
+                if(!found) {
+                    cout<<"Couldn't find a patch for "<<bank_assignment[channel]<<":"<<patch_assignment[channel]<<"; note may be invalid."<<endl;
+                }
+            }
+            else {
+                midi_num = v[1];
+            }
             block = get<1>(freqs[midi_num]);
             f_num = get<2>(freqs[midi_num]);
             voice_num = find_playing(channel, midi_num);
+            if(channel >= 9) {
+                //cout<<"Off Percussion, bank "<<int(bank_assignment[channel])<<", patch: "<<int(patch_assignment[channel])<<", note: "<<int(midi_num)<<endl;
+            }
             if(voice_num == -1) {
                 cout<<"Couldn't find a voice playing "<<int(midi_num)<<" for channel "<<int(channel)<<endl;
                 break;
@@ -371,15 +404,46 @@ int main(int argc, char* argv[]) {
                 break;
             }
             channel = e->get_channel();
+            v = e->get_data();
+
+            //Look up the note info, store in note tracking, write the note-on register commands
+            if(channel == 9) {
+                patch_assignment[channel] = v[1];
+                bool found = false;
+                uint8_t voice = v[1];
+                for(int i=9;i<16;++i) {
+                    if(patch_assignment[i] == voice) {
+                        channel = i;
+                        break;
+                    }
+                }
+
+                for(auto it = uwpf.bank_data.begin(); it != uwpf.bank_data.end(); ++it) {
+                    if(it->bank == bank_assignment[channel] && it->patch == patch_assignment[channel]) {
+                        uw_patch_file::opl2_patch pat = it->ad_patchdatastruct;
+                        midi_num = pat.transpose;
+                        found = true;
+                    }
+                }
+                if(!found) {
+                    cout<<"Couldn't find a patch for "<<bank_assignment[channel]<<":"<<patch_assignment[channel]<<"; note may be invalid."<<endl;
+                }
+            }
+            else {
+                midi_num = v[1];
+            }
+
             retval = copy_patch(voice_num, bank_assignment[channel], patch_assignment[channel]);
+
             if(!retval) { cout<<"Had trouble copying "<<int(bank_assignment[channel])<<":"<<int(patch_assignment[channel])<<" to channel "<<int(channel)<<". Dropping the note."<<endl;
                 break;
             }
-            //Look up the note info, store in note tracking, write the note-on register commands
-            v = e->get_data();
-            midi_num = v[1];
+
             block = get<1>(freqs[midi_num]);
             f_num = get<2>(freqs[midi_num]);
+            if(channel >= 9) {
+                //cout<<"On Percussion, bank "<<int(bank_assignment[channel])<<", patch: "<<int(patch_assignment[channel])<<", note: "<<int(midi_num)<<endl;
+            }
             opl_channel_assignment[voice_num] = channel;
             opl_note_assignment[voice_num] = midi_num; 
             opl->WriteReg(voice_base2[voice_num]+0xa0, (f_num&0xff));
