@@ -352,21 +352,24 @@ int main(int argc, char* argv[]) {
         cur_time = e->get_time();
         //e->toString();
         bool retval = true;
+        v = e->get_data();
+        channel = e->get_channel();
+        if(channel == 9) {
+            uint8_t voice = v[1];
+            for(int i=9;i<16;++i) {
+                if(patch_assignment[i] == voice) {
+                    channel = i;
+                    break;
+                }
+            }
+        }
+              
         switch(e->get_command()) {
         case midi_event::NOTE_OFF: //0x80
             //Look up the voice playing the note, and the block+f_num values
-            channel = e->get_channel();
-            v = e->get_data();
-            midi_num = 0;
-            if(channel == 9) {
+            if(channel >= 9) {
                 bool found = false;
                 uint8_t voice = v[1];
-                for(int i=9;i<16;++i) {
-                    if(patch_assignment[i] == voice) {
-                        channel = i;
-                        break;
-                    }
-                }
                 for(auto it = uwpf.bank_data.begin(); it != uwpf.bank_data.end(); ++it) {
                     if(it->bank == bank_assignment[channel] && it->patch == patch_assignment[channel]) {
                         uw_patch_file::opl2_patch pat = it->ad_patchdatastruct;
@@ -403,21 +406,11 @@ int main(int argc, char* argv[]) {
                 cout<<"No free voice, dropping a note."<<endl;
                 break;
             }
-            channel = e->get_channel();
-            v = e->get_data();
 
             //Look up the note info, store in note tracking, write the note-on register commands
-            if(channel == 9) {
-                patch_assignment[channel] = v[1];
+            if(channel >= 9) {
                 bool found = false;
                 uint8_t voice = v[1];
-                for(int i=9;i<16;++i) {
-                    if(patch_assignment[i] == voice) {
-                        channel = i;
-                        break;
-                    }
-                }
-
                 for(auto it = uwpf.bank_data.begin(); it != uwpf.bank_data.end(); ++it) {
                     if(it->bank == bank_assignment[channel] && it->patch == patch_assignment[channel]) {
                         uw_patch_file::opl2_patch pat = it->ad_patchdatastruct;
@@ -450,8 +443,6 @@ int main(int argc, char* argv[]) {
             opl->WriteReg(voice_base2[voice_num]+0xb0, 0x20 + (block<<(2)) + ((f_num&0xff00)>>(8)));
             break;
         case midi_event::PROGRAM_CHANGE: //0xc0
-            v = e->get_data();
-            channel = e->get_channel();
             patch_assignment[channel] = v[1];
             bank_assignment[channel] = timbre_bank[v[1]];
             for(int i=0;i<18;++i) {
@@ -467,12 +458,10 @@ int main(int argc, char* argv[]) {
             break;
         case midi_event::CONTROL_CHANGE: //0xb0
             meta = e->get_meta();
-            channel = e->get_channel();
-            v = e->get_data();
             if(meta == 0x07) { //Volume change
                 for(int i=0;i<18;++i) {
                     if(opl_channel_assignment[i] == channel)
-                        opl->WriteReg(voice_base[i] + 0x40 + 3, 63 - (uint8_t((float(channel_volume[channel])/MIDI_MAX_VAL) * (v[2] / 2))));
+                        opl->WriteReg(voice_base[i] + 0x40 + 3, /*63 -*/ (uint8_t((float(channel_volume[channel])/MIDI_MAX_VAL) * (v[2] / 2))));
                 }
             }
             else if(meta == 0x0a) { //Panning controll
@@ -501,7 +490,7 @@ int main(int argc, char* argv[]) {
             else if(meta == 0x77) cout<<"Callback trigger (not implemented)"<<endl;
             else if(meta == 0x78) cout<<"Sequence branch index (not implemented)"<<endl;
             else 
-                cout<<"Other nimplemented control change: "<<int(v[1])<<" = "<<int(v[2])<<endl;
+                cout<<"Other unimplemented control change: "<<int(v[1])<<" = "<<int(v[2])<<endl;
             break;
         case midi_event::META: //0xff
             if(e->get_command() != 0xf0)
@@ -538,7 +527,6 @@ int main(int argc, char* argv[]) {
             break;
         default:
             cout<<"Not implemented, yet: ";
-            v = e->get_data();
             cout<<hex<<int(v[0])<<" "<<int(v[1])<<" "<<int(v[2])<<endl;
         }
 

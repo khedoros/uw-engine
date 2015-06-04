@@ -113,7 +113,7 @@ private:
         unsigned char index=0;
         //unsigned char t_size;
         while(in_time>0) {
-            assert(index<4);
+            //assert(index<4);
             buff[index]=(in_time&0x7f);
             index++;
             in_time/=128;
@@ -142,8 +142,47 @@ bool sortFunct (midi_command* i, midi_command* j) {return i->get_time() < j->get
 vector<unsigned char> midi_buffer;
 vector<midi_command*> midi_builder;
 
+unsigned char mt2gm_rhy(unsigned char patch) {
+    switch(patch) {
+/*
+ * No equiv for instrument 36
+ * No equiv for instrument 38
+ * No equiv for instrument 42
+ * No equiv for instrument 46
+ * No equiv for instrument 49
+ * No equiv for instrument 60
+ * No equiv for instrument 70
+ * No equiv for instrument 75
+ */
+    case 36: return 35;
+    case 38:
+    case 42:
+    case 46:
+    case 49:
+    case 60:
+    default:
+        cout<<"No equiv for instrument "<<int(patch)<<endl;
+        return patch;
+    }
+}
+
 unsigned char mt2gm(unsigned char patch) {
     bool known=true;
+    //"255" needs secondary lookup in rhythm table
+    unsigned char vals[] = {  0,   1,  0,   4,  5,   4,   5,   3,  16,  17,  18,  18,
+                             19,  19, 20,  21,  6,   6,   6,   7,   7,   7,   8,   8,
+                             62,  63, 62,  63, 38,  39,  38,  39,  88,  89,  52,  98,
+                             97,  99, 89,  85, 39, 101,  68,  87,  86, 103,  88,  80,
+                             48,  48, 49,  45, 40,  40,  42,  42,  43,  46,  46,  24,
+                             25,  26, 27, 104, 32,  33,  34,  39,  36,  37,  35,  35,
+                             73,  73, 72,  72, 74,  75,  64,  65,  66,  67,  71,  71,
+                             68,  69, 70,  22, 56,  56,  57,  57,  60,  60,  58,  61,
+                             61,  11, 11,  15, 88,   9,  14,  13,  12, 107, 111,  77,
+                             78,  78, 76, 121, 47, 117, 255, 115, 118, 116, 118, 255,
+                            255, 112, 55, 124, 123,  8,  98,  75 };
+    if(patch<128) return vals[patch];
+    else return 0;
+
     unsigned char retval;
     switch(patch) {
         case 0:
@@ -375,6 +414,10 @@ bool process_events(binifstream &filein) {
             buffer[0]=event;
             buffer[1]=note_num;
             buffer[2]=velocity;
+            if((event&0x0f) == 9) { //Channel 9 is percussion, and XMidi handles it oddly
+                unsigned char buffer2[2] = {0xc9, note_num};
+                midi_builder.push_back(new midi_command(cur_time - 1, 2, buffer2));
+            }
             midi_builder.push_back(new midi_command(cur_time,3,buffer));
             buffer=new unsigned char[3];
             buffer[0]=event-0x10;
@@ -393,6 +436,7 @@ bool process_events(binifstream &filein) {
         case 0xc0://Change patch number
             filein>>new_num;
             new_num=mt2gm(new_num);//translate MT32 patch# to General Midi patch#
+            if(new_num > 127) {cout<<"Over 127, setting to 0"<<endl; new_num = 0;}
             buffer=new unsigned char[2];
             buffer[0]=event;
             buffer[1]=new_num;
@@ -698,7 +742,11 @@ void play_midi(unsigned int midi_data_size) { //SDL-based play_midi method
 
 void play_midi(unsigned int midi_data_size) { //SFML-based play_midi method
     int status=mid_init("/usr/share/midi/eawpats12/timidity.cfg");
+    if(status < 0) {
+        status=mid_init("/usr/share/timidity/timidity.cfg");
+    }
     cout<<"Timidity initiation: "<<status<<endl;
+    if(status == -1) return;
     MidIStream *stream=mid_istream_open_mem(&(midi_buffer[0]),midi_data_size,0);
     MidSongOptions *opts=new MidSongOptions;
     opts->rate=22050;
@@ -728,7 +776,9 @@ void play_midi(unsigned int midi_data_size) { //SFML-based play_midi method
     //cout<<"Buffer sample count: "<<midi_song_buf.getSampleCount()<<endl;
     sf::Sound midi_song(midi_song_buf);
     midi_song.play();
-    while(midi_song.getStatus() == sf::SoundSource::Playing) {}
+    while(midi_song.getStatus() == sf::SoundSource::Playing) {
+        sf::sleep(sf::seconds(1.0));
+    }
 }
 
 int main(int argc, char *argv[]) {
