@@ -741,12 +741,15 @@ void play_midi(unsigned int midi_data_size) { //SDL-based play_midi method
 */
 
 void play_midi(unsigned int midi_data_size) { //SFML-based play_midi method
-    int status=mid_init("/usr/share/midi/eawpats12/timidity.cfg");
+    int status=mid_init("/etc/timidity.cfg");
     if(status < 0) {
-        status=mid_init("/usr/share/timidity/timidity.cfg");
+        status = mid_init("/etc/timidity/timidity.cfg");
     }
     cout<<"Timidity initiation: "<<status<<endl;
-    if(status == -1) return;
+    if(status == -1) {
+        cout<<"Timidity couldn't be initialized using /etc/timidity.cfg or /etc/timidity/timidity.cfg. Check those files."<<endl;
+        return;
+    }
     MidIStream *stream=mid_istream_open_mem(&(midi_buffer[0]),midi_data_size,0);
     MidSongOptions *opts=new MidSongOptions;
     opts->rate=22050;
