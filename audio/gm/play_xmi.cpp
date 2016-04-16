@@ -741,8 +741,11 @@ void play_midi(unsigned int midi_data_size) { //SDL-based play_midi method
 */
 
 void play_midi(unsigned int midi_data_size) { //SFML-based play_midi method
-    int status=mid_init("/usr/share/midi/eawpats12/timidity.cfg");
+    
+    //int status=mid_init("/usr/share/midi/eawpats12/timidity.cfg");
+    int status=mid_init("/usr/share/midi/eawpats12/mt-32.cfg");
     if(status < 0) {
+        //cout<<"Couldn't init with /usr/share/midi/
         status=mid_init("/usr/share/timidity/timidity.cfg");
     }
     cout<<"Timidity initiation: "<<status<<endl;
