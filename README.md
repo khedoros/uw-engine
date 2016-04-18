@@ -23,11 +23,38 @@ I can convert the XMI files to MIDI, read the ad-lib instrument definition files
 - The XMI format and format of the \*.ad file were gleaned from the AIL 2.0 (aka Miles Sound System 2.0) documentation and source code.
 - I'm using a C++ port of Robson Cozenday's Java OPL3 emulator, which was distributed under an LGPL 2.1+ license
 - I also include some code from MAME, which I acquired through one of the Doom engine implementations (don't remember which one). I don't think that I actually *use* their OPL3 code, but I'm using their interface to Cozenday's emulator, and I think that it was that project which ported it to C++.
+- I'm actually not completely happy with my current sequencing code; the output doesn't sound perfectly like the music in the original game. There are some sour notes, and some MIDI control commands that I ignore (FOR loops, velocity on start and stop, probably some others like pitch bends). For that reason, I'm currently working on porting the original AIL2 C+ASM code into modern-ish C++. The whole audio subsystem will be put into its own shared library. Eventually, it'll be configurable to output to an included OPL3 emulator (operating in OPL2 mode, since that's what the game supports), or to talk to the MUNT emulator for Roland music and sound effects.
 
 ###Sound Effects
 These are defined in the instrument definition files, but don't follow any format that I've been able to find documentation for. I contacted John Miles, who wrote the Audio Interface Library (AIL) that the game uses, and was informed that sound effects are defined in terms of twiddling OPL2 registers, but he didn't have any further details. The format is refered to as OSI ALE or OSI TVFX (OSI = Origin Systems, Inc), and it is a proprietary format made by Origin themselves.
 
 Dosbox can record register writes to an Ad-Lib card into a file format called DRO, and I've included some code to interpret those. It's been a while since I've looked at it (a couple of years), and it seems like it needs some love to get into a properly-working state.
+
+####Update####
+Having looked at some of the audio code, I've identified the routines that handle the TVFX sound effects, and I've looked at them some. I haven't completely figured out their operation. Here's what I think I've found, though:
+- The sizes of sound effects are variable, but based on multiples of 16 plus 2 (the 2 is a word specifying the size of the effect block).
+- Like all the other parts of the AIL interface, the sound effects are handled based on a 120Hz timer. The difference is that over time, the values that get written to the OPL2 change.
+- There seem to be 8 word values that get updated per iteration of the effect handler.
+- TVFX blocks in a timbre definition file start with a 2-byte word showing the size (like all the other timbre types). After that, there are 16-byte blocks.
+- The smallest effect has 0xC2 bytes (so 12 * 16-byte blocks, plus 2 size). The next is 0xD2 bytes (13 * 16 + 2). The largest is 0x162 (22 * 16 + 2).
+
+####Playing an effect in the code####
+- Checks for an available SFX callback (the code allows up to 4 to play at once)
+- Checks if the timbre is already in the cache
+- Load it if it isn't
+- Get a lock on a MIDI channel (so it won't be interfered with due to music playback or other SFX)
+- Do some bookkeeping for SFX/Music note tracking (the music device is always the one rendering sounds effects in UW1; that optionally changes in UW2)
+- Sets the bank to 1 (the SFX bank)
+- Sets the program to the SFX patch number
+- Clears all MIDI controls on the locked channel
+- Max out the volume
+- Max out the expression
+- Set panpot to level defined in sounds.dat
+- Play note# with specified velocity (both given in sounds.dat)
+
+####Where does it get some of those arguments?####
+- UW1's sounds.dat has 24 5-byte structs. The first byte of the file tells how many items there are (0x18 = 24)
+- For each struct: Byte 0: Timbre number from bank 1, Byte 1: MIDI note number, Byte 2: Velocity for the note, Byte 3: Not sure. Haven't seen it used. Byte 4: Seems to be a pan value
 
 ###Graphics
 I can load most of the graphics in the game, including cut scenes, wall, floor and 3d object textures, sprites for in-game items, etc. Foreground/in-hand weapon graphics use a variant on the other graphic formats, so that isn't working properly yet.
