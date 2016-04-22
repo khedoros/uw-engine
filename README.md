@@ -74,21 +74,37 @@ These are actually contained in structs in the executable itself. I can interpre
 - N00 files are a series of entries. The first value of an entry is a 1-based frame number. (frames numbered 0 are run before processing any image data). The next value is a function number. In UW1, it's in the range 0-15 (0x0-0xF). In UW2, the range is larger, but I'm not sure how large (maybe 0-31?). Functions have between 0 and 3 arguments that immediately follow the function numbers.
 
 Function 0: 2 arguments. The first argument is a palette index from the current nXX file. The second argument is an index into the game's string table (strings.pak is also documented elsewhere)
+
 Function 1: 0 arguments. I don't know what it does.
+
 Function 2: 2 arguments. Seems to be a no-op.
+
 Function 3: 1 argument. The argument is a number of seconds to pause, displaying the current frame.
+
 Function 4: 2 arguments. The first seems to be a frame number. The second might be a speed to play the frames at. It seems to play the frames from current to the argument.
+
 Function 5: 1 argument. I'm not sure what it does.
+
 Function 6: 0 arguments. Marks the end of a cutscene.
+
 Function 7: 1 argument. The argument is the number of times to repeat from the beginning of the file to this point (the start point is speculation on my part)
+
 Function 8: 2 arguments. The first argument is a cutscene number, and the second is an animation file number. It instructs the file to load the given cutscene file.
+
 Function 9: 1 argument. The argument is a rate to fade to black at. A higher number is a slower rate (1 fades in 8 steps, 2 fades in 16, 0 is instant-black, etc)
+
 Function A: 1 argument. The argument is a rate to fade from black to the current frame. Same rules apply as in the fade-out function.
+
 Function B: 1 argument. I'm not sure what it does.
+
 Function C: 1 argument. Not sure what it does.
+
 Function D: 3 arguments. First arg is a palette index. Second is text (these two are the same as function 0). Third arg is the number of a .voc sound file to play.
+
 Function E: 2 arguments. Not sure what it does.
+
 Function F: 0 arguments. Plays the "Klang" sound effect (MIDI bank 1, patch 3, using 0-based numbering)
+
 Function 10+: Only available in UW2, and I haven't begun my investigations of that binary.
 
 ###VOC file format
