@@ -30,7 +30,7 @@ These are defined in the instrument definition files, but don't follow any forma
 
 Dosbox can record register writes to an Ad-Lib card into a file format called DRO, and I've included some code to interpret those. It's been a while since I've looked at it (a couple of years), and it seems like it needs some love to get into a properly-working state.
 
-####Update####
+####Update
 Having looked at some of the audio code, I've identified the routines that handle the TVFX sound effects, and I've looked at them some. I haven't completely figured out their operation. Here's what I think I've found, though:
 - The sizes of sound effects are variable, but based on multiples of 16 plus 2 (the 2 is a word specifying the size of the effect block).
 - Like all the other parts of the AIL interface, the sound effects are handled based on a 120Hz timer. The difference is that over time, the values that get written to the OPL2 change.
@@ -38,7 +38,7 @@ Having looked at some of the audio code, I've identified the routines that handl
 - TVFX blocks in a timbre definition file start with a 2-byte word showing the size (like all the other timbre types). After that, there are 16-byte blocks.
 - The smallest effect has 0xC2 bytes (so 12 * 16-byte blocks, plus 2 size). The next is 0xD2 bytes (13 * 16 + 2). The largest is 0x162 (22 * 16 + 2).
 
-####Playing an effect in the code####
+####Playing an effect in the code
 - Checks for an available SFX callback (the code allows up to 4 to play at once)
 - Checks if the timbre is already in the cache
 - Load it if it isn't
@@ -52,7 +52,7 @@ Having looked at some of the audio code, I've identified the routines that handl
 - Set panpot to level defined in sounds.dat
 - Play note# with specified velocity (both given in sounds.dat)
 
-####Where does it get some of those arguments?####
+####Where does it get some of those arguments?
 - UW1's sounds.dat has 24 5-byte structs. The first byte of the file tells how many items there are (0x18 = 24)
 - For each struct: Byte 0: Timbre number from bank 1, Byte 1: MIDI note number, Byte 2: Velocity for the note, Byte 3: Not sure. Haven't seen it used. Byte 4: Seems to be a pan value
 
@@ -68,5 +68,31 @@ I've got a fly-through view, level-switching, and a few other things written. 3D
 ###3D objects
 These are actually contained in structs in the executable itself. I can interpret them and output .obj 3D models. The next step for the engine is to build them into arrays of vertexes and attributes, so that they can be processed by shaders and displayed in the game engine.
 
+###Cutscenes
+- N00 files contain the "scripts" for how to run each cutscene. NXX files with higher numbers are DeluxePaint ANM files, aka LPFs (Long Page Files). They contain actual frames of animation. They're also documented elsewhere, so I won't go into their exact format here.
+- For a file CSxyz.Nab, 'xyz' is the cutscene number. 'ab' is the script file (ab == 00), or the image files (ab > 00).
+- N00 files are a series of entries. The first value of an entry is a 1-based frame number. (frames numbered 0 are run before processing any image data). The next value is a function number. In UW1, it's in the range 0-15 (0x0-0xF). In UW2, the range is larger, but I'm not sure how large (maybe 0-31?). Functions have between 0 and 3 arguments that immediately follow the function numbers.
+
+Function 0: 2 arguments. The first argument is a palette index from the current nXX file. The second argument is an index into the game's string table (strings.pak is also documented elsewhere)
+Function 1: 0 arguments. I don't know what it does.
+Function 2: 2 arguments. Seems to be a no-op.
+Function 3: 1 argument. The argument is a number of seconds to pause, displaying the current frame.
+Function 4: 2 arguments. The first seems to be a frame number. The second might be a speed to play the frames at. It seems to play the frames from current to the argument.
+Function 5: 1 argument. I'm not sure what it does.
+Function 6: 0 arguments. Marks the end of a cutscene.
+Function 7: 1 argument. The argument is the number of times to repeat from the beginning of the file to this point (the start point is speculation on my part)
+Function 8: 2 arguments. The first argument is a cutscene number, and the second is an animation file number. It instructs the file to load the given cutscene file.
+Function 9: 1 argument. The argument is a rate to fade to black at. A higher number is a slower rate (1 fades in 8 steps, 2 fades in 16, 0 is instant-black, etc)
+Function A: 1 argument. The argument is a rate to fade from black to the current frame. Same rules apply as in the fade-out function.
+Function B: 1 argument. I'm not sure what it does.
+Function C: 1 argument. Not sure what it does.
+Function D: 3 arguments. First arg is a palette index. Second is text (these two are the same as function 0). Third arg is the number of a .voc sound file to play.
+Function E: 2 arguments. Not sure what it does.
+Function F: 0 arguments. Plays the "Klang" sound effect (MIDI bank 1, patch 3, using 0-based numbering)
+Function 10+: Only available in UW2, and I haven't begun my investigations of that binary.
+
+###VOC file format
+The file format is straight-forward, but not necessarily only raw WAV data. It's used in its simplest form in UW 1+2, though. Open the file, seek to byte 32 to skip the header. The remaining data is 8-bit unsigned mono PCM (except the final "00" byte that marks the end of the file). In UW1, they're recorded at 12048Hz. In UW2, they're recorded at 11111Hz.
+
 ##Legality
-I encourage you to go to gog.com (or a similar site) and buy Ultima Underworld. It's cheap, and it includes the sequel. Effort will be taken to allow the demo files to work as well, but I'm sure that EA would like to see sales of the original game. I can't give anyone copies of any game files, and this project will *never* distribute actual game data or information that could be used to reconstruct game data.
+I encourage you to go to gog.com (or a similar site) and buy Ultima Underworld. It's cheap, and it includes the sequel (which I plan to support eventually anyhow). Effort will be taken to allow the demo files to work as well, but I'm sure that EA would like to see sales of the original game. I can't give anyone copies of any game files, and this project will *never* distribute actual game data or information that could be used to reconstruct game data.
