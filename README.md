@@ -72,22 +72,23 @@ These are actually contained in structs in the executable itself. I can interpre
 - N00 files contain the "scripts" for how to run each cutscene. NXX files with higher numbers are DeluxePaint ANM files, aka LPFs (Long Page Files). They contain actual frames of animation. They're also documented elsewhere, so I won't go into their exact format here.
 - For a file CSxyz.Nab, 'xyz' is the cutscene number. 'ab' is the script file (ab == 00), or the image files (ab > 00).
 - N00 files are a series of entries. The first value of an entry is a 1-based frame number. (frames numbered 0 are run before processing any image data). The next value is a function number. In UW1, it's in the range 0-15 (0x0-0xF). In UW2, the range is larger, but I'm not sure how large (maybe 0-31?). Functions have between 0 and 3 arguments that immediately follow the function numbers.
+- A lot of the functions operate on a byte-size bitfield, setting and clearing options that change the behavior of the cutscene state-machine
 
-Function 0: 2 arguments. The first argument is a palette index from the current nXX file. The second argument is an index into the game's string table (strings.pak is also documented elsewhere)
+Function 0: 2 arguments. The first argument is a palette index from the current nXX file. The second argument is an index into the game's string table (strings.pak is also documented elsewhere). It reads flag bit0, and returns immediately if it isn't set.
 
 Function 1: 0 arguments. I don't know what it does.
 
 Function 2: 2 arguments. Seems to be a no-op.
 
-Function 3: 1 argument. The argument is a number of seconds to pause, displaying the current frame.
+Function 3: 1 argument. The argument is a number of seconds to pause, displaying the current frame. Current frame is used as a kind of hidden second argument. Clears flag bit1.
 
-Function 4: 2 arguments. The first seems to be a frame number. The second might be a speed to play the frames at. It seems to play the frames from current to the argument.
+Function 4: 2 arguments. The first seems to be a frame number. The second seems to be a time in seconds. It seems to play the frames from current to the first argument, probably over the course of arg2 seconds.
 
-Function 5: 1 argument. I'm not sure what it does.
+Function 5: 1 argument. I'm not sure what it does, but the argument isn't used in the function. It just clears a bit in an 8-bit flag that controls flow of the cutscene. Might mean that the next frame's audio shouldn't block playback of the frames.
 
 Function 6: 0 arguments. Marks the end of a cutscene.
 
-Function 7: 1 argument. The argument is the number of times to repeat from the beginning of the file to this point (the start point is speculation on my part)
+Function 7: 1 argument. The argument is the number of times to repeat from the beginning of the file to this point (the start point is speculation on my part, but cs011 is the only example)
 
 Function 8: 2 arguments. The first argument is a cutscene number, and the second is an animation file number. It instructs the file to load the given cutscene file.
 
@@ -95,13 +96,13 @@ Function 9: 1 argument. The argument is a rate to fade to black at. A higher num
 
 Function A: 1 argument. The argument is a rate to fade from black to the current frame. Same rules apply as in the fade-out function.
 
-Function B: 1 argument. I'm not sure what it does.
+Function B: 1 argument. I'm not sure what it does. Argument is a frame number that shouldn't be the "current" frame. This clears flag bit0 and sets flag bit1.
 
-Function C: 1 argument. Not sure what it does.
+Function C: 1 argument. Not sure what it does. The argument is used as a boolean value. Odd numbers are true. Even are false (i.e. it just looks at bit0 of the value). It sets/unsets bit4 of the flag.
 
 Function D: 3 arguments. First arg is a palette index. Second is text (these two are the same as function 0). Third arg is the number of a .voc sound file to play.
 
-Function E: 2 arguments. Not sure what it does.
+Function E: 2 arguments. Might pause on current frame for different amounts of time, depending on whether audio is enabled. Current frame is used as a frame number arg. arg0 is used as a time if flag bit5 is clear, arg1 is used if flag bit5 is set. I think bit5 is related to whether digital sound is active or not.
 
 Function F: 0 arguments. Plays the "Klang" sound effect (MIDI bank 1, patch 3, using 0-based numbering)
 

@@ -50,12 +50,10 @@
 #include <limits>
 #include <time.h>
 
-//#include "doomtype.h"
 #include "opl.h"
-//#include "m_random.h"
 #include "xs_Float.h"
 
-//static FRandom pr_opl3;
+#include<iostream>
 
 #define VOLUME_MUL		0.3333
 
@@ -596,6 +594,7 @@ public:
 	void Reset();
 	void WriteReg(int reg, int v);
 	void Update(float *buffer, int length);
+        void Update(int16_t *buffer, int length);
 	void SetPanning(int c, float left, float right);
 };
 
@@ -615,6 +614,32 @@ void OPL3::Update(float *output, int numsamples) {
 					double channelOutput = channel->getChannelOutput(this);
 					output[0] += float(channelOutput * channel->leftPan);
 					output[1] += float(channelOutput * channel->rightPan);
+				}
+			}
+
+		// Advances the OPL3-wide vibrato index, which is used by 
+		// PhaseGenerator.getPhase() in each Operator.
+		vibratoIndex = (vibratoIndex + 1) & (OPL3DataStruct::vibratoTableLength - 1);
+		// Advances the OPL3-wide tremolo index, which is used by 
+		// EnvelopeGenerator.getEnvelope() in each Operator.
+		tremoloIndex++;
+		if(tremoloIndex >= OPL3DataStruct::tremoloTableLength) tremoloIndex = 0;
+		output += 2;
+	}
+}
+
+void OPL3::Update(int16_t *output, int numsamples) {
+	while (numsamples--) {
+		// If _new = 0, use OPL2 mode with 9 channels. If _new = 1, use OPL3 18 channels;
+		for(int array=0; array < (_new + 1); array++)
+			for(int channelNumber=0; channelNumber < 9; channelNumber++) {
+				// Reads output from each OPL3 channel, and accumulates it in the output buffer:
+				Channel *channel = channels[array][channelNumber];
+				if (channel != &disabledChannel)
+				{
+					double channelOutput = channel->getChannelOutput(this);
+					output[0] += int16_t(floor(10240 * channelOutput * channel->leftPan));
+					output[1] += int16_t(floor(10240 * channelOutput * channel->rightPan));
 				}
 			}
 
@@ -1846,6 +1871,7 @@ void OPL3::Reset()
 void OPL3::WriteReg(int reg, int v)
 {
 	write(reg >> 8, reg & 0xFF, v);
+        //std::cout<<std::hex<<"OPL3::WriteReg("<<(reg>>(8))<<", "<<(reg&0xff)<<", "<<v<<")"<<std::endl;
 }
 
 void OPL3::SetPanning(int c, float left, float right)
@@ -1864,6 +1890,7 @@ void OPL3::SetPanning(int c, float left, float right)
 		}
 		channel->leftPan = left;
 		channel->rightPan = right;
+                //std::cout<<"OPL3::SetPanning("<<std::dec<<c<<", "<<left<<", "<<right<<")"<<std::endl;
 	}
 }
 
