@@ -23,7 +23,7 @@ bool vocfile::print_info(std::string& filename) {
         uint8_t tag = filedata[offset];
         switch(tag) {
           case 0: cout<<"Terminator"<<endl; bof = false; break;
-          case 1: cout<<"Sound data"; break;
+          case 1: cout<<"Sound data"<<" Freq: "<<1000000 / (256 - int32_t(filedata[offset+4]))<<" Codec ID: "<<uint32_t(filedata[offset+5]); break;
           case 2: cout<<"Sound data continuation"; break;
           case 3: cout<<"Silence"; break;
           case 4: cout<<"Marker"; break;
@@ -49,7 +49,7 @@ bool vocfile::check(char * filename) {
     a.seekg(0,ios::end);
     size_t size = a.tellg();
     a.seekg(0,ios::beg);
-    if(size>100000) { a.close(); return false;}
+    if(size>200000) { a.close(); return false;}
     vector<uint8_t> filedata(size,10);
     a.read((char *)(&(filedata[0])), size);
     a.close();
@@ -67,7 +67,7 @@ tuple<size_t,size_t> vocfile::get_data_loc(std::string& filename) {
     a.seekg(0,ios::end);
     size_t filesize = a.tellg();
     a.seekg(0,ios::beg);
-    if(filesize > 100000) {
+    if(filesize > 200000) {
         cerr<<"Filesize larger than expected. Bailing."<<endl;
         return make_tuple(0,0);
     }

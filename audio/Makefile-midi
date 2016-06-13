@@ -1,0 +1,39 @@
+SFML_LIB :=-L/usr/local/lib64 -lsfml-window -lsfml-graphics -lsfml-system -lsfml-audio
+CPPFLAGS = -std=c++11
+OBJDIR = objs
+BINDIR = bin
+vpath %.o ./$(OBJDIR)
+vpath %.cpp ./opl
+vpath %.h ./opl ../
+
+default: setup $(BINDIR)/xmi $(BINDIR)/uw_patch_file $(BINDIR)/play_opl_xmi $(BINDIR)/play_timidity_xmi $(BINDIR)/midi_freqs
+
+.PHONY: setup
+setup:
+	mkdir -p $(OBJDIR) $(BINDIR)
+
+.PHONY: clean
+clean:
+	-@rm $(OBJDIR)/*.o
+	-@rm $(BINDIR)/*
+
+$(BINDIR)/xmi: midi_event.o midi_event.h xmi-standalone.o xmi.h util.h
+	g++ $(OBJDIR)/xmi-standalone.o $(OBJDIR)/midi_event.o -o $@
+
+$(BINDIR)/uw_patch_file: uw_patch-standalone.o uw_patch.h
+	g++ $(OBJDIR)/uw_patch-standalone.o -o $@
+
+$(BINDIR)/play_opl_xmi: play_opl_xmi.o midi_event.o midi_event.h xmi.o xmi.h uw_patch.o uw_patch.h OPL3.o opl.h xs_Float.h util.h
+	g++ $(OBJDIR)/play_opl_xmi.o $(OBJDIR)/midi_event.o $(OBJDIR)/xmi.o $(OBJDIR)/uw_patch.o $(OBJDIR)/OPL3.o -lsfml-system -lsfml-audio -o $@
+
+$(BINDIR)/play_timidity_xmi: play_timidity_xmi.cpp
+	g++ play_timidity_xmi.cpp -ltimidity $(SFML_LIB) -I.. -o $@
+
+$(BINDIR)/midi_freqs: midi_freqs.o
+	g++ $(OBJDIR)/midi_freqs.o -o $@
+
+%-standalone.o: %.cpp
+	g++ -c $(CPPFLAGS) -DSTAND_ALONE $< -o $(OBJDIR)/$@
+
+%.o: %.cpp
+	g++ -c $(CPPFLAGS) $< -o $(OBJDIR)/$@

@@ -3,9 +3,11 @@
 #include<string>
 #include<stdint.h>
 #include<vector>
+#include "util.h"
 
 using namespace std;
 
+/*
 uint8_t read8(ifstream& in) {
     uint8_t ret = 0;
     in.read(reinterpret_cast<char *>(&ret), 1);
@@ -23,11 +25,15 @@ uint32_t read32(ifstream& in) {
     in.read(reinterpret_cast<char *>(&ret), 4);
     return ret;
 }
+*/
 
 class fontfile {
     public:
     vector<vector<vector<uint8_t>>> font;
     vector<uint8_t> widths;
+    uint16_t space_width; //in pixels
+    uint16_t font_height; //in pixels
+    uint16_t max_char_width; //in pixels
 
     bool load(string fn) {
         ifstream in;
@@ -41,10 +47,10 @@ class fontfile {
         in.seekg(0, ios::beg);
         uint16_t pad1 = read16(in);
         uint16_t bytes_per_char = read16(in); //in bytes
-        uint16_t space_width = read16(in); //in pixels
-        uint16_t font_height = read16(in); //in pixels
+        /*uint16_t*/ space_width = read16(in); //in pixels
+        /*uint16_t*/ font_height = read16(in); //in pixels
         uint16_t font_width = read16(in); //in bytes
-        uint16_t max_char_width = read16(in); //in pixels
+        /*uint16_t*/ max_char_width = read16(in); //in pixels
         uint32_t char_count = (filesize - 12) / (bytes_per_char + 1);
         if(pad1 != 1 || filesize != char_count * (bytes_per_char + 1) + 12) {
             cerr<<"File doesn't look right. Bailing."<<endl;
@@ -74,10 +80,15 @@ class fontfile {
             //cout<<"This char has width "<<widths[glyph]<<endl;
         }
 
-        cout<<"Ready to print out my results."<<endl;
+        return true;
+    }
+
+    void print() {
+        uint16_t char_count = font.size();
         for(size_t g = 0; g < char_count; ++g) {
             if(widths[g] == 0) continue;
-            cout<<"Char "<<g<<":"<<endl;
+            cout<<"Char "<<g<<"("<<int(widths[g])<<" wide) :"<<endl;
+            uint16_t font_width = widths[g];
             for(size_t r = 0; r < font_height; ++r) {
                 for(size_t c = 0; c < font_width; ++c) {
                     for(int i=128;i>0;i/=2)
@@ -88,10 +99,9 @@ class fontfile {
             }
             cout<<endl;
         }
-            
-        return true;
     }
 };
+
 int main(int argc, char* argv[]) {
     fontfile in;
     if(argc == 2) {
@@ -104,6 +114,7 @@ int main(int argc, char* argv[]) {
         cerr<<"Provide the path to the font file to open."<<endl;
         return 1;
     }
+    in.print();
     cout<<"Loaded the file successfully."<<endl;
     return 0;
 }
