@@ -193,6 +193,8 @@ bool critfile::load(const std::string& critfile, const std::string& palfile) {
     //std::cout<<"Reading assoc file "<<critfile<<"/assoc.anm"<<std::endl;
     std::vector<std::tuple<std::string, uint8_t, uint8_t> > assocs;
     retval = read_assoc(critfile+"/assoc.anm", assocs);
+    if(!retval)
+        retval = read_assoc(critfile+"/ASSOC.ANM", assocs);
     if(!retval) return false;
     std::ifstream in;
     crits.resize(64);

@@ -305,14 +305,4 @@ bool Lpfcut::iterate_frame() {
     //std::cout<<"New page: "<<frame_page_index<<" record: "<<frame_record_index<<std::endl;
 }
 
-/*
-int main(int argc, char *argv[]) {
-    Lpfcut bob(false);
-    bool success = bob.load(argv[1]);
-    if(!success) {
-        cout<<"Blech, couldn't open file."<<endl;
-        return 1;
-    }
 
-    
-  */  

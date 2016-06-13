@@ -2,6 +2,7 @@
 #include <SFML/Audio.hpp>
 //#include "palette.h"
 #include "lpfcut.h"
+#include "vocfile.h"
 
 void play_lpf(sf::RenderWindow *, const char *, sf::SoundBuffer * wait_for_done=NULL);
 void play_snd(sf::Sound * snd, sf::SoundBuffer * sb, bool blocking=true);
@@ -76,6 +77,15 @@ int main(int argc, char *argv[])
             snd.play();
             sf::sleep(t);
         }
+        else if(vocfile::check(argv[1])) {
+            std::string filename = std::string(argv[1]);
+            std::vector<int16_t> samples = vocfile::get_file_dat(filename);
+            sb_file.loadFromSamples(&samples[0], samples.size(),1,12048);
+            sf::Sound snd(sb_file);
+            sf::Time t = sb_file.getDuration();
+            snd.play();
+            sf::sleep(t);
+        }
     }
     else if(argc==1) {//No args
         std::cout<<"No args? Trying to play the opening cutscene."<<std::endl;
@@ -88,12 +98,13 @@ int main(int argc, char *argv[])
             std::ifstream filetest(filename);
             if(filetest) {
                 filetest.close();
-                sb[i].loadFromFile(filename);
+                std::vector<int16_t> samples = vocfile::get_file_dat(filename);
+                sb[i].loadFromSamples(&samples[0], samples.size(),1,12048);
             }
             delete[] buffer;
         }
 
-        sf::RenderWindow App(sf::VideoMode(320, 200), "LPF Cutscene Player");
+        sf::RenderWindow App(sf::VideoMode(320, 240), "LPF Cutscene Player");
 
         play_lpf(&App, "./cuts/cs000.n01");
         play_snd(&snd, &sb[26]);

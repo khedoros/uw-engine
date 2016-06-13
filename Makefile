@@ -17,8 +17,8 @@ simple_map: simple_map.cpp simple_map.h util.cpp util.h UwText.cpp UwText.h
 lpfcut: lpfcut.cpp lpfcut.h util.cpp util.h
 	g++ -std=c++11 lpfcut.cpp util.cpp  -DSTAND_ALONE $(SFML_LIB) -o lpfcut
 
-mainplay: main.cpp lpfcut.cpp lpfcut.h util.cpp util.h
-	g++ -std=c++11 main.cpp lpfcut.cpp util.cpp $(SFML_LIB) -o mainplay
+mainplay: main.cpp lpfcut.cpp lpfcut.h util.cpp util.h audio/vocfile.cpp audio/vocfile.h
+	g++ -std=c++11 main.cpp lpfcut.cpp util.cpp audio/vocfile.cpp -Iaudio $(SFML_LIB) -o mainplay
 
 UwText: UwText.cpp UwText.h util.h
 	g++ UwText.cpp -DSTAND_ALONE_TEXT -o UwText
