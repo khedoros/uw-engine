@@ -1,6 +1,6 @@
 SFML_LIB :=-L/usr/local/lib64 -lsfml-window -lsfml-graphics -lsfml-system -lsfml-audio
 
-all: texfile play_xmi sfml-engine simple_map UwText critfile convfile engine 3dmodel fontfile
+all: texfile play_xmi sfml-engine simple_map UwText critfile convfile engine 3dmodel uwfont
 
 texfile: texfile.cpp texfile.h util.cpp util.h
 	g++ texfile.cpp util.cpp -DSTAND_ALONE -o texfile $(SFML_LIB)
@@ -35,5 +35,5 @@ engine: engine.cpp
 3dmodel: 3dmodel.cpp 3dmodel.h
 	g++ -std=c++11 3dmodel.cpp util.cpp -o 3dmodel
 
-fontfile: fontfile.cpp util.cpp util.h fontfile.h
-	g++ -std=c++11 -DSTAND_ALONE fontfile.cpp util.cpp `pkg-config --libs sfml-all` -o fontfile
+uwfont: uwfont.cpp util.cpp util.h uwfont.h
+	g++ -std=c++11 -DSTAND_ALONE uwfont.cpp util.cpp `pkg-config --libs sfml-all` -o uwfont
