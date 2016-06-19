@@ -37,7 +37,8 @@ bool uwfont::load(std::string fn) {
         std::cerr<<"File doesn't look right. Bailing."<<std::endl;
         return false;
     }
-    std::cout<<font_height<<"x"<<max_char_width<<" font with "<<char_count<<" defined glyphs."<<std::endl;
+    std::cout<<max_char_width<<"x"<<font_height<<" font with "<<char_count<<" defined glyphs.\n";
+    std::cout<<bytes_per_char <<" bytes per glyph, "<<font_width<<" bytes per row, "<<max_char_width<<" pixels, max size"<<std::endl;
 
     font.resize(char_count);
     widths.resize(char_count);
@@ -58,7 +59,11 @@ bool uwfont::load(std::string fn) {
         //cout<<"Did glyph "<<glyph<<endl;
         //cout<<"Reading the width of glyph "<<glyph<<" (vector has size "<<widths.size()<<")"<<endl;
         widths[glyph] = read8(in);
-        std::cout<<"This char has width "<<int(widths[glyph])<<std::endl;
+        if(widths[glyph] > max_char_width) {
+            std::cerr<<"Width of "<<int(widths[glyph])<<" for char "<<int(glyph)<<" exceeds stated max of "<<max_char_width<<std::endl;
+            max_char_width = widths[glyph];
+        }
+        //std::cout<<"This char has width "<<int(widths[glyph])<<std::endl;
     }
 
     return true;
@@ -81,6 +86,10 @@ void uwfont::print() {
         cout<<endl;
     }
 }
+
+//void uwfont::print_info() {
+//    cout<<"Character count: "<<font.size()<<"\nSize: "<<max_char_width<<" x "<<font_height<<"\n";
+//}
 
 std::string uwfont::to_bdf() {
     std::ostringstream bdf_repr;
@@ -132,6 +141,10 @@ std::string uwfont::to_bdf() {
     return bdf_repr.str();
 }
 
+uint32_t uwfont::get_height() {
+    return font_height;
+}
+
 #ifdef STAND_ALONE
 int main(int argc, char* argv[]) {
     uwfont in;
@@ -145,7 +158,7 @@ int main(int argc, char* argv[]) {
         cerr<<"Provide the path to the font file to open."<<endl;
         return 1;
     }
-    in.print();
+    //in.print();
     ofstream out("font.bdf");
     out<<in.to_bdf();
     out.close();
@@ -160,11 +173,21 @@ int main(int argc, char* argv[]) {
         
         return EXIT_FAILURE;
     }
-    sf::Text text("A QUICK BROWN FOX JUMPED OVER THE LAZY DOG\na quick brown fox jumped over the lazy dog\n1234567890`~!@#$%^&*()-_[{}]\\|;:'\",<>./?", font, 10);
-    text.setPosition(sf::Vector2f(0,10));
+    //sf::Font::Info i = font.getInfo();
+    //std::cout<<"Family: "<<i.family<<std::endl;
+    sf::Text text;
+    uint32_t fontsize = 0;
+    for(int i=0;i<20;++i) {
+        text = sf::Text("A QUICK BROWN FOX JUMPED OVER THE LAZY DOG\na quick brown fox jumped over the lazy dog\n1234567890`~!@#$%^&*()-_[{}]\\|;:'\",<>./?", font, i+1);
+        //std::cout<<"Font size "<<i+1<<" has width: "<<texts[i].getLocalBounds().width<<std::endl;
+        if(text.getLocalBounds().width > 0) {
+            fontsize = i+1;
+            break;
+        }
+    }
+    text.setPosition(sf::Vector2f(100,100));
     // Start the game loop
-    while (window.isOpen())
-    {
+    while (window.isOpen()) {
         // Process events
         sf::Event event;
         while (window.pollEvent(event))
@@ -177,6 +200,7 @@ int main(int argc, char* argv[]) {
         window.clear();
         // Draw the text
         window.draw(text);
+
         // Update the window
         window.display();
     }
