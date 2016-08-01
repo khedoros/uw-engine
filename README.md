@@ -111,5 +111,66 @@ Function 10+: Only available in UW2, and I haven't begun my investigations of th
 ###VOC file format
 The file format is straight-forward, but not necessarily only raw WAV data. It's used in its simplest form in UW 1+2, though. Open the file, seek to byte 32 to skip the header. The remaining data is 8-bit unsigned mono PCM (except the final "00" byte that marks the end of the file). In UW1, they're recorded at 12048Hz. In UW2, they're recorded at 11111Hz.
 
+###Skills.dat
+This one isn't documented in the uwformats file, so I decided to figure it out. It's used in the character generation process. There are a number of important indexes that the values refer to, and these are reflected by the orders of some strings in strings.pak.
+
+####Classes
+0: Fighter
+1: Mage
+2: Bard
+3: Tinker
+4: Druid
+5: Paladin
+6: Ranger
+7: Shepherd
+
+####Character Attributes
+0: Strength
+1: Dexterity
+2: Intelligence
+3: Vitality
+
+####Skills
+00: Attack
+01: Defense
+02: Unarmed
+03: Sword
+04: Axe
+05: Mace
+06: Missile
+07: Mana
+08: Lore
+09: Casting
+0A: Traps
+0B: Search
+0D: Sneak
+0E: Repair
+0F: Charm
+10: Picklock
+11: Acrobat
+12: Appraise
+13: Swimming
+
+####File Format
+The first 32 bytes are divided among the 8 classes, with 4 bytes per class. These describe the ranges for the character attributes, with 0C, 0E, 10, 12, and 14 as the possible values. These aren't used directly, but as range inputs for random number generation, and possibly involving other calculation. For example, Vitality usually comes in values of 33, 34, and 35, when the range values seem to be 0C and 14. I did 5 character generations each for a fighter and a mage. The fighter's Strength value ranged between 24 and 28, while the mage's was between 13 and 19. This at least correlates with the classes' values of 0x14 and 0x0C for the base strength values, but is clearly calculated using different formulae than the one for vitality. I can either re-generate a large number of characters until a pattern emerges or find the character generation code. The former would be easier, but the latter would give a clearer answer.
+
+The remaining bytes (starting from the 33rd and going to the end of the file) are a series of records, 5 per class, which provide the skills lists for that class during character generation. Each record is in the format of a byte (len) to show the length of the record, and then "len" bytes of data showing the available choices. A record with a length of 1 is auto-selected (no choice is presented to the player). The classes are in order identified above, and the skill numbers are the same as identified above.
+
+Here's an example, for what I might expect for a "battle mage" class (keeping with my policy of not including actual game data in any of my materials):
+
+02 00 01 
+02 00 01
+01 07
+01 09
+04 03 04 05 06
+
+First:  02 - 2 bytes, 00 - Attack,  01 - Defense
+Second: 02 - 2 bytes, 00 - Attack,  01 - Defense
+Third:  01 - 1 bytes, 07 - Mana (Automatically selected, because it's the only choice)
+Fourth: 01 - 1 bytes, 09 - Casting (Ditto)
+Fifth:  04 - 4 bytes, 02 - Unarmed, 03 - Sword, 04 - Axe, 05 - Mace, 06 - Missile
+
+Similar to the character attributes, I suspect that the way to calculate how the skills are actually applied to the character are contained in the game executable itself, rather than encoded anywhere as data.
+
 ##Legality
-I encourage you to go to gog.com (or a similar site) and buy Ultima Underworld. It's cheap, and it includes the sequel (which I plan to support eventually anyhow). Effort will be taken to allow the demo files to work as well, but I'm sure that EA would like to see sales of the original game. I can't give anyone copies of any game files, and this project will *never* distribute actual game data or information that could be used to reconstruct game data.
+I encourage you to go to gog.com (or a similar site) and buy Ultima Underworld. It's cheap, and it includes the sequel (which I plan to support eventually anyhow). Effort will be taken to allow the demo files to work as well, but I'm sure that EA would like to see sales of the original games. I can't give anyone copies of any game files, and this project will *never* distribute actual game data or information that could be used to reconstruct game data (just information about how to interpret game data). I'm also wary of distributing files directly representing any efforts at analysis of the files, so I don't plan to post anything like hex dumps, program traces, disassemblies, etc.
