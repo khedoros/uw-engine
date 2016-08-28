@@ -94,6 +94,8 @@ __next_slot:    inc si
                 jz __exit
                 cmp S_status[si], FREE
                 jz __next_slot
+                cmp S_voice[si], -1
+                jnz __next_slot
                 mov bx, 0FFFFh
 
 __next_voice:   inc bx
@@ -110,6 +112,7 @@ __next_voice:   inc bx
                 call update_priority
 
 __exit:         ret
+                ENDP
 
 
 
@@ -119,7 +122,7 @@ TVFX_increment_stage PROC slot, memory_element
                 mov bx, si
                 shl bx, 1
                 mov ds, S_timbre_seg[bx]
-                mov ds, S_timbre_off[bx]
+                mov di, S_timbre_off[bx]
                 add bx, [memory_element]
                 add di, cs:[bx]
                 mov cx, 0Ah
@@ -132,21 +135,21 @@ loc_367E:       mov ax, [di]
                 add cs:[bx], dx
 
 __next_loop:    loop loc_367E
-                mov S_f_increment[bx], 0        ;bx is large enough that this won't necessarily point to f-increment, but it will always point to *some* increment value
-                mov S_f_counter[bx], 0FFFFh     ;Same principle applies here. Disassembled version of the code looks like "mov word ptr cs:[bx+28h], 0FFFFh"
+                mov WORD PTR cs:[bx + (6 * NUM_SLOTS)], 0        ;bx is large enough that this won't necessarily point to f-increment, but it will always point to *some* increment value
+                mov WORD PTR cs:[bx + (2 * NUM_SLOTS)], 0FFFFh     ;Same principle applies here. Disassembled version of the code looks like "mov word ptr cs:[bx+28h], 0FFFFh"
                 ret
 
 __ax_not_0:     add di, 4
-                add cs:[bx], 4
+                add WORD PTR cs:[bx], 4
                 cmp ax, -1
-                jz loc_36BE
+                jz __loc_36BE
                 cmp ax, -2
-                jz loc_36C4
-                mov S_f_counter[bx], ax
-                mov S_f_increment[bx], dx
+                jz __loc_36C4
+                mov cs:[bx + (2 * NUM_SLOTS)], ax
+                mov cs:[bx + (6 * NUM_SLOTS)], dx
                 ret
 
-__loc_36BE:     mov S_f_val[bx], dx
+__loc_36BE:     mov cs:[bx+(4 * NUM_SLOTS)], dx
                 jmp __next_loop
 
 __loc_36C4:     mov ax, [memory_element]
@@ -186,6 +189,7 @@ __TV_inst:      and S_BLOCK[si], 0E0h
 
 __update_fb:    mov S_FBC[si], dh
                 jmp __next_loop
+                ENDP
 
 
 
@@ -229,13 +233,7 @@ __next_slot:    inc si
 __zero_f_increment:
                 dec S_f_counter[di]
                 jnz __f_counter_is_not_zero
-                push ax
-                push bp
-                mov bp, sp
-                mov [bp+2], OFFSET S_f_offset
-                pop bp
-                call TVFX_increment_stage C, si
-                add sp, 2
+                call TVFX_increment_stage C, si, OFFSET S_f_offset
                 or S_update[si], U_FREQ
 
 __f_counter_is_not_zero:
@@ -248,13 +246,7 @@ __f_counter_is_not_zero:
 __zero_fb_increment:
                 dec S_fb_counter[di]
                 jnz __fb_counter_is_not_zero
-                push ax
-                push bp
-                mov bp, sp
-                mov [bp+2], OFFSET S_fb_offset
-                pop bp
-                call TVFX_increment_stage C, si
-                add sp, 2
+                call TVFX_increment_stage C, si, OFFSET S_fb_offset
                 or S_update[si], U_FBC
 
 __fb_counter_is_not_zero:
@@ -267,13 +259,7 @@ __fb_counter_is_not_zero:
 __zero_m0_increment:
                 dec S_m0_counter[di]
                 jnz __m0_counter_is_not_zero
-                push ax
-                push bp
-                mov bp, sp
-                mov [bp+2], OFFSET S_m0_offset
-                pop bp
-                call TVFX_increment_stage C, si
-                add sp, 2
+                call TVFX_increment_stage C, si, OFFSET S_m0_offset
                 or S_update[si], U_AVEKM
 
 __m0_counter_is_not_zero:
@@ -286,13 +272,7 @@ __m0_counter_is_not_zero:
 __zero_m1_increment:
                 dec S_m1_counter[di]
                 jnz __m1_counter_is_not_zero
-                push ax
-                push bp
-                mov bp, sp
-                mov [bp+2], OFFSET S_m1_offset
-                pop bp
-                call TVFX_increment_stage C, si
-                add sp, 2
+                call TVFX_increment_stage C, si, OFFSET S_m1_offset
                 or S_update[si], U_AVEKM
 
 __m1_counter_is_not_zero:
@@ -310,7 +290,7 @@ __m1_counter_is_not_zero:
                 mov dx, cx
                 xor dx, ax
                 js __update_volume_0
-                mv S_v0_val[di], 0
+                mov S_v0_val[di], 0
 
 __update_volume_0:
                 mov al, vol_update
@@ -319,13 +299,7 @@ __update_volume_0:
 __zero_v0_increment:
                 dec S_v0_counter[di]
                 jnz __v0_counter_is_not_zero
-                push ax
-                push bp
-                mov bp, sp
-                mov [bp+2], OFFSET S_v0_offset
-                pop bp
-                call TVFX_increment_stage C, si
-                add sp, 2
+                call TVFX_increment_stage C, si, OFFSET S_v0_offset
                 or S_update[si], U_KSLTL
 
 __v0_counter_is_not_zero:
@@ -352,13 +326,7 @@ __update_volume_1:
 __zero_v1_increment:
                 dec S_v1_counter[di]
                 jnz __v1_counter_is_not_zero
-                push ax
-                push bp
-                mov bp, sp
-                mov [bp+2], OFFSET S_v1_offset
-                pop bp
-                call TVFX_increment_stage C, si
-                add sp, 2
+                call TVFX_increment_stage C, si, OFFSET S_v1_offset
                 or S_update[si], U_KSLTL
 
 __v1_counter_is_not_zero:
@@ -371,13 +339,7 @@ __v1_counter_is_not_zero:
 __zero_ws_increment:
                 dec S_ws_counter[di]
                 jnz __ws_counter_is_not_zero
-                push ax
-                push bp
-                mov bp, sp
-                mov [bp+2], OFFSET S_ws_offset
-                pop bp
-                call    TVFX_increment_stage C, si
-                add sp, 2
+                call    TVFX_increment_stage C, si, OFFSET S_ws_offset
                 or S_update[si], U_WS
 
 __ws_counter_is_not_zero:
@@ -385,13 +347,7 @@ __ws_counter_is_not_zero:
                 add S_p_val[di], ax
                 dec S_p_counter[di]
                 jnz __p_counter_is_not_zero
-                push ax
-                push bp
-                mov bp, sp
-                mov [bp+2], OFFSET S_p_offset
-                pop bp
-                call TVFX_increment_stage C, si
-                add sp, 2
+                call TVFX_increment_stage C, si, OFFSET S_p_offset
 
 __p_counter_is_not_zero:
                 test S_update[si], U_ALL_REGS
@@ -404,7 +360,7 @@ __no_update_necessary:
                 dec S_duration[di]
                 jnz __still_running
                 mov S_status[si], KEYOFF
-                call TVFX_phase C, si
+                call TV_phase C, si
                 jmp __next_slot
 
 __key_off:      cmp S_v0_val[di], 0400h
@@ -416,6 +372,7 @@ __key_off:      cmp S_v0_val[di], 0400h
                 call TVFX_switch_voice
 
 __still_running:jmp __next_slot
+                ENDP
 
 
 
@@ -448,12 +405,20 @@ __TV_inst:      mov S_type[si], al
                 add cx, 2 ; Offsets never include the "size" data at the top of the struct
                 cmp cx, 36h ; If the first chunk of update data is at offset 36h, then we use the default AD/SR values
                 jz __use_default
-                mov ax, [di].T_play_ad_1 ;Values to use if KEYON is still true
-                mov dx, [di].T_play_ad_0
+;                mov ah, [di].T_play_ad_1 ;Values to use if KEYON is still true
+;                mov al, [di].T_play_sr_1 ;Values to use if KEYON is still true
+                mov ax, WORD PTR [di].T_play_ad_1
+;                mov dh, [di].T_play_ad_0
+;                mov dl, [di].T_play_sr_0
+                mov dx, WORD PTR [di].T_play_ad_0
                 cmp S_status[si], KEYOFF
                 jnz __use_default
-                mov ax, [di].T_rel_ad_1 ;Values to use if KEYOFF is true
-                mov dx, [di].T_rel_ad_0
+;                mov ah, [di].T_rel_ad_1 ;Values to use if KEYOFF is true
+;                mov al, [di].T_rel_sr_1 ;Values to use if KEYOFF is true
+                mov ax, WORD PTR [di].T_rel_ad_1
+;                mov dh, [di].T_rel_ad_0
+;                mov dl, [di].T_rel_sr_0
+                mov dx, WORD PTR [di].T_rel_ad_0
 
 __use_default:  mov S_AD_0[si], dh
                 mov S_SR_0[si], dl
@@ -506,7 +471,7 @@ __set_TV_inst:  mov S_duration[bx], ax
                 add     ax, 2
                 mov     S_m1_offset[bx], ax ; Connected to S_AVEKM_1 Used as offset for TVFX_sub_365E
 
-                mov     ax, [di].T_init_fb
+                mov     ax, [di].T_init_fb_val
                 mov     S_fb_val[bx], ax
 
                 mov     ax, [di].T_init_fb_offset
@@ -579,3 +544,4 @@ __finalize:     mov     S_update[si], U_ALL_REGS ; 7 = AVEKM, 6 = KSLTL, 5 = ADS
                 mov     S_ws_increment[bx], 0
 
                 ret
+                ENDP
