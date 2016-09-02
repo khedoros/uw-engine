@@ -699,7 +699,7 @@ void play_midi(unsigned int midi_data_size) { //SDL-based play_midi method
 void play_midi(unsigned int midi_data_size) { //SFML-based play_midi method
     int status=mid_init("/usr/share/midi/eawpats12/timidity.cfg");
     cout<<"Timidity initiation: "<<status<<endl;
-    MidIStream *stream=mid_istream_open_mem(&(midi_buffer[0]),midi_data_size,0);
+    MidIStream *stream=mid_istream_open_mem(&(midi_buffer[0]),midi_data_size);
     MidSongOptions *opts=new MidSongOptions;
     opts->rate=22050;
     opts->channels=2;
@@ -717,7 +717,7 @@ void play_midi(unsigned int midi_data_size) { //SFML-based play_midi method
     vbuffer.resize(vbuffer.size() + 1024);
     while(mid_song_get_time(song) < song_length) {
         vbuffer.resize(vbuffer.size() + 1024);
-        mid_song_read_wave(song,&(vbuffer[vbuffer.size()-1024]),2048);
+        mid_song_read_wave(song,reinterpret_cast<int8_t*>(&(vbuffer[vbuffer.size()-1024])),2048);
     }
     sf::SoundBuffer midi_song_buf;
     //cout<<"About to load samples from audio buffer."<<endl;

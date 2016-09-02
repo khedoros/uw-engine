@@ -6,7 +6,7 @@ adlib_bank: adlib_bank.cpp ../util.h
 	g++ -Wall adlib_bank.cpp -I.. -o adlib_bank
 
 uw_patch: uw_patch.cpp ../util.h
-	g++ -Wall -std=c++11 uw_patch.cpp -I.. -o uw_patch
+	g++ -Wall -std=c++11 uw_patch.cpp -DSTAND_ALONE -I.. -o uw_patch
 
 dro_parse: dro_parse.cpp ../util.h
 	g++ -Wall -I.. dro_parse.cpp -o dro_parse

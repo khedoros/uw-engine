@@ -44,6 +44,7 @@ bool uw_patch_file::load_patches(binifstream& in) {
             //std::cout<<"Size mismatch. Expected "<<sizeof(opl2_patch)<<", found "<<size<<std::endl;
         }
 
+        //This is a MT-32 patch, which usually have an ASCII name field, which I want to capture.
         char name_str[11];
         if(data.size() == 0xf8) {
             memcpy(name_str,&(data[2]),10);
@@ -91,11 +92,34 @@ bool uw_patch_file::load(std::string fna, std::string fnm /*= ""*/) {
         if((*it).ad_patchdata.size() > 0) std::cout<<" Has Adblib Data, size: "<<(*it).ad_patchdata.size()<<"  {";
         if((*it).ad_patchdata.size() == 0x0e) for(auto it2 = (*it).ad_patchdata.begin(); it2 != (*it).ad_patchdata.end(); ++it2) std::cout<<std::hex<<" "<<int(*it2)<<std::dec;
         else if((*it).ad_patchdata.size() > 0x0e) {
+            //Go to beginning of large patch
             auto it2 = (*it).ad_patchdata.begin();
+            //Print out the size
             std::cout<<std::hex<<std::setfill('0')<<std::setw(2)<<int(*it2++)<<std::setw(2)<<int(*it2++)<<std::endl;
+            //print out the rest of the data
+            std::cout<<"Transpose: "<<std::setw(2)<<int(*it2++)<<std::endl;
+            std::cout<<"Type: "<<std::setw(2)<<int(*it2++)<<std::endl;
+            std::cout<<"Duration (in 120Hz ticks): "<<std::setw(2)<<int(*(++it2))<<std::setw(2)<<int(*(--it2))<<std::endl; it2+=2;
+            std::string types[] = {"init value", "play offset", "release offset"};
+            enum e_types {init,play,release, t_count};
+            std::string data[] = {"f", "v0", "v1", "p", "fb", "m0", "m1", "ws"};
+            enum e_data {f,v0,v1,p,fb,m0,m1,ws, d_count};
+            bool extra_dat = false;
+            for(int i=0;i<d_count;++i) {
+                for(int j=0;j<t_count;++j) {
+                    uint16_t low = *(it2++);
+                    uint16_t high = *(it2++);
+                    if(i == f && j == play && low > 0x34) extra_dat = true; 
+                    std::cout<<data[i]<<" ("<<types[j]<<"): "<<std::setw(2)<<high<<std::setw(2)<<low<<std::endl;
+                }
+            }
+            if(extra_dat) std::cout<<"Contains 8 bytes of extra data to change default adsr values"<<std::endl;
             while(it2 != (*it).ad_patchdata.end()) {
-                for(size_t count = 0;it2 != (*it).ad_patchdata.end() && count < 16; ++count)
-                    std::cout<<std::hex<<" "<<std::setw(2)<<int(*it2++);
+                for(size_t count = 0;it2 != (*it).ad_patchdata.end() && count < 16; count+=2) {
+                    uint16_t low = *(it2++);
+                    uint16_t high = *(it2++);
+                    std::cout<<std::hex<<" "<<std::setw(2)<<high<<std::setw(2)<<low;
+                }
                 std::cout<<std::endl;
             }
             std::cout<<std::dec;

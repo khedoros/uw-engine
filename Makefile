@@ -1,4 +1,4 @@
-SFML_LIB :=-L/usr/local/lib64 -lsfml-window -lsfml-graphics -lsfml-system -lsfml-audio
+SFML_LIB :=-L/usr/lib -L/usr/local/lib -lsfml-window -lsfml-graphics -lsfml-system -lsfml-audio
 
 all: texfile play_xmi sfml-engine simple_map UwText critfile convfile engine 3dmodel uwfont
 

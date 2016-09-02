@@ -64,8 +64,8 @@ public:
     };
 
     struct patchdat {
-        patchdat() : bank(0), patch(0), name("N/A"), ad_patchdata(0), ad_patchdatastruct(), mt_patchdata(0) {};
-        patchdat(uint8_t b, uint8_t p, std::vector<uint8_t> d, opl2_patch ad, std::string n = "N/A") : bank(b), patch(p), ad_patchdatastruct(ad), name(n) {
+        patchdat() : bank(0), patch(0), name("N/A"), ad_patchdatastruct(), ad_patchdata(0), mt_patchdata(0) {};
+        patchdat(uint8_t b, uint8_t p, std::vector<uint8_t> d, opl2_patch ad, std::string n = "N/A") : bank(b), patch(p), name(n), ad_patchdatastruct(ad) {
             //std::cout<<int(bank)<<": "<<int(patch)<<": ";
             if(d.size() == 0xf8) { mt_patchdata = d; /*std::cout<<"Init'd MT Patch data"<<std::endl;*/ }
             else { ad_patchdata = d; /*std::cout<<"Init'd Adlib Patch data"<<std::endl;*/ }
@@ -78,8 +78,8 @@ public:
         uint8_t bank;
         uint8_t patch;
         std::string name;
-        std::vector<uint8_t> ad_patchdata;
         opl2_patch ad_patchdatastruct;
+        std::vector<uint8_t> ad_patchdata;
         std::vector<uint8_t> mt_patchdata;
     };
 private:
