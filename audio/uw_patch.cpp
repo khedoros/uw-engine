@@ -17,6 +17,52 @@ void uw_patch_file::print_opl(opl2_patch p) {
     std::cout<<"\tAttack: "<<int(p.mod_attack)<<" Release: "<<int(p.mod_release)<<" Sustain Lvl: "<<int(p.mod_sustain_lvl)<<" Carrier Waveform: "<<int(p.mod_waveform)<<std::endl<<std::endl;
 }
 */
+
+void uw_patch_file::patchdat::setpat(std::vector<uint8_t> d, uint8_t b, uint8_t p) {
+    bank = b;
+    patch = p;
+    //std::cout<<int(bank)<<": "<<int(patch)<<": ";
+    if(d.size() == 0x0e) {
+        memcpy(reinterpret_cast<void *>(&ad_patchdatastruct), reinterpret_cast<void *>(&(d[0])), d.size());
+        ad_patchdata = d;
+        has_opl2 = true;
+        /* std::cout<<"Added Adlib Patch data"<<std::endl;*/
+    }
+    else if(d.size() == 0xf8) {
+        mt_patchdata = d; 
+
+        //This is a MT-32 patch, which usually have an ASCII name field, which I want to capture.
+        char name_str[11];
+        memcpy(name_str,&(d[2]),10);
+        name_str[10] = 0;
+        name = std::string(name_str);
+        has_mt = true;
+        /*std::cout<<"Added MT Patch data"<<std::endl;*/
+    }
+    else if(d.size() > (8*3*2+6)) { //8 elements, 3 items per element, 2 bytes per item, plus the 6 bytes that make up the first 4 fields of the header
+        ad_patchdata = d;
+        size_t offset = 0;
+        //Set the always-present init values
+        memcpy(reinterpret_cast<void *>(&(tv_patchdatastruct.init)), reinterpret_cast<void *>(&(d[offset])), sizeof(struct tvfx_init));
+        offset += sizeof(struct tvfx_init);
+        //If there are optional ADSR values, read them
+        if(tv_patchdatastruct.init.keyon_f_offset == 0x3c) {
+            memcpy(reinterpret_cast<void *>(&(tv_patchdatastruct.opt)), reinterpret_cast<void *>(&(d[offset])), sizeof(struct tvfx_init_opt));
+            offset+= sizeof(struct tvfx_init_opt);
+            tv_patchdatastruct.uses_opt = true;
+            tv_patchdatastruct.offset = 0x3e;
+        }
+        //The rest of the data is put into a vector, because it's easier to access by offset than by name.
+        assert((d.size() - offset) % 2 == 0 && d.size() > offset);
+        tv_patchdatastruct.update_data.resize((d.size() - offset) / 2);
+        memcpy(reinterpret_cast<void *>(&(tv_patchdatastruct.update_data[0])), reinterpret_cast<void *>(&(d[offset])), d.size() - offset);
+        has_tvfx = true;
+    }
+    else {
+        std::cerr<<"Unimplemented patch type, size: "<<d.size()<<" bytes."<<std::endl;
+    }
+}
+
 bool uw_patch_file::load_patches(binifstream& in) {
     uint8_t bank=0, patch=0;
     uint32_t offset;
@@ -30,39 +76,22 @@ bool uw_patch_file::load_patches(binifstream& in) {
         uint16_t size;
         in>>size;
         std::vector<uint8_t> data;
-        opl2_patch opl_data;
         data.resize(size);
         in.seekg(offset,std::ios::beg);
         in.read(reinterpret_cast<char *>(&data[0]),size);
 
-        if(size == sizeof(opl2_patch)) {
-            //std::cout<<"Seeking back to beginning of instrument"<<std::endl;
-            in.seekg(offset,std::ios::beg);
-            in>>opl_data;
-        }
-        else {
-            //std::cout<<"Size mismatch. Expected "<<sizeof(opl2_patch)<<", found "<<size<<std::endl;
-        }
-
-        //This is a MT-32 patch, which usually have an ASCII name field, which I want to capture.
-        char name_str[11];
-        if(data.size() == 0xf8) {
-            memcpy(name_str,&(data[2]),10);
-            name_str[10] = 0;
-        }
         bool found = false;
         for(auto it = bank_data.begin(); it != bank_data.end() && !found; ++it) {
-            if((*it).bank == bank && (*it).patch == patch) {
-                //std::cout<<"Adding data to already built patch structure"<<std::endl;
-                (*it).setpat(data);
-                (*it).name = std::string((name_str));
+            if(it->bank == bank && it->patch == patch) {
+                it->setpat(data, bank, patch);
                 found = true;
             }
         }
         if(!found) {
-            //std::cout<<"Creating new patch structure"<<std::endl;
-            bank_data.push_back(patchdat(bank,patch,data,opl_data));
+            bank_data.push_back(patchdat());
+            bank_data.back().setpat(data, bank, patch);
         }
+
         in.seekg(bookmark,std::ios::beg);
         //std::cout<<"Sought back to "<<bookmark<<" (the bookmark point)."<<std::endl;
     }
@@ -87,47 +116,24 @@ bool uw_patch_file::load(std::string fna, std::string fnm /*= ""*/) {
     if(fnm != "" && !load_patches(inm)) return false;
     #ifdef STAND_ALONE
     for(auto it = bank_data.begin(); it != bank_data.end(); ++it) {
-        std::cout<<"Bank: "<<int((*it).bank)<<" Patch: "<<int((*it).patch);
-        if((*it).name != "N/A") std::cout<<" Name: "<<(*it).name;
-        if((*it).ad_patchdata.size() > 0) std::cout<<" Has Adblib Data, size: "<<(*it).ad_patchdata.size()<<"  {";
-        if((*it).ad_patchdata.size() == 0x0e) for(auto it2 = (*it).ad_patchdata.begin(); it2 != (*it).ad_patchdata.end(); ++it2) std::cout<<std::hex<<" "<<int(*it2)<<std::dec;
-        else if((*it).ad_patchdata.size() > 0x0e) {
-            //Go to beginning of large patch
-            auto it2 = (*it).ad_patchdata.begin();
-            //Print out the size
-            std::cout<<std::hex<<std::setfill('0')<<std::setw(2)<<int(*it2++)<<std::setw(2)<<int(*it2++)<<std::endl;
-            //print out the rest of the data
-            std::cout<<"Transpose: "<<std::setw(2)<<int(*it2++)<<std::endl;
-            std::cout<<"Type: "<<std::setw(2)<<int(*it2++)<<std::endl;
-            std::cout<<"Duration (in 120Hz ticks): "<<std::setw(2)<<int(*(++it2))<<std::setw(2)<<int(*(--it2))<<std::endl; it2+=2;
-            std::string types[] = {"init value", "play offset", "release offset"};
-            enum e_types {init,play,release, t_count};
-            std::string data[] = {"f", "v0", "v1", "p", "fb", "m0", "m1", "ws"};
-            enum e_data {f,v0,v1,p,fb,m0,m1,ws, d_count};
-            bool extra_dat = false;
-            for(int i=0;i<d_count;++i) {
-                for(int j=0;j<t_count;++j) {
-                    uint16_t low = *(it2++);
-                    uint16_t high = *(it2++);
-                    if(i == f && j == play && low > 0x34) extra_dat = true; 
-                    std::cout<<data[i]<<" ("<<types[j]<<"): "<<std::setw(2)<<high<<std::setw(2)<<low<<std::endl;
-                }
-            }
-            if(extra_dat) std::cout<<"Contains 8 bytes of extra data to change default adsr values"<<std::endl;
-            while(it2 != (*it).ad_patchdata.end()) {
-                for(size_t count = 0;it2 != (*it).ad_patchdata.end() && count < 16; count+=2) {
-                    uint16_t low = *(it2++);
-                    uint16_t high = *(it2++);
-                    std::cout<<std::hex<<" "<<std::setw(2)<<high<<std::setw(2)<<low;
-                }
-                std::cout<<std::endl;
-            }
-            std::cout<<std::dec;
+        std::cout<<"Bank: "<<int(it->bank)<<" Patch: "<<int(it->patch);
+        if(it->name != "") {
+            std::cout<<" Name: "<<it->name;
         }
-        if((*it).mt_patchdata.size() > 0) std::cout<<" Has MT-32  Data, size: "<<(*it).mt_patchdata.size();
-        std::cout<<" }"<<std::endl;
-        //if((*it).ad_patchdata.size()==0xe)
-        //     print_opl((*it).ad_patchdatastruct);
+        if(it->mt_patchdata.size() > 0) std::cout<<" Has MT-32  Data, size: "<<it->mt_patchdata.size()<<"\n";
+        if(it->ad_patchdata.size() > 0) {
+            std::cout<<" Has Adblib Data, size: "<<it->ad_patchdata.size()<<"  {\n";
+            for(auto it2 = it->ad_patchdata.begin(); it2 != it->ad_patchdata.end(); ++it2) {
+                std::cout<<std::hex<<" "<<int(*it2)<<std::dec;
+            }
+            std::cout<<"\n}"<<std::endl;
+            if(it->has_opl2) {
+                print_opl(it->ad_patchdatastruct);
+            }
+            else if(it->has_tvfx) {
+                print_tvfx(it->tv_patchdatastruct);
+            }
+        }
     }
     #endif
     return true;
@@ -147,6 +153,24 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     for(auto it = upf.bank_data.begin();it != upf.bank_data.end();++it) {
+        std::cout<<"Bank: "<<int(it->bank)<<" Patch: "<<int(it->patch);
+        if(it->name != "") {
+            std::cout<<" Name: "<<it->name;
+        }
+        if(it->mt_patchdata.size() > 0) std::cout<<" Has MT-32  Data, size: "<<it->mt_patchdata.size()<<"\n";
+        if(it->ad_patchdata.size() > 0) {
+        std::cout<<" Has Adblib Data, size: "<<it->ad_patchdata.size()<<"  {\n";
+        for(auto it2 = it->ad_patchdata.begin(); it2 != it->ad_patchdata.end(); ++it2) {
+            std::cout<<std::hex<<" "<<int(*it2)<<std::dec;
+        }
+        std::cout<<"\n}"<<std::endl;
+        if(it->has_opl2) {
+            uw_patch_file::print_opl(it->ad_patchdatastruct);
+        }
+        else if(it->has_tvfx) {
+            uw_patch_file::print_tvfx(it->tv_patchdatastruct);
+        }
+    }
         uw_patch_file::print_opl(it->ad_patchdatastruct);
     }
 }

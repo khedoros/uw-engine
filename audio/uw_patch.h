@@ -62,23 +62,78 @@ public:
 
         uint8_t car_waveform;
     };
+    
+    struct __attribute__((packed)) tvfx_init {
+        uint16_t size;
+        uint8_t transpose;
+        uint8_t type;
+        uint16_t duration;
+
+        uint16_t init_f_val;
+        uint16_t keyon_f_offset;
+        uint16_t release_f_offset;
+
+        uint16_t init_v0_val;
+        uint16_t keyon_v0_offset;
+        uint16_t release_v0_offset;
+
+        uint16_t init_v1_val;
+        uint16_t keyon_v1_offset;
+        uint16_t release_v1_offset;
+
+        uint16_t init_p_val;
+        uint16_t keyon_p_offset;
+        uint16_t release_p_offset;
+
+        uint16_t init_fb_val;
+        uint16_t keyon_fb_offset;
+        uint16_t release_fb_offset;
+
+        uint16_t init_m0_val;
+        uint16_t keyon_m0_offset;
+        uint16_t release_m0_offset;
+
+        uint16_t init_m1_val;
+        uint16_t keyon_m1_offset;
+        uint16_t release_m1_offset;
+
+        uint16_t init_ws_val;
+        uint16_t keyon_ws_offset;
+        uint16_t release_ws_offset;
+    };
+
+    struct __attribute__((packed)) tvfx_init_opt {
+        uint8_t keyon_ad_1;
+        uint8_t keyon_sr_1;
+        uint8_t keyon_ad_0;
+        uint8_t keyon_sr_0;
+
+        uint8_t release_ad_1;
+        uint8_t release_sr_1;
+        uint8_t release_ad_0;
+        uint8_t release_sr_0;
+    };
+
+    struct tvfx_patch {
+        tvfx_patch() : init{0}, opt{0}, uses_opt(false), offset(0x36), update_data(0) {};
+        tvfx_init init;
+        tvfx_init_opt opt;
+        bool uses_opt;
+        size_t offset;
+        std::vector<int16_t> update_data;
+    };
 
     struct patchdat {
-        patchdat() : bank(0), patch(0), name("N/A"), ad_patchdatastruct(), ad_patchdata(0), mt_patchdata(0) {};
-        patchdat(uint8_t b, uint8_t p, std::vector<uint8_t> d, opl2_patch ad, std::string n = "N/A") : bank(b), patch(p), name(n), ad_patchdatastruct(ad) {
-            //std::cout<<int(bank)<<": "<<int(patch)<<": ";
-            if(d.size() == 0xf8) { mt_patchdata = d; /*std::cout<<"Init'd MT Patch data"<<std::endl;*/ }
-            else { ad_patchdata = d; /*std::cout<<"Init'd Adlib Patch data"<<std::endl;*/ }
-        };
-        void setpat(std::vector<uint8_t> d) {
-            //std::cout<<int(bank)<<": "<<int(patch)<<": ";
-            if(d.size() == 0xf8) { mt_patchdata = d; /*std::cout<<"Added MT Patch data"<<std::endl;*/ }
-            else { ad_patchdata = d;/* std::cout<<"Added Adlib Patch data"<<std::endl;*/ }
-        }
+        patchdat() : bank(0), patch(0), name(""), has_opl2(false), has_tvfx(false), has_mt(false), ad_patchdatastruct{0}, tv_patchdatastruct(), ad_patchdata(0), mt_patchdata(0) {};
+        void setpat(std::vector<uint8_t> d,uint8_t b, uint8_t p);
         uint8_t bank;
         uint8_t patch;
         std::string name;
+        bool has_opl2;
+        bool has_tvfx;
+        bool has_mt;
         opl2_patch ad_patchdatastruct;
+        tvfx_patch tv_patchdatastruct;
         std::vector<uint8_t> ad_patchdata;
         std::vector<uint8_t> mt_patchdata;
     };
@@ -96,6 +151,26 @@ public:
        std::cout<<"\tAttack: "<<int(p.mod_attack)<<" Release: "<<int(p.mod_release)<<" Sustain Lvl: "<<int(p.mod_sustain_lvl)<<" Carrier Waveform: "<<int(p.mod_waveform)<<std::endl<<std::endl;
     }
  
+    static void print_tvfx(tvfx_patch p) {
+       std::cout<<std::hex<<"Size: "<<p.init.size<<"\nTranspose: "<<int(p.init.transpose)<<"\nType: "<<int(p.init.type)<<"\nDuration (in 120Hz ticks): "<<p.init.duration<<std::endl;
+       std::cout<<"Freq\tinit: "<<p.init.init_f_val<<"\tKeyon list: "<<p.init.keyon_f_offset<<"\tRelease list: "<<p.init.release_f_offset<<std::endl;
+       std::cout<<"Vol0\tinit: "<<p.init.init_v0_val<<"\tKeyon list: "<<p.init.keyon_v0_offset<<"\tRelease list: "<<p.init.release_v0_offset<<std::endl;
+       std::cout<<"Vol1\tinit: "<<p.init.init_v1_val<<"\tKeyon list: "<<p.init.keyon_v1_offset<<"\tRelease list: "<<p.init.release_v1_offset<<std::endl;
+       std::cout<<"Priority\tinit: "<<p.init.init_p_val<<"\tKeyon list: "<<p.init.keyon_p_offset<<"\tRelease list: "<<p.init.release_p_offset<<std::endl;
+       std::cout<<"Feedback\tinit: "<<p.init.init_fb_val<<"\tKeyon list: "<<p.init.keyon_fb_offset<<"\tRelease list: "<<p.init.release_fb_offset<<std::endl;
+       std::cout<<"M0\tinit: "<<p.init.init_m0_val<<"\tKeyon list: "<<p.init.keyon_m0_offset<<"\tRelease list: "<<p.init.release_m0_offset<<std::endl;
+       std::cout<<"M1\tinit: "<<p.init.init_m1_val<<"\tKeyon list: "<<p.init.keyon_m1_offset<<"\tRelease list: "<<p.init.release_m1_offset<<std::endl;
+       std::cout<<"Waveform\tinit: "<<p.init.init_ws_val<<"\tKeyon list: "<<p.init.keyon_ws_offset<<"\tRelease list: "<<p.init.release_ws_offset<<std::endl;
+       if(p.uses_opt) std::cout<<"\nContains 8 bytes of extra data to change default adsr values:";
+       std::cout<<"\n\tKeyOn AD1: "<<int(p.opt.keyon_ad_1)<<"\n\tKeyOn SR1: "<<int(p.opt.keyon_sr_1)<<"\n\tKeyOn AD0: "<<int(p.opt.keyon_ad_0)<<"\n\tKeyOn SR0: "<<int(p.opt.keyon_sr_0);
+       std::cout<<"\n\tRelease AD1: "<<int(p.opt.release_ad_1)<<"\n\tRelease SR1: "<<int(p.opt.release_sr_1)<<"\n\tRelease AD0: "<<int(p.opt.release_ad_0)<<"\n\tRelease SR0: "<<int(p.opt.release_sr_0)<<std::endl;
+       std::cout<<"List data dump (first word is at byte offset "<<p.offset<<"): "<<std::endl;
+       for(auto i: p.update_data) {
+           std::cout<<i<<" ";
+       }
+       std::cout<<std::endl<<std::dec;
+    }
+
     bool load(std::string fna, std::string fnm = "");
 
     std::vector<patchdat> bank_data;

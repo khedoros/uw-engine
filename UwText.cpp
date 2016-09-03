@@ -3,6 +3,7 @@
 #include <string>
 #include<vector>
 #include "UwText.h"
+#include<cstdio>
 
 UwText::UwText() {}
 
@@ -61,7 +62,7 @@ bool UwText::load(std::string filename) {
 
     uint16_t block_count;
     in>>block_count;
-    //std::cout<<block_count<<" text blocks in the file."<<std::endl;
+    std::cout<<block_count<<" text blocks in the file."<<std::endl;
     blocks.resize(block_count);
     for(int i=0;i<block_count;++i) {
         std::string n;
@@ -155,15 +156,50 @@ bool UwText::process_block(binifstream& in, int num) {
     in.seekg(d->block_off,std::ios::beg);
     uint16_t string_count;
     in>>string_count;
-    //std::cout<<"Found block "<<d.block_num<<" (\""<<d.name<<"\", "<<string_count<<" strings at offset: "<<d.block_off<<")"<<std::endl;
+    std::cout<<"Found block "<<d->block_num<<" (\""<<d->name<<"\", "<<string_count<<" strings at offset: "<<d->block_off<<")"<<std::endl;
     std::vector<uint16_t> str_off;
     str_off.resize(string_count);
     d->strings.resize(string_count);
     size_t BASE_OFFSET = d->block_off + 2 + 2 * string_count;
     for(int i=0;i<string_count;++i) {
         in>>str_off[i];
-        //std::cout<<"String "<<i<<": Offset: "<<str_off[i] + BASE_OFFSET<<" Val: ";
-        d->strings[i]=decode_string(in, BASE_OFFSET + str_off[i]);
+        uint8_t min[2] = {0xff};
+        uint8_t max[2] = {0};
+        std::cout<<std::dec<<"String "<<i<<": Offset: "<<str_off[i] + BASE_OFFSET<<std::hex<<" Val: ";
+        if(nodes.size() == 0) {
+            size_t bookmark = in.tellg();
+            in.seekg(BASE_OFFSET+str_off[i],std::ios::beg);
+            std::string retval;
+            char temp_buff[40];
+            char out_buff[40];
+            uint8_t buf,buf2 = 0;
+            for(int j=0;j<40;j+=2) {
+                in>>buf>>buf2;
+                sprintf(&temp_buff[0],"%02X %02X ",buf,buf2);
+                retval+=temp_buff;
+
+                if(buf<min[0]) min[0] = buf;
+                if(buf>max[0]) max[0] = buf;
+                if(buf2<min[1]) min[1] = buf2;
+                if(buf2>max[1]) max[1] = buf2;
+                out_buff[j]=buf; out_buff[j+1]=buf2;
+                //if(buf >= 33 && buf <= 94)      out_buff[j] = (buf+1)/2 + 112;
+                //else if(buf >=95 && buf <= 126) out_buff[j] = (buf+1)/2 + 176;
+                //else {std::cout<<"byte 1 out of expected range ("<<std::hex<<int(buf)<<")"<<std::endl; out_buff[j] = 0; }
+
+                //if(buf % 2 == 0) out_buff[j+1] = buf2 + 126;
+                //else out_buff[j+1] = buf2 + 31 + (buf2/96);
+            }
+            std::ofstream out_test("test.txt");
+            out_test.write(&out_buff[0], 40);
+            out_test.close();
+            in.seekg(bookmark,std::ios::beg);
+            d->strings[i] = retval;
+            std::cout<<retval<<"First byte: ["<<std::hex<<int(min[0])<<", "<<int(max[0])<<"] Second byte: ["<<int(min[1])<<", "<<int(max[1])<<"]"<<std::endl;
+        }
+        else {
+            d->strings[i]=decode_string(in, BASE_OFFSET + str_off[i]);
+        }
         //std::cout<<d.strings[i]<<std::endl;
     }
 
