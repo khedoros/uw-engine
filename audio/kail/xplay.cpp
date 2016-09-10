@@ -3,9 +3,8 @@
 #include "../xmi.h"
 #include<iostream>
 #include<fstream>
-#include<stdint>
+#include<cstdint>
 #include<string>
-#include<vector>
 
 using namespace std;
 
