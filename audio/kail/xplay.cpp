@@ -21,9 +21,15 @@ int main(int argc, char *argv[]) {
 
     if(argc == 4) seqnum = stoi(argv[3]);
 
+    uw_patch_file gtl;
+    if(!gtl.load(argv[2])) { //Loads one or two timbre definition files, and provides access to their data
+        cerr<<"Couldn't load timbres from "<<argv[2]<<". Aborting.\n";
+        return 1;
+    }
+
     //load driver: Just one driver, static-linked into the program. We don't have to worry about any others.
 
-    kail_startup(); //init SFML audio system, init data structures for tracking music and audio
+    kail_startup(gtl); //init SFML audio system, init data structures for tracking music and audio
 
     //register driver: Maybe if I reimplement some of this as a dynamically-loaded library
 
@@ -41,14 +47,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    uw_patch_file gtl;
-    if(!gtl.load(argv[2])) { //Loads one or two timbre definition files, and provides access to their data
-        cerr<<"Couldn't load timbres from "<<argv[2]<<". Aborting.\n";
-        return 1;
-    }
-
     kail_seq seq;
-    if(!seq.load(midi_file, gtl, seqnum)) {
+    if(!seq.load(midi_file, seqnum)) {
         cerr<<"Invalid sequence number or bad MIDI file. Aborting.\n";
         return 1;
     }
