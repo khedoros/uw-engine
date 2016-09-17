@@ -18,7 +18,17 @@ static OPLEmul * opl = nullptr;
 
 void kail_startup(const uw_patch_file& p);
 void kail_shutdown();
+void reset_synth();
+
 class kail_seq : public sf::SoundStream {
+    private:
+        class kail_seq_state {
+            //Tracks the current state of this sequence
+        };
+        
+        xmi music;
+        kail_seq_state state;
+
     public:
     bool load(xmi& x, const uint16_t seqnum);
     virtual void play();

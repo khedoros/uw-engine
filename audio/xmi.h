@@ -16,7 +16,10 @@ public:
     bool load(string fn);
     pair<uint8_t, uint8_t> * next_timbre();
     void reset_timbre_it() { t_it = timbres.begin(); }
+
     midi_event * next_event();
+    vector<midi_event>::iterator& get_event_it() { return e_it; };
+    void set_event_it(vector<midi_event>::iterator& new_it) { e_it = new_it; };
     uint32_t tick_count();
 private:
     uint32_t tag(const char chars[5]);

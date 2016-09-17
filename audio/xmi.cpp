@@ -140,7 +140,7 @@ bool xmi::load_events(binifstream &in) {
         }
         else {
             switch(event & 0xf0) {
-            case 0x90:
+            case 0x90: // NOTE ON
                 in>>note>>velocity;
                 //cout<<hex<<"Note on (channel: "<<(event&0x0f)<<" note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<dec<<curtime<<")"<<endl;
                 data.push_back(note);
@@ -151,27 +151,27 @@ bool xmi::load_events(binifstream &in) {
                 //cout<<"Note off (note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<dec<<note_off_time<<")"<<endl;
                 events.push_back(midi_event(note_off_time, data));
                 break;
-            case 0xb0:
+            case 0xb0: //CTRL_CHANGE
                 in>>controller>>value;
                 //cout<<"Control change ("<<hex<<int(controller)<<" = "<<int(value)<<")"<<endl;
                 data.push_back(controller);
                 data.push_back(value);
                 events.push_back(midi_event(curtime, data));
                 break;
-            case 0xc0:
+            case 0xc0: //PRG_CHANGE
                 in>>value;
                 //cout<<"Patch change (Channel #"<<(event&0x0f)<<" = "<<int(value)<<")"<<endl;
                 data.push_back(value);
                 events.push_back(midi_event(curtime, data));
                 break;
-            case 0xe0:
+            case 0xe0: //PITCH_WHEEL
                 in>>value;
                 data.push_back(value);
                 in>>value;
                 data.push_back(value);
                 events.push_back(midi_event(curtime, data));
                 break;
-            case 0xf0:
+            case 0xf0: //META_EVENT
                 in>>meta_event>>meta_size;
                 //cout<<"Meta event "<<hex<<int(meta_event);
                 data.push_back(meta_event);
