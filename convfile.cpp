@@ -2,13 +2,9 @@
 #include "convfile.h"
 #include "util.h"
 
-bool convfile::load(std::string& cnvfile, std::string& globfile) {
-    bool retval = load_cnv(cnvfile) && load_globals(globfile);
-    if(!retval) std::cout<<"There was an error loading either "<<cnvfile<<" or "<<globfile<<std::endl;
-    return retval;
-}
+//Implements the conversation program loader
 
-bool convfile::load_cnv(std::string& cnvfile) {
+bool convfile::load(std::string& cnvfile) {
     binifstream in;
     in.open(cnvfile.c_str());
     if(!in.is_open()) {
@@ -227,25 +223,20 @@ bool convfile::load_cnv(std::string& cnvfile) {
             in.seekg(bookmark, std::ios::beg);
         }
     }
-    return false;
-}
-
-bool convfile::load_globals(std::string& globfile) {
-    return false;
+    return true;
 }
 
 #ifdef STAND_ALONE
 int main(int argc, char *argv[]) {
     bool retval = false;
-    std::string cnvfile, globfile;
-    if(argc == 3) {
+    std::string cnvfile;
+    if(argc == 2) {
         convfile cnv;
         cnvfile = argv[1];
-        globfile = argv[2];
-        retval = cnv.load(cnvfile, globfile);
+        retval = cnv.load(cnvfile);
     }
-    if(!retval || argc != 3) {
-        std::cerr<<"Provide a conversation archive and a global variables file."<<std::endl;
+    if(!retval || argc != 2) {
+        std::cerr<<"Provide a conversation archive in your argument."<<std::endl;
         return 1;
     }
     return 0;

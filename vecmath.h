@@ -1,6 +1,4 @@
-#ifndef VECMATH_H
-#define VECMATH_H
-
+#pragma once
 #include <cfloat>
 #include <cmath>
 
@@ -242,4 +240,3 @@ inline mat4 operator *(const mat4& m, const mat4& n)
         m.x.w*n.w.x + m.y.w*n.w.y + m.z.w*n.w.z + m.w.w*n.w.w);
 }
 
-#endif // VECMATH_H

@@ -1,5 +1,4 @@
-#ifndef MAPPARSER_H
-#define MAPPARSER_H
+#pragma once
 #include "util.h"
 #include<vector>
 
@@ -80,4 +79,4 @@ private:
 
     uw_map::level_section get_section_type(size_t index);
 };
-#endif
+

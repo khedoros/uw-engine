@@ -1,5 +1,4 @@
-#ifndef TEXFILE_H
-#define TEXFILE_H
+#pragma once
 #include<SFML/Graphics.hpp>
 #include<string>
 #include<vector>
@@ -44,4 +43,3 @@ private:
     std::vector< std::vector<color> > altpal;
 };
 
-#endif

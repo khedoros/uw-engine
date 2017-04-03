@@ -1,6 +1,4 @@
-#ifndef PALETTE_H
-#define PALETTE_H
-
+#pragma once
 #include "util.h"
 #include <vector>
 #include <string>
@@ -17,5 +15,3 @@ public:
 private:
     std::vector<color> colors;
 };
-#else
-#endif

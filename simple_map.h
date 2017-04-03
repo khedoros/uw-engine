@@ -1,3 +1,4 @@
+#pragma once
 #include "UwText.h"
 #include<iostream>
 #include<string>
@@ -146,3 +147,4 @@ private:
     uint8_t   get_wall_index(uint16_t dat2);
     uint16_t  get_obj_list_start(uint16_t dat2);
 };
+

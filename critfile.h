@@ -1,5 +1,4 @@
-#ifndef CRITFILE_H
-#define CRITFILE_H
+#pragma once
 #include<SFML/Graphics.hpp>
 #include<string>
 #include<vector>
@@ -73,4 +72,3 @@ private:
     uint16_t nibble_count;
 };
 
-#endif

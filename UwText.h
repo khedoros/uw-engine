@@ -1,10 +1,9 @@
+#pragma once
 #include<iostream>
 #include "util.h"
 #include <string>
 #include<vector>
 
-#ifndef UWTEXT_H
-#define UWTEXT_H
 class UwText {
 public:
     UwText();
@@ -35,4 +34,4 @@ private:
     std::string decode_string(binifstream& in, size_t offset);
     bool process_block(binifstream& in, int num);
 };
-#endif
+

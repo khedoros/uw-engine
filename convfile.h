@@ -1,15 +1,11 @@
-#ifndef CONVFILE_H
-#define CONVFILE_H
-
+#pragma once
 #include<string>
 #include<vector>
 
 class convfile {
 public:
     convfile() {}
-    bool load(std::string& cnvfile, std::string& globfile);
-    bool load_cnv(std::string& cnvfile);
-    bool load_globals(std::string& globfile);
+    bool load(std::string& cnvfile);
 
     class conversation {
     public:
@@ -26,4 +22,3 @@ public:
 class convemu {
 
 };
-#endif
