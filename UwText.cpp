@@ -62,7 +62,7 @@ bool UwText::load(std::string filename) {
 
     uint16_t block_count;
     in>>block_count;
-    std::cout<<block_count<<" text blocks in the file."<<std::endl;
+    //std::cout<<block_count<<" text blocks in the file."<<std::endl;
     blocks.resize(block_count);
     for(int i=0;i<block_count;++i) {
         std::string n;
@@ -156,7 +156,7 @@ bool UwText::process_block(binifstream& in, int num) {
     in.seekg(d->block_off,std::ios::beg);
     uint16_t string_count;
     in>>string_count;
-    std::cout<<"Found block "<<d->block_num<<" (\""<<d->name<<"\", "<<string_count<<" strings at offset: "<<d->block_off<<")"<<std::endl;
+    //std::cout<<"Found block "<<d->block_num<<" (\""<<d->name<<"\", "<<string_count<<" strings at offset: "<<d->block_off<<")"<<std::endl;
     std::vector<uint16_t> str_off;
     str_off.resize(string_count);
     d->strings.resize(string_count);
@@ -165,7 +165,7 @@ bool UwText::process_block(binifstream& in, int num) {
         in>>str_off[i];
         uint8_t min[2] = {0xff};
         uint8_t max[2] = {0};
-        std::cout<<std::dec<<"String "<<i<<": Offset: "<<str_off[i] + BASE_OFFSET<<std::hex<<" Val: ";
+        //std::cout<<std::dec<<"String "<<i<<": Offset: "<<str_off[i] + BASE_OFFSET<<std::hex<<" Val: ";
         if(nodes.size() == 0) {
             size_t bookmark = in.tellg();
             in.seekg(BASE_OFFSET+str_off[i],std::ios::beg);
@@ -195,7 +195,7 @@ bool UwText::process_block(binifstream& in, int num) {
             out_test.close();
             in.seekg(bookmark,std::ios::beg);
             d->strings[i] = retval;
-            std::cout<<retval<<"First byte: ["<<std::hex<<int(min[0])<<", "<<int(max[0])<<"] Second byte: ["<<int(min[1])<<", "<<int(max[1])<<"]"<<std::endl;
+            //std::cout<<retval<<"First byte: ["<<std::hex<<int(min[0])<<", "<<int(max[0])<<"] Second byte: ["<<int(min[1])<<", "<<int(max[1])<<"]"<<std::endl;
         }
         else {
             d->strings[i]=decode_string(in, BASE_OFFSET + str_off[i]);

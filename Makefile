@@ -1,6 +1,6 @@
 SFML_LIB :=-L/usr/lib -L/usr/local/lib -lsfml-window -lsfml-graphics -lsfml-system -lsfml-audio
 
-all: texfile play_xmi sfml-fixed-engine sfml-shader-engine simple_map UwText critfile convfile engine 3dmodel uwfont
+all: texfile play_xmi sfml-fixed-engine sfml-shader-engine simple_map UwText critfile convfile engine 3dmodel uwfont convvm
 
 texfile: texfile.cpp texfile.h util.cpp util.h
 	g++ texfile.cpp util.cpp -DSTAND_ALONE -o texfile $(SFML_LIB)
@@ -31,6 +31,9 @@ critfile: critfile.cpp critfile.h util.cpp util.h
 
 convfile: convfile.cpp convfile.h util.cpp util.h UwText.cpp UwText.h
 	g++ convfile.cpp util.cpp UwText.cpp -std=c++11 -DSTAND_ALONE -o convfile
+
+convvm: convvm.cpp convvm.h convfile.cpp convfile.h util.cpp util.h UwText.cpp UwText.h globfile.cpp globfile.h savefile.cpp savefile.h
+	g++ convvm.cpp convfile.cpp util.cpp UwText.cpp globfile.cpp savefile.cpp -std=c++11 -DSTAND_ALONE_VM -o convvm
 
 engine: engine.cpp
 	g++ engine.cpp -lGL -lGLU -lglut -o engine

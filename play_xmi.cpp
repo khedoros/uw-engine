@@ -699,7 +699,7 @@ void play_midi(unsigned int midi_data_size) { //SDL-based play_midi method
 void play_midi(unsigned int midi_data_size) { //SFML-based play_midi method
     int status=mid_init("/usr/share/midi/eawpats12/timidity.cfg");
     cout<<"Timidity initiation: "<<status<<endl;
-    MidIStream *stream=mid_istream_open_mem(&(midi_buffer[0]),midi_data_size);
+    MidIStream *stream=mid_istream_open_mem(&(midi_buffer[0]),midi_data_size, false);
     MidSongOptions *opts=new MidSongOptions;
     opts->rate=22050;
     opts->channels=2;

@@ -1,17 +1,23 @@
 #include<iostream>
 #include "convfile.h"
+#include "UwText.h"
 #include "util.h"
 
 //Implements the conversation program loader
 
 bool convfile::load(std::string& cnvfile) {
+    UwText txt;
+    std::string txtfile(cnvfile);
+    txt.load(txtfile.replace(txtfile.end()-7,txtfile.end(),"strings.pak"));
+    int str_block = 6;
+    int block_size = txt.get_string_count(str_block);
+    uint16_t cnv_count;
     binifstream in;
     in.open(cnvfile.c_str());
     if(!in.is_open()) {
         std::cerr<<"Couldn't open "<<cnvfile<<". Aborting."<<std::endl;
         return false;
     }
-    uint16_t cnv_count;
     in>>cnv_count;
     std::cout<<cnv_count<<" conversations in this file."<<std::endl;
     std::vector<uint32_t> offsets;
@@ -20,7 +26,12 @@ bool convfile::load(std::string& cnvfile) {
     for(uint32_t i=0;i<cnv_count;++i) {
         offsets[i] = read32(in);
         if(offsets[i] != 0) {
-            std::cout<<"Conversation #"<<i<<" offset: "<<offsets[i]<<std::endl;
+            std::cout<<"Conversation #"<<i<<" offset: "<<offsets[i]<<"  (";
+            std::string speaker;
+            if(i>block_size) speaker = "Invalid?";
+            else speaker = txt.get_string(str_block, i+16);
+            if(speaker == "") speaker = "None";
+            std::cout<<speaker<<")"<<std::endl;
             size_t bookmark = in.tellg();
             in.seekg(offsets[i], std::ios::beg);
 
@@ -61,7 +72,7 @@ bool convfile::load(std::string& cnvfile) {
                 else
                     std::cerr<<"Unknown import type!"<<std::endl;
             }
-            std::vector<uint16_t> *binary = &(convos[i].code);
+            std::vector<int16_t> *binary = &(convos[i].code);
             binary->resize(code_size);
             uint32_t addr = 0;
             for(auto it = binary->begin(); it != binary->end(); ++it) {

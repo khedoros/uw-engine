@@ -9,7 +9,7 @@ public:
 
     class conversation {
     public:
-        std::vector<uint16_t> code;
+        std::vector<int16_t> code;
         uint16_t string_block;
         uint16_t var_slots;
         std::vector<std::string> functs;

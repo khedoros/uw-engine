@@ -3,10 +3,12 @@
 #include "convfile.h"
 #include "globfile.h"
 #include "savefile.h"
+#include "UwText.h"
+#include<vector>
 
 class convvm {
 public:
-    convvm(int w, convfile& c, globfile& g, savefile& s) : who(w), conv(c), glob(g), save(s) 
+    convvm(int, convfile&, globfile&, savefile&, UwText&);
     std::string& step();
     int who;
     convfile conv;
@@ -18,8 +20,8 @@ private:
     int sp;
     int bp;
     int16_t result;
-    int16_t data_stack[32*1024];
-    int16_t code_stack[32*1024];
+    std::vector<int16_t> data_stack;
+    std::vector<int16_t> code_stack;
 
     void push(int16_t val);
     int16_t pop();

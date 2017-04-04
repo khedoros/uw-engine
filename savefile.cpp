@@ -4,6 +4,7 @@
 #include<stdint.h>
 using namespace std;
 
+#ifdef STANDALONE_SAVE
 int main(int argc, char **argv) {
     ifstream in("PLAYER.DAT");
     if(!in.is_open()) {
@@ -92,3 +93,4 @@ int main(int argc, char **argv) {
     cout<<"Current health (??): "<<int(data[i++])<<hex<<'	'<<i<<dec<<endl;
     return 0;
 }
+#endif
