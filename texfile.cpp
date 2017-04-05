@@ -1,6 +1,7 @@
 #include "texfile.h"
 #include "util.h"
 #include<iostream>
+#include<string>
 
 #ifdef STAND_ALONE
 int main(int argc, char *argv[]) {
@@ -72,6 +73,12 @@ int main(int argc, char *argv[]) {
                 sprite_num--;
             else if(key==sf::Keyboard::Right)
                 sprite_num++;
+            else if(key==sf::Keyboard::D) {
+                for(int i=0;i<tf.tex.size();++i) {
+                    sf::Image temp = tf.tex[i].copyToImage();
+                    temp.saveToFile(texfile + "-" + std::to_string(i) + ".png");
+                }
+            }
             if(sprite_num == tf.tex.size()) sprite_num = 0;
             else if(sprite_num == -1) sprite_num = tf.tex.size() - 1;
 
