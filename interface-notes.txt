@@ -1,0 +1,95 @@
+chains.gr: chains beneath the paper doll panel. 8 frames of the bottom of the chain, 8 frames of the top.
+compass.gr:
+frame 0: straight compass, no "north" mark
+frame 1-3: counter-clockwise rotations
+frame 4-19: red compass-points, also rotating counter-clockwise.
+
+converse.gr:
+frame 0: name box
+frame 1: trade boxes
+frame 2: face boxes
+frame 3: top of conversation scroll
+frame 4: bottom of conversation scroll
+frame 5: paperdoll background on right
+
+cursors.gr:
+frame 0: cross
+1: forward
+2: backward
+3: slide left
+4: slide right
+5: sharp left
+6: sharp right
+7: forward left
+8: forward right
+9: magic projectile
+10: magic enchant
+11: red x
+12: rest quill
+13: blotter
+14: writing quill
+15-18: looks like a white, rotating ankh?
+
+dragons.gr:
+0: left dragon, curve of back near head
+1: left dragon, head and arms
+2-5: left dragon, hands fidgeting
+6-9: left dragon, face laughing
+10-13: left dragon, head and arms, cowering
+14-17: left dragon, top of tail moving
+18: right dragon, curve of back near head
+19: right dragon, head and arms
+20-23: right dragon, hands fidgeting
+24-27: right dragon, face laughing
+28-31: right dragon, head and arms, cowering
+32-35: right dragon, top of tail moving
+
+eyes.gr:
+0: unlit
+1-3: greens, getting brighter
+4-6: yellows, getting brighter
+7-9: reds, getting brighter
+
+flasks.gr:
+0-12: red levels
+13-24: red roiling, partially full
+25-37: blue levels
+38-49: blue roiling, partially full
+50-62: green levels
+63-74: green roiling, partially full
+75: empty
+76: bottle mask
+
+inv.gr:
+0-5: inventory masks?
+6: empty bag interface
+
+lfti.gr:
+0-1: "O" unlit and lit
+2-3: "Mouth" unlit and lit
+4-5: "Grab" unlit and lit
+6-7: "Eye" unlit and lit
+8-9: "Sword" unlit and lit
+10-11: "Key" unlit and lit
+
+main.byt: Main window without animated elements
+
+panels.gr:
+0: Inventory
+1: Runes
+2: Character sheet
+3: Horizontal "braiding"?
+
+power.gr (hit strength crystal):
+0-8: unlit to yellow
+9-13: glittering green
+
+pres1.byt+pres2.byt: "Presented by" windows
+
+scrledge.gr:
+0-4: Left msg board scrolling
+5-9: Right msg board scrolling
+10-15: Left conversation board scrolling?
+16-21: Right conversation board scrolling?
+
+
