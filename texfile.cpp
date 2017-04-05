@@ -280,6 +280,10 @@ sf::Texture texfile::read_bmp(std::ifstream& in, const uint32_t offset, const bo
         yres = read8(in);
     }
     else {
+        //Image alignment is off by 2 pixels if I don't do this:
+        in.seekg(offset-2, std::ios::beg);
+
+        //Image doesn't have a header, and these are the known-correct values
         type = 4;
         xres = 83;
         yres = 114;
