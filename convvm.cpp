@@ -18,8 +18,20 @@ convvm::convvm(int w, convfile& c, globfile& g, savefile& s, UwText& t) : who(w)
     std::copy(conv.convos[who].code.begin(), conv.convos[who].code.end(), code_stack.begin());
 };
 
+void convvm::start() {
+    int16_t op = 1;
+    //while(op != 0x26 /*EXIT_OP*/) {
+    //}
+}
 #ifdef STAND_ALONE_VM
 int main() {
-    std::cout<<"Yeah? It's the convo VM code. So what?"<<std::endl;
+    int who = 291; //Small conversation with an attacking ghoul
+    convfile c;
+    globfile g;
+    savefile s;
+    UwText t;
+    c.load(std::string("../uw/uw/data/cnv.ark"));
+    convvm vm(who, c,g,s,t);
+    vm.start();
 }
 #endif
