@@ -10,6 +10,7 @@ class convvm {
 public:
     convvm(int, convfile&, globfile&, savefile&, UwText&);
     std::string& step();
+    std::string op_str(int op);
     int who;
     convfile conv;
     globfile glob;
@@ -22,6 +23,8 @@ private:
     int16_t result;
     std::vector<int16_t> data_stack;
     std::vector<int16_t> code_stack;
+
+    std::string op_strs[42];
 
     void push(int16_t val);
     int16_t pop();
