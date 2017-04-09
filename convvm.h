@@ -9,6 +9,7 @@
 class convvm {
 public:
     convvm(int, convfile&, globfile&, savefile&, UwText&);
+    void start();
     std::string& step();
     std::string op_str(int op);
     int who;
