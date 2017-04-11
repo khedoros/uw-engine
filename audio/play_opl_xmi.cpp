@@ -36,14 +36,14 @@ int8_t opl_note_assignment[18] =    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-
 
 //Which patch and bank is each MIDI channel currently set to play
 //Initialize them to 0:0
-uint8_t bank_assignment[16] =  {0,0,0,0,0,0,0,0,0,127,0,0,0,0,0,0};
-uint8_t patch_assignment[16] = {0,68,48,95,78,41,3,110,122,36,0,0,0,0,0,0};
-uint8_t channel_volume[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint8_t bank_assignment[16] =  {  0,  0,  0,  0,  0,  0,  0,  0,  0,127,  0,  0,  0,  0,  0,  0};
+uint8_t patch_assignment[16] = {  0, 68, 48, 95, 78, 41,  3,110,122, 36,  0,  0,  0,  0,  0,  0};
+uint8_t channel_volume[16] =   {  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
 
-const uint16_t voice_base[18] = {    0,     1,     2,    8,    9,  0xa, 0x10, 0x11, 0x12,
-                                 0x100, 0x101, 0x102,0x108,0x109,0x10a,0x110,0x111,0x112};
-const uint16_t voice_base2[18] = {     0,    1,    2,    3,    4,    5,    6,    7,    8,
-                                   0x100,0x101,0x102,0x103,0x104,0x105,0x106,0x107,0x108};
+const uint16_t voice_base[18] =  {    0,     1,     2,    8,    9,  0xa, 0x10, 0x11, 0x12,
+                                  0x100, 0x101, 0x102,0x108,0x109,0x10a,0x110,0x111,0x112};
+const uint16_t voice_base2[18] = {    0,     1,     2,    3,    4,    5,    6,    7,    8,
+                                  0x100, 0x101, 0x102,0x103,0x104,0x105,0x106,0x107,0x108};
 enum OPL_addresses {
     TEST       = 0x01, //Set to 0
     TIMER1     = 0x02, //'      '
@@ -60,6 +60,7 @@ enum OPL_addresses {
     FEED_CON   = 0xc0,
     WAVEFORM   = 0xe0
 };
+
 //Find the voice playing the given note on the given channel
 //-1 means "not found"
 int8_t find_playing(uint8_t channel, uint8_t note) {
@@ -461,6 +462,7 @@ int main(int argc, char* argv[]) {
                     cout<<"Done playing."<<endl;
                 }
                 delete opl;
+                opl=NULL;
                 //output_data(sample_buffer);
                 //cout<<"Left: min: "<<lminval<<" max: "<<lmaxval<<"\tRight: min: "<<rminval<<" max: "<<rmaxval<<endl;
                 return 0;
@@ -482,5 +484,6 @@ int main(int argc, char* argv[]) {
     }
     cout<<"I reached the end of the track without seeing the appropriate command. Weird."<<endl;
     delete opl;
+    opl=NULL;
     return 1;
 }
