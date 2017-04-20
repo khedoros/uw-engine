@@ -350,7 +350,7 @@ sf::Texture texfile::read_bmp(std::ifstream& in, const uint32_t offset, const bo
                     index = get_nibble(in,col,onfirst);
                     //std::cout<<"Repeat record "<<reps+1<<"/"<<multrep<<": repeat "<<std::hex<<int(index)<<" "<<count<<" times"<<std::endl;
                 }
-                for(uint16_t count_process = 0; count_process < count; count_process++) {
+                for(uint16_t count_process = 0; count_process < count && pix_index < buffer.size(); count_process++) {
                     if(!repeat) index = get_nibble(in,col,onfirst);
                     buffer[pix_index].r = altpal[altpalnum][index].r;
                     buffer[pix_index].g = altpal[altpalnum][index].g;
