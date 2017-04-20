@@ -5,7 +5,7 @@
 class convfile {
 public:
     convfile() {}
-    bool load(std::string& cnvfile);
+    bool load(const std::string& cnvfile);
 
     class conversation {
     public:

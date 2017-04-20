@@ -5,7 +5,7 @@
 
 //Implements the conversation program loader
 
-bool convfile::load(std::string& cnvfile) {
+bool convfile::load(const std::string& cnvfile) {
     UwText txt;
     std::string txtfile(cnvfile);
     txt.load(txtfile.replace(txtfile.end()-7,txtfile.end(),"strings.pak"));
@@ -216,13 +216,16 @@ bool convfile::load(std::string& cnvfile) {
                     std::cout<<"\tPUSH_REG"<<std::endl;
                     break;
                 case 0x25:
-                    std::cout<<"\tSTRCMP"<<std::endl;
+                    std::cout<<"\tSTRCMP (undocumented)"<<std::endl;
                     break;
                 case 0x26:
                     std::cout<<"\tEXIT_OP\n"<<std::endl;
                     break;
                 case 0x27:
                     std::cout<<"\tSAY_OP"<<std::endl;
+                    break;
+                case 0x28:
+                    std::cout<<"\tRESPOND_OP (undocumented)"<<std::endl;
                     break;
                 case 0x29:
                     std::cout<<"\tOPNEG"<<std::endl;

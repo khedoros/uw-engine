@@ -28,11 +28,11 @@ convvm::convvm(int w, convfile& c, globfile& g, savefile& s, UwText& t) : who(w)
 
 };
 
-string convvm::op_str(int op) {
+std::string convvm::op_str(int op) {
     if(op>0 && op < 42)
         return op_strs[op];
     else
-        return string("");
+        return std::string("");
 }
 
 void convvm::start() {
@@ -48,7 +48,7 @@ int main() {
     globfile g;
     savefile s;
     UwText t;
-    c.load(std::string("../uw/uw/data/cnv.ark"));
+    c.load("../uw/uw/data/cnv.ark");
     convvm vm(who, c,g,s,t);
     vm.start();
 }
