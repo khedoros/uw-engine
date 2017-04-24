@@ -13,6 +13,7 @@
 #include<cmath>
 #include<SFML/System.hpp>
 #include<SFML/Audio.hpp>
+#include<thread>
 using namespace std;
 
 //Store midi note number mappings to OPL block number and OPL F-num values
@@ -228,6 +229,8 @@ void output_data(vector<int16_t *>& dat) {
         outfile.write(cd, 800 * sizeof(int16_t));
     }
 }
+*/
+
 
 //Intended to allow for streaming the music to output.
 //Never worked right; it seems like it plays the same
@@ -237,30 +240,27 @@ class AudioOut: public sf::SoundStream {
     public:
     AudioOut() {
         initialize(2,OPL_SAMPLE_RATE);
-        keep_going = true;
     }
     
     private:
-    bool keep_going;
+    uint32_t offset = 0;
     void onSeek(sf::Time t) {}
     bool onGetData(sf::SoundStream::Chunk& data) {
-        data.sampleCount = int(OPL_SAMPLE_RATE/120);
-        while(sample_buffer.size() < 5) {}
-        delete[] sample_buffer.front();
-        sample_buffer.pop_front();
-        uint32_t buffer_size = sample_buffer.size();
-        if(buffer_size > 0) {
-            data.samples = sample_buffer.front();
-            //cout<<"Buffer: "<<buffer_size<<endl;
+        data.sampleCount = 10000;
+        if(offset + 10000 < sample_insertion_offset) {
+            data.samples=const_cast<const int16_t *>(&sample_buffer[offset]);
+            offset+=10000;
+        }
+        else if(offset + 10000 >= sample_buffer.size()) {
+            return false;
         }
         else {
-            data.samples = NULL;
-            cout<<"Buffer Underrun"<<endl;
+            std::cout<<"Buffer underrun by "<<std::dec<<((offset+10000) - sample_insertion_offset)<<" samples"<<std::endl;
         }
         return true;
     }
 };
-  */      
+
         
 int main(int argc, char* argv[]) {
     //Load the patch data
@@ -319,6 +319,10 @@ int main(int argc, char* argv[]) {
     float lmaxval = 0, lminval = 0, rmaxval = 0, rminval = 0;
     //bool started = false;
 
+    AudioOut ao;
+    ao.pause();
+
+
     //Start processing MIDI events from the XMI file
     midi_event* e = xmifile.next_event();
     while(e != NULL) {
@@ -327,6 +331,8 @@ int main(int argc, char* argv[]) {
             for(int i=0;i<(e->get_time() - cur_time);++i) {
                 opl->Update(&(sample_buffer[sample_insertion_offset]), int(OPL_SAMPLE_RATE/TICK_RATE));
                 sample_insertion_offset+=(2 * int(OPL_SAMPLE_RATE/TICK_RATE));
+
+                if(sample_insertion_offset > 100000 && ao.getStatus() != sf::SoundSource::Playing) ao.play();
 
                 /*int16_t * samples = new int16_t[int(OPL_SAMPLE_RATE/(TICK_RATE/2))];
                 opl->Update(samples, int(OPL_SAMPLE_RATE/TICK_RATE));
@@ -447,7 +453,7 @@ int main(int argc, char* argv[]) {
             if(meta == 0x2f) {
                 cout<<"End of track."<<endl;
                 sf::SoundBuffer sb;
-                cout<<"Loading "<<2 * tick_count * int(OPL_SAMPLE_RATE / TICK_RATE)<<" samples for playback."<<endl;
+                cout<<"Loading "<<2 * tick_count * int(OPL_SAMPLE_RATE / TICK_RATE)<<" samples for playback. Should take "<<int(tick_count/120)<<" seconds to play."<<endl;
                 sb.loadFromSamples(&sample_buffer[0], 2* tick_count * int(OPL_SAMPLE_RATE / TICK_RATE), 2, OPL_SAMPLE_RATE);
                 sf::Sound music(sb);
                 if(argc == 3) {
@@ -456,9 +462,10 @@ int main(int argc, char* argv[]) {
                     else cout<<"Output a rendering of the music to '"<<output_file<<"'."<<endl;
                 }
                 else {
-                    music.play();
+                    //music.play();
                     sf::sleep(sf::seconds(1));
-                    while(music.getStatus() == sf::SoundSource::Playing) {sf::sleep(sf::seconds(1));}
+                    //while(music.getStatus() == sf::SoundSource::Playing) {sf::sleep(sf::seconds(1));}
+                    while(ao.getStatus() == sf::SoundSource::Playing) {sf::sleep(sf::seconds(1));}
                     cout<<"Done playing."<<endl;
                 }
                 delete opl;
