@@ -25,11 +25,11 @@ public:
     uint16_t yres;
 private:
     bool load_tr(std::ifstream& in);
-    bool load_gr(std::ifstream& in, const bool no_img_hdr = false);
+    bool load_gr(std::ifstream& in, const int palnum = 0, const bool no_img_hdr = false);
     bool load_byt(std::ifstream& in, const std::string& name);
     bool read_palette(const std::string& palfile, const std::string& altpalfile = std::string());
     sf::Texture read_texture(std::ifstream& in, const uint32_t offset);
-    sf::Texture read_bmp(std::ifstream& in, const uint32_t offset, const bool no_img_hdr = false);
+    sf::Texture read_bmp(std::ifstream& in, const uint32_t offset, const int palnum = 0, const bool no_img_hdr = false);
     uint16_t get_rle_count(std::ifstream& in, uint8_t& col, bool& onfirst);
     uint8_t get_nibble(std::ifstream& in, uint8_t& col, bool& onfirst);
     struct color {

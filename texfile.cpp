@@ -135,11 +135,19 @@ bool texfile::load(const std::string& palfile,const std::string& texfile, const 
     }
     else if(bit8 == 1) {
         std::cout<<"First byte is 1. Interpreting as an image file."<<std::endl;
-        std::string panelsl("panels.gr");
-        std::string panelsu("PANELS.GR");
-        std::string test(texfile.substr(texfile.length()-panelsl.length(),panelsl.length()));
-        if(test == panelsl || test == panelsu) retval = load_gr(in, true);
-        else retval = load_gr(in);
+        bool no_hdr = false;
+        int main_pal = 0;
+        auto missing = std::string::npos;
+        if(texfile.find("panels.gr") != missing || texfile.find("PANELS.GR") != missing) {
+            no_hdr = true;
+        }
+        else if(texfile.find("opbtn.gr") != missing || texfile.find("OPBTN.GR") != missing) {
+            main_pal = 2;
+        }
+        else if(texfile.find("chrbtns.gr") != missing || texfile.find("CHRBTNS.GR") != missing) {
+            main_pal = 3;
+        }
+        retval = load_gr(in, main_pal, no_hdr);
     }
     else {
         std::cout<<"First byte is "<<int(bit8)<<", which is unexpected."<<std::endl;
@@ -196,7 +204,7 @@ bool texfile::load_tr(std::ifstream& in) {
     return true;
 }
 
-bool texfile::load_gr(std::ifstream& in, const bool no_img_hdr) {
+bool texfile::load_gr(std::ifstream& in, const int palnum, const bool no_img_hdr) {
     if(altpal.size() == 0) {
         std::cerr<<"You need to specify an alternate palette file to open this kind of image. Aborting."<<std::endl;
         return false;
@@ -208,9 +216,10 @@ bool texfile::load_gr(std::ifstream& in, const bool no_img_hdr) {
     tex.resize(bit16);
     animtex.resize(bit16);
     std::cout<<"Reading "<<bit16<<" images."<<std::endl;
+
     for(size_t i=0;i<tex.size(); ++i) {
         std::cout<<i<<": ";
-        tex[i]=read_bmp(in, read32(in), no_img_hdr);
+        tex[i]=read_bmp(in, read32(in), palnum, no_img_hdr);
         //tex[i].setSmooth(true);
         tex[i].setRepeated(false);
     }
@@ -269,7 +278,7 @@ bool texfile::read_palette(const std::string& palfile, const std::string& altpal
     return true;
 }
 
-sf::Texture texfile::read_bmp(std::ifstream& in, const uint32_t offset, const bool no_img_hdr) {
+sf::Texture texfile::read_bmp(std::ifstream& in, const uint32_t offset, const int palnum, const bool no_img_hdr) {
     size_t bookmark = in.tellg();
     in.seekg(offset, std::ios::beg);
     std::vector<color> buffer;
@@ -293,6 +302,7 @@ sf::Texture texfile::read_bmp(std::ifstream& in, const uint32_t offset, const bo
     buffer.resize(xres * yres);
     uint8_t altpalnum = 0;
     if(type == 8 || type == 0x0a) altpalnum = read8(in);
+    std::cout<<"Type: "<<int(type)<<std::endl;
     uint16_t expected_size = read16(in);
     //std::cout<<"Expected size: "<<expected_size<<" ("<<xres*yres<<" by dimensions)"<<std::endl;
     size_t start_offset = in.tellg();
@@ -311,10 +321,10 @@ sf::Texture texfile::read_bmp(std::ifstream& in, const uint32_t offset, const bo
         for(int pix = 0; pix < xres * yres; ++pix) {
             if(type == 0x04) {
                 col = read8(in);
-                buffer[pix].r = allpals[0][col].r;
-                buffer[pix].g = allpals[0][col].g;
-                buffer[pix].b = allpals[0][col].b;
-                buffer[pix].a = allpals[0][col].a;
+                buffer[pix].r = allpals[palnum][col].r;
+                buffer[pix].g = allpals[palnum][col].g;
+                buffer[pix].b = allpals[palnum][col].b;
+                buffer[pix].a = allpals[palnum][col].a;
             }
             else if(type == 0x0a) {
                 uint8_t index = get_nibble(in, col, onfirst);
