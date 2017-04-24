@@ -1,4 +1,4 @@
-all: adlib_bank uw_patch dro_parse sine_gen dro_play
+all: adlib_bank uw_patch dro_parse sine_gen dro_play play_opl_xmi
 
 clean:
 	/bin/rm adlib_bank uw_patch dro_parse sine_gen dro_play
@@ -23,3 +23,6 @@ dro_play_g: dro_play.cpp sine_gen.cpp sine_gen.h ../util.h
 
 dro_analyze: dro_analyze.cpp ../util.h
 	g++ -Wall dro_analyze.cpp -I.. -o dro_analyze
+
+play_opl_xmi: play_opl_xmi.cpp uw_patch.cpp uw_patch.h opl/OPL3.cpp opl/opl.h xmi.cpp xmi.h -lsfml-audio -lsfml-system
+	g++ -std=c++11 -o play_opl_xmi play_opl_xmi.cpp uw_patch.cpp ./opl/OPL3.cpp xmi.cpp midi_event.cpp -lsfml-audio -lsfml-system
