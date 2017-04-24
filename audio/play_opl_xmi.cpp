@@ -232,10 +232,10 @@ void output_data(vector<int16_t *>& dat) {
 */
 
 
-//Intended to allow for streaming the music to output.
-//Never worked right; it seems like it plays the same
-//Sample over and over before switching to the next one,
-// after about 20-30x playing the previous one.
+// I previously had trouble getting the SoundStream to work. Currently, it doesn't do anything very 
+// smart, like reading from anything but a linear buffer, but my short-term goal was to allow for 
+// immediate playback, rather than the old behavior of having to wait until the whole audio stream 
+// was generated to start playback.
 class AudioOut: public sf::SoundStream {
     public:
     AudioOut() {
