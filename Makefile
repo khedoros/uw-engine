@@ -2,8 +2,8 @@ SFML_LIB :=-L/usr/lib -L/usr/local/lib -lsfml-window -lsfml-graphics -lsfml-syst
 
 all: texfile play_xmi sfml-fixed-engine sfml-shader-engine simple_map UwText critfile convfile engine 3dmodel uwfont convvm
 
-texfile: texfile.cpp texfile.h util.cpp util.h
-	g++ -std=c++11 texfile.cpp util.cpp -DSTAND_ALONE -o texfile $(SFML_LIB)
+texfile: texfile.cpp texfile.h util.cpp util.h weapon_offset.cpp weapon_offset.h
+	g++ -std=c++11 texfile.cpp util.cpp weapon_offset.cpp -DSTAND_ALONE -o texfile $(SFML_LIB)
 
 play_xmi: play_xmi.cpp
 	g++ play_xmi.cpp -ltimidity $(SFML_LIB) -o play_xmi

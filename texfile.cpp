@@ -1,4 +1,5 @@
 #include "texfile.h"
+#include "weapon_offset.h"
 #include "util.h"
 #include<iostream>
 #include<string>
@@ -24,13 +25,27 @@ int main(int argc, char *argv[]) {
         retval = tf.load(palfile, texfile, altpalfile);
     }
 
+    std::string weapoff_file("");
+    weapon_offset wo;
+    if(retval && texfile.find("weapons.gr") != std::string::npos) {
+        weapoff_file = texfile + " ";
+        weapoff_file.replace(weapoff_file.size() - 3, 3, "dat");
+    }
+    if(retval && texfile.find("WEAPONS.GR") != std::string::npos) {
+        weapoff_file = texfile + " ";
+        weapoff_file.replace(weapoff_file.size() - 3, 3, "DAT");
+    }
+    if(weapoff_file.size() > 0) {
+        retval = wo.load(weapoff_file);
+    }
+
     if(!retval) {
         std::cout<<"Error opening the files specified. Aborting."<<std::endl;
         return 1;
     }
 
-    std::cout<<"Trying to open a 480x512@32 window."<<std::endl;
-    sf::RenderWindow window(sf::VideoMode(480,512,32), "Ultima Underworld Texture Viewer");
+    std::cout<<"Trying to open a 960x512@32 window."<<std::endl;
+    sf::RenderWindow window(sf::VideoMode(960,512,32), "Ultima Underworld Texture Viewer");
     if(window.isOpen()) {
         std::cout<<"Window opened successfully!"<<std::endl;
     } else {
@@ -41,7 +56,14 @@ int main(int argc, char *argv[]) {
     sprite.resize(tf.tex.size());
     for(size_t i=0;i<sprite.size();++i) {
         sprite[i] = sf::Sprite(tf.tex[i]);
-        sprite[i].move(10,32);
+        int offx = 0;
+        int offy = 0;
+        if(weapoff_file.size() > 0) {
+            offx = 50 + wo.getx(i) * (480/tf.res);
+            offy = 450 - wo.gety(i) * (480/tf.res);
+            std::cout<<"Offsetting frame "<<std::dec<<i<<"by "<<int(offx)<<", "<<int(offy)<<std::endl;
+        }
+        sprite[i].move(10+offx,32+offy);
         if(tf.res != 0)
             sprite[i].scale(480/tf.res,480/tf.res);
         else
@@ -264,8 +286,13 @@ bool texfile::read_palette(const std::string& palfile, const std::string& altpal
             std::cerr<<"Couldn't open "<<altpalfile<<std::endl;
             return false;
         }
-        altpal.resize(32);
-        for(size_t pal = 0; pal < 32; ++pal) {
+        in.seekg(0, std::ios::end);
+        int altpalsize = in.tellg();
+        in.seekg(0, std::ios::beg);
+        assert(altpalsize == 513 || altpalsize == 32); //allpals.dat or weapons.cm
+        altpal.resize(altpalsize/16);
+        std::cout<<"Resizing the altpal thing to hold "<<altpalsize/16<<" palettes"<<std::endl;
+        for(size_t pal = 0; pal < altpal.size(); ++pal) {
             altpal[pal].resize(16);
             unsigned char buf;
             for(size_t pal_entry = 0; pal_entry < 16; ++pal_entry) {
@@ -302,7 +329,8 @@ sf::Texture texfile::read_bmp(std::ifstream& in, const uint32_t offset, const in
     buffer.resize(xres * yres);
     uint8_t altpalnum = 0;
     if(type == 8 || type == 0x0a) altpalnum = read8(in);
-    std::cout<<"Type: "<<int(type)<<std::endl;
+    std::cout<<"Type: "<<int(type)<<" altpalnum: "<<int(altpalnum)<<std::endl;
+    if(altpal.size() < altpalnum) altpalnum = 1;
     uint16_t expected_size = read16(in);
     //std::cout<<"Expected size: "<<expected_size<<" ("<<xres*yres<<" by dimensions)"<<std::endl;
     size_t start_offset = in.tellg();
