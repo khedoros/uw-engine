@@ -37,6 +37,7 @@ public:
     }
     uint32_t get_time() const;
     uint8_t *get_data();
+    int get_data_size();
     static uint32_t vlq2int(binifstream& in) {
        uint8_t digit;
        uint32_t accumulator;

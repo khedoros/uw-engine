@@ -312,6 +312,9 @@ int main(int argc, char* argv[]) {
     uint8_t * v;
     uint32_t tick_count = xmifile.tick_count();
 
+    uint8_t for_counter[4] = {0};
+    int for_nesting = 0;
+
     //pre-allocate the space for the music. Takes roughly 12MB/minute to store
     cout<<"Building a sound output buffer of "<<dec<<2* tick_count * int(OPL_SAMPLE_RATE / TICK_RATE)<<" bytes"<<endl;
     sample_buffer.resize(2 * tick_count * int(OPL_SAMPLE_RATE / TICK_RATE), 0);
@@ -438,13 +441,25 @@ int main(int argc, char* argv[]) {
             else if(meta == 0x71) cout<<"Timbre protect (not implemented)"<<endl;
             else if(meta == 0x72) cout<<"Patch bank select (not implemented)"<<endl;
             else if(meta == 0x73) cout<<"Indirect controller prefix (not implemented)"<<endl;
-            else if(meta == 0x74) cout<<"For loop controller (not implemented)"<<endl;
-            else if(meta == 0x75) cout<<"Next/Break loop controller (not implemented)"<<endl;
+            else if(meta == 0x74) {
+                cout<<"For loop controller (not implemented) data: ";
+                for(int i=0;i<e->get_data_size();++i) {
+                    cout<<hex<<int(v[i])<<" ";
+                }
+                cout<<endl;
+            }
+            else if(meta == 0x75) {
+                cout<<"Next/Break loop controller (not implemented) data: ";
+                for(int i=0;i<e->get_data_size();++i) {
+                    cout<<hex<<int(v[i])<<" ";
+                }
+                cout<<endl;
+            }
             else if(meta == 0x76) cout<<"Clear beat/bar count (not implemented)"<<endl;
             else if(meta == 0x77) cout<<"Callback trigger (not implemented)"<<endl;
             else if(meta == 0x78) cout<<"Sequence branch index (not implemented)"<<endl;
             else 
-                cout<<"Other nimplemented control change: "<<int(v[1])<<" = "<<int(v[2])<<endl;
+                cout<<"Other unimplemented control change: "<<int(v[1])<<" = "<<int(v[2])<<endl;
             break;
         case midi_event::META: //0xff
             if(e->get_command() != 0xf0)

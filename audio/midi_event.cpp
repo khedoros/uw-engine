@@ -22,8 +22,12 @@ uint8_t * midi_event::get_data() {
     return data.data();
 }
 
+int midi_event::get_data_size() {
+    return data.size();
+}
+
 void midi_event::toString() {
     std::cout<<std::dec<<timestamp<<": Cmd: "<<std::hex<<int(command);
-    if(command == 0xf0) std::cout<<" Meta: "<<int(meta_command);
+    if(command == 0xf0 || command == 0xb0) std::cout<<" Meta: "<<int(meta_command);
     std::cout<<std::dec<<" Ch: "<<int(channel)<<std::endl;
 }
