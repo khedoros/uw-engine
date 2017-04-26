@@ -24,5 +24,5 @@ dro_play_g: dro_play.cpp sine_gen.cpp sine_gen.h ../util.h
 dro_analyze: dro_analyze.cpp ../util.h
 	g++ -Wall dro_analyze.cpp -I.. -o dro_analyze
 
-play_opl_xmi: play_opl_xmi.cpp uw_patch.cpp uw_patch.h opl/OPL3.cpp opl/opl.h xmi.cpp xmi.h
-	g++ -std=c++11 -o play_opl_xmi play_opl_xmi.cpp uw_patch.cpp ./opl/OPL3.cpp xmi.cpp midi_event.cpp -lsfml-audio -lsfml-system
+opl_music: opl_music.cpp uw_patch.cpp uw_patch.h opl/OPL3.cpp opl/opl.h xmi.cpp xmi.h
+	g++ -std=c++11 -o opl_music -DSTAND_ALONE opl_music.cpp uw_patch.cpp ./opl/OPL3.cpp xmi.cpp midi_event.cpp -lsfml-audio -lsfml-system

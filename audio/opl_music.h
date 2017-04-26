@@ -10,23 +10,28 @@
 #include<cmath>
 #include<SFML/System.hpp>
 #include<SFML/Audio.hpp>
+#include<thread>
 using namespace std;
 
-class opl_music {
+class opl_music : public sf::SoundStream {
 private:
 //Store midi note number mappings to OPL block number and OPL F-num values
     vector<tuple<uint8_t,    uint8_t,     uint16_t>> freqs;
     vector<int16_t> sample_buffer;
-    uint32_t sample_playback_offset = 0;
-    uint32_t sample_insertion_offset = 0;
+    uint32_t sample_playback_offset;
+    uint32_t sample_insertion_offset;
+    uint32_t tick_count;
+    uint32_t cur_time;
     OPLEmul* opl;
     uw_patch_file uwpf;
-    xmi xmi_file;
+    xmi xmifile;
     uint8_t timbre_bank[256];
+    string output_file;
+    std::thread gen_audio_thread;
 
     //XMI uses a standard 120Hz clock
-    static const uint32_t TICK_RATE = 120;
-    static const float MIDI_MAX_VAL = 127.0;
+    static const uint32_t TICK_RATE;
+    static const float MIDI_MAX_VAL;
 
     //Data and methods having to do with current use of OPL channels, voice assignments, etc
 
@@ -40,10 +45,8 @@ private:
     uint8_t patch_assignment[16];
     uint8_t channel_volume[16];
 
-    static const uint16_t voice_base[18] =  {    0,     1,     2,    8,    9,  0xa, 0x10, 0x11, 0x12,
-                                             0x100, 0x101, 0x102,0x108,0x109,0x10a,0x110,0x111,0x112};
-    static const uint16_t voice_base2[18] = {    0,     1,     2,    3,    4,    5,    6,    7,    8,
-                                             0x100, 0x101, 0x102,0x103,0x104,0x105,0x106,0x107,0x108};
+    static const uint16_t voice_base[18];
+    static const uint16_t voice_base2[18];
     enum OPL_addresses {
         TEST       = 0x01, //Set to 0
         TIMER1     = 0x02, //'      '
@@ -82,29 +85,19 @@ private:
                     //OPL voice #, bank #,       instrument patch #
     bool copy_patch(uint8_t voice, uint8_t bank, uint8_t patch);
 
-    /*
-
-    //Used to export the data to a file. Currently dead code.
-    void output_data(vector<int16_t *>& dat) {
-    */
+    //Thread to generate audio data into the buffer
+    void generate_audio();
 
     // I previously had trouble getting the SoundStream to work. Currently, it doesn't do anything very 
     // smart, like reading from anything but a linear buffer, but my short-term goal was to allow for 
     // immediate playback, rather than the old behavior of having to wait until the whole audio stream 
     // was generated to start playback.
-    class AudioOut: public sf::SoundStream {
-    public:
-        AudioOut();
-    private:
-        uint32_t offset;
-        void onSeek(sf::Time t);
-        bool onGetData(sf::SoundStream::Chunk& data);
-    };
-
-    AudioOut ao;
+    uint32_t offset;
+    void onSeek(sf::Time t);
+    bool onGetData(sf::SoundStream::Chunk& data);
 
 public:
-    bool load(std::string& ad_file,std::string& xmi_file);   
-    void play();
-    void pause();
+    opl_music();
+    ~opl_music();
+    bool load(std::string ad_file,std::string xmi_file,std::string output = std::string(""));   
 };

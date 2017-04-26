@@ -33,6 +33,10 @@ midi_event * xmi::next_event() {
 }
 
 bool xmi::load(string filename) {
+    curtime = 0;
+    timbres.resize(0);
+    events.resize(0);
+
     binifstream in;
     in.open(filename.c_str());
     bool opened = in.is_open();
@@ -109,6 +113,7 @@ bool xmi::load_tags(binifstream &in) {
 }
 
 bool xmi::load_timbres(binifstream &in, uint16_t timbre_count) {
+    assert(timbres.size() == 0);
     for(int i=0;i<timbre_count;++i) {
         uint8_t patch=0, bank=0;
         in>>patch>>bank;
@@ -130,6 +135,7 @@ bool xmi::load_events(binifstream &in) {
     uint8_t velocity = 0;
     uint32_t note_off_time = 0;
     vector<uint8_t> data;
+    assert(events.size() == 0);
     while(!in.eof()) {
         data.clear();
         in>>event;

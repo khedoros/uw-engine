@@ -13,10 +13,18 @@
 #include<SFML/Audio.hpp>
 #include<thread>
 using namespace std;
+//Static class data
+const uint32_t opl_music::TICK_RATE = 120;
+const float opl_music::MIDI_MAX_VAL = 127.0;
+const uint16_t opl_music::voice_base[18] =  {    0,     1,     2,    8,    9,  0xa, 0x10, 0x11, 0x12,
+                                             0x100, 0x101, 0x102,0x108,0x109,0x10a,0x110,0x111,0x112};
+const uint16_t opl_music::voice_base2[18] = {    0,     1,     2,    3,    4,    5,    6,    7,    8,
+                                             0x100, 0x101, 0x102,0x103,0x104,0x105,0x106,0x107,0x108};
 
 opl_music::opl_music() {
-    sample_playback_offset = 0;
-    sample_insertion_offset = 0;
+    initialize(2,OPL_SAMPLE_RATE);
+
+
 
     //Which channel and note each of the 18 voices in an OPL3 chip is set to play. -1 means "none".
     for(int i=0;i<18;++i) {
@@ -34,233 +42,45 @@ opl_music::opl_music() {
         channel_volume[i] = 0;
     }
 
+    //Set up the OPL emulator
     opl = JavaOPLCreate(/*bool stereo*/ true);
-    init_opl3();
     calc_freqs();
 }
 
-bool opl_music::load(std::string ad_file, std::string xmi_file) {
-
+opl_music::~opl_music() {
+    if(gen_audio_thread.joinable()) gen_audio_thread.join();
+    opl = NULL;
+    delete opl;
 }
 
-//Find the voice playing the given note on the given channel
-//-1 means "not found"
-int8_t opl_music::find_playing(uint8_t channel, uint8_t note) {
-    for(int i=0;i<18;++i) {
-        if(opl_channel_assignment[i] == channel && opl_note_assignment[i] == note)
-            return i;
-    }
-    return -1;
-}
+bool opl_music::load(std::string ad_file, std::string xmi_file, std::string output) {
+    init_opl3();
+    stop();
+    if(gen_audio_thread.joinable()) gen_audio_thread.join();
+    sample_playback_offset = 0;
+    sample_insertion_offset = 0;
+    cur_time = 0;
 
-//Find the first voice that's currently empty
-//-1 means 'all in use'
-int8_t opl::music::find_unused() {
-    for(int i=0;i<18;++i) {
-        if(opl_channel_assignment[i] == -1)
-            return i;
-    }
-    cout<<"Couldn't find a free OPL voice."<<endl;
-    return -1;
-}
-
-//Mathematically calculate the best OPL settings to match Midi frequencies
-//Outputs the best matches into the freqs vector of 3-tuples.
-void opl_music::calc_freqs() {
-    double base_freq = 440.0;
-    uint8_t base_mid_num = 69;
-    for(uint16_t mid_num = 0; mid_num < 128; ++mid_num) {
-        double midi_freq = base_freq * pow(2.0, (mid_num - base_mid_num)/12.0);
-        //cout<<"MIDI Number: "<<mid_num<<" Frequency: "<<midi_freq;
-        double diff = 9999999999.0;
-        uint8_t blk = 0;
-        uint16_t f_num = 0;
-        double OPL_freq = 0.0;
-        for(uint32_t block = 0; block < 8; ++block) {
-            for(uint32_t f_number = 0; f_number < 1024; ++f_number) {
-                double opl_freq = double(f_number * /*49716*/ OPL_SAMPLE_RATE ) / pow(2.0, 20 - double(block));
-                if(abs(opl_freq - midi_freq) < diff) {
-                    diff = abs(opl_freq - midi_freq);
-                    f_num = f_number;
-                    blk = block;
-                    OPL_freq = opl_freq;
-                }
-            }
-        }
-        if(diff < 10) {
-            //cout<<" OPL_Blk: "<<uint16_t(blk)<<" F-Num: "<<f_num<<" OPL Freq: "<<OPL_freq<<endl;
-            freqs.push_back(make_tuple(mid_num,blk,f_num));
-        }
-        else {
-            //cout<<" OPL: Out of Range"<<endl;
-        }
-    }
-}
-
-//Methods to do sets of register writes to the OPL synth emulator.
-
-//Write values to the OPL3 emulator to initialize it to defaults
-void opl_music::init_opl3() {
-    opl->Reset();
-    for(int i=0;i<18;++i)
-        opl->SetPanning(i, 0.5,0.5);
-     const uint8_t init_array1[] =
-     {0,0x20,   0,   0,0x60,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //00-0f Turn on waveform select, mask timer interrupts
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //10-1f 
-      1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   //20-2f Frequency mult: 1, voices 0-8
-      1,   1,   1,   1,   1,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //30-3f '                           '
-     63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,   //40-4f Volume attenuation to full
-     63,  63,  63,  63,  63,  63,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //50-5f '                        '
-    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,   //60-6f Full attack and decay rates
-    255, 255, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //70-7f '                         '
-     15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,   //80-8f Low sustain level, high release rate
-     15,  15,  15,  15,  15,  15,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //90-9f '                                  '
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //a0-af F-Num, lower 8 bits to 0
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,0xc0,   0,   0,   //b0-bf 0 out notes, turn on tremolo and vibrato, turn off rhythm
-   0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,   0,   0,   0,   0,   0,   0,   0,   //c0-cf Turn on output to both speakers
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //d0-df
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //e0-ef Set waveforms to sine
-      0,   0,   0,   0,   0,   0};                                                    //f0-f5 '                   '
-
-     const uint8_t init_array2[] =
-     {0,   0,   0,   0,   0,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //100-10f OPL3 mode enable
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //110-11f
-      1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   //120-12f Frequency mult: 1, voices 9-17
-      1,   1,   1,   1,   1,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //130-13f '                            '
-     63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,   //140-14f volume attenuation to full
-     63,  63,  63,  63,  63,  63,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //150-15f '                        '
-    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,   //160-16f Full attack and decay rates
-    255, 255, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //170-17f '                         '
-     15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,   //180-18f Low sustain level, high release rate
-     15,  15,  15,  15,  15,  15,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //190-19f '                                  '
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //1a0-1af F-Num, lower 8 bits to 0
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //1b0-1bf 0 out notes, turn on tremolo and vibrato
-   0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,   0,   0,   0,   0,   0,   0,   0,   //1c0-1cf Turn on output to both speakers
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //1d0-1df
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //1e0-1ef Set waveforms to sine
-      0,   0,   0,   0,   0, 0};                                                      //1f0-1f5 '                   '
-
-    for(size_t reg = 0; reg < 0xf6; ++reg) {
-        opl->WriteReg(reg,init_array1[reg]);
-        opl->WriteReg(reg+0x100, init_array2[reg]);
-    }
-}
-
-//Set the notes of the OPL3 to play again, if previously silenced
-void opl_music::play() {
-}
-
-//Set the notes of the OPL3 to silent
-void opl_music::pause() {
-}
-
-//Copies the given patch data into the given voice slot
-                //OPL voice #, bank #,       instrument patch #
-bool copy_patch(uint8_t voice, uint8_t bank, uint8_t patch) {
-    for(auto it = uwpf.bank_data.begin(); it != uwpf.bank_data.end(); ++it) {
-        if(it->bank == bank && it->patch == patch) {
-            uw_patch_file::opl2_patch pat = it->ad_patchdatastruct;
-            //Write the values to the modulator:
-            opl->WriteReg(voice_base[voice]+0x20,(pat.mod_freq_mult&0x0f) +
-                                                 ((pat.mod_env_scaling&1)<<(4)) +
-                                                 ((pat.mod_sustain_sound&1)<<(5)) +
-                                                 ((pat.mod_ampl_vibrato&1)<<(6)) +
-                                                 ((pat.mod_freq_vibrato&1)<<(7)));
-            opl->WriteReg(voice_base[voice]+0x40,(pat.mod_out_lvl&0x3f) +
-                                                 ((pat.mod_key_scale&0x3)<<(6)));
-            opl->WriteReg(voice_base[voice]+0x60,(pat.mod_decay&0xf) +
-                                                 ((pat.mod_attack&0xf)<<(4)));
-            opl->WriteReg(voice_base[voice]+0x80,(pat.mod_release&0xf) +
-                                                 ((pat.mod_sustain_lvl&0xf)<<(4)));
-            opl->WriteReg(voice_base[voice]+0xc0,(pat.connection&1) +
-                                                 ((pat.feedback&7)<<(1)));
-            opl->WriteReg(voice_base[voice]+0xe0,(pat.mod_waveform&7));
-
-            //Write the values to the carrier:
-            opl->WriteReg(voice_base[voice]+0x23,(pat.car_freq_mult&0x0f) +
-                                                 ((pat.car_env_scaling&1)<<(4)) +
-                                                 ((pat.car_sustain_sound&1)<<(5)) +
-                                                 ((pat.car_ampl_vibrato&1)<<(6)) +
-                                                 ((pat.car_freq_vibrato&1)<<(7)));
-            opl->WriteReg(voice_base[voice]+0x43,((pat.car_out_lvl&0x3f) +
-                                                 ((pat.car_key_scale&0x3)<<(6))));
-            opl->WriteReg(voice_base[voice]+0x63,(pat.car_decay&0xf) +
-                                                 ((pat.car_attack&0xf)<<(4)));
-            opl->WriteReg(voice_base[voice]+0x83,(pat.car_release&0xf) +
-                                                 ((pat.car_sustain_lvl&0xf)<<(4)));
-            opl->WriteReg(voice_base[voice]+0xc3,(pat.connection&0x7)+
-                                                 ((pat.feedback&0x7)<<(1)));
-            opl->WriteReg(voice_base[voice]+0xe3,(pat.car_waveform&7));
-            return true;
-        }
-    }
-    cout<<"Bank: "<<int(bank)<<" Patch: "<<int(patch)<<endl;
-    return false;        
-}
-
-/*
-
-//Used to export the data to a file. Currently dead code.
-void output_data(vector<int16_t *>& dat) {
-    ofstream outfile;
-    outfile.open("test.dat");
-    for(auto it=dat.begin();it != dat.end(); ++it) {
-        int16_t * d = *it;
-        char * cd = reinterpret_cast<char *>(d);
-        outfile.write(cd, 800 * sizeof(int16_t));
-    }
-}
-*/
-
-
-// I previously had trouble getting the SoundStream to work. Currently, it doesn't do anything very 
-// smart, like reading from anything but a linear buffer, but my short-term goal was to allow for 
-// immediate playback, rather than the old behavior of having to wait until the whole audio stream 
-// was generated to start playback.
-opl_music::AudioOut::AudioOut() {
-    initialize(2,OPL_SAMPLE_RATE);
-    offset = 0;
-}
-    
-void opl_music::AudioOut::onSeek(sf::Time t) {}
-bool opl_music::AudioOut::onGetData(sf::SoundStream::Chunk& data) {
-    data.sampleCount = 10000;
-    if(offset + 10000 < sample_insertion_offset) {
-        data.samples=const_cast<const int16_t *>(&sample_buffer[offset]);
-        offset+=10000;
-    }
-    else if(offset + 10000 >= sample_buffer.size()) {
-        return false;
-    }
-    else {
-        std::cout<<"Buffer underrun by "<<std::dec<<((offset+10000) - sample_insertion_offset)<<" samples"<<std::endl;
-    }
-    return true;
-}
-       
-int main(int argc, char* argv[]) {
     //Load the patch data
-    bool success = uwpf.load("uw.ad");
+    bool success = uwpf.load(ad_file);
     if(!success) {
         cout<<"Couldn't load the patch file. Aborting."<<endl;
+        return false;
     }
+
     //Load the music itself
-    xmi xmifile;
-    success = xmifile.load(argv[1]);
+    success = xmifile.load(xmi_file);
     if(!success) {
         cout<<"Couldn't load the xmi file. Aborting."<<endl;
+        return false;
     }
 
-    string output_file = "";
+    if(output.size() > 0) output_file = output;
 
-    if(argc == 3) {
-        output_file = argv[2];
-    }
-    //Instantiate the OPL emulator
-    opl = JavaOPLCreate(/*bool stereo =*/ true);
-    init_opl3();
-
-    calc_freqs();//Populate the frequency conversion table
+    tick_count = xmifile.tick_count();
+    //pre-allocate the space for the music. Takes roughly 12MB/minute to store
+    cout<<"Building a sound output buffer of "<<dec<<2* tick_count * int(OPL_SAMPLE_RATE / TICK_RATE)<<" bytes"<<endl;
+    sample_buffer.resize(2 * tick_count * int(OPL_SAMPLE_RATE / TICK_RATE), 0);
 
     //Look up the timbre->bank map in the xmi file
     pair<uint8_t,uint8_t> * p = xmifile.next_timbre();
@@ -276,9 +96,13 @@ int main(int argc, char* argv[]) {
         p = xmifile.next_timbre();
     }
 
-    //AudioOut out;
+    gen_audio_thread = std::thread(&opl_music::generate_audio, this);
+    sf::sleep(sf::seconds(0.25));
+    return true;
+}
 
-    uint32_t cur_time = 0;
+void opl_music::generate_audio() {
+
     uint8_t meta = 0;
     uint8_t channel = 0;
     int8_t voice_num = 0;
@@ -286,50 +110,23 @@ int main(int argc, char* argv[]) {
     uint8_t block = 0;
     uint8_t midi_num = 0;
     uint8_t * v;
-    uint32_t tick_count = xmifile.tick_count();
-
-    uint8_t for_counter[4] = {0};
-    int for_nesting = 0;
-
-    //pre-allocate the space for the music. Takes roughly 12MB/minute to store
-    cout<<"Building a sound output buffer of "<<dec<<2* tick_count * int(OPL_SAMPLE_RATE / TICK_RATE)<<" bytes"<<endl;
-    sample_buffer.resize(2 * tick_count * int(OPL_SAMPLE_RATE / TICK_RATE), 0);
 
     float lmaxval = 0, lminval = 0, rmaxval = 0, rminval = 0;
-    //bool started = false;
-
-    AudioOut ao;
-    ao.pause();
-
 
     //Start processing MIDI events from the XMI file
     midi_event* e = xmifile.next_event();
     while(e != NULL) {
+        //Calculate samples from "current time" to the time of the next midi event
         uint32_t sample_count = (int(OPL_SAMPLE_RATE / TICK_RATE)) * (e->get_time() - cur_time);
+
+        //Output samples to get "up-to-date" with the time of the midi_event in "e"
         if(sample_count != 0) {
             for(int i=0;i<(e->get_time() - cur_time);++i) {
                 opl->Update(&(sample_buffer[sample_insertion_offset]), int(OPL_SAMPLE_RATE/TICK_RATE));
                 sample_insertion_offset+=(2 * int(OPL_SAMPLE_RATE/TICK_RATE));
-
-                if(sample_insertion_offset > 100000 && ao.getStatus() != sf::SoundSource::Playing) ao.play();
-
-                /*int16_t * samples = new int16_t[int(OPL_SAMPLE_RATE/(TICK_RATE/2))];
-                opl->Update(samples, int(OPL_SAMPLE_RATE/TICK_RATE));
-                sample_buffer.push_back(samples);
-                if(!started && sample_buffer.size()>=TICK_RATE) { //Ensure 1 second of buffer before trying to play
-                    started = true;
-                    out.play();
-                }
-                
-                for(int j = 0;j < 800; j+=2)
-                    if(samples[j]<lminval) lminval = samples[j];
-                    else if(samples[j]>lmaxval) lmaxval = samples[j];
-                    else if(samples[j+1]<rminval) rminval = samples[j+1];
-                    else if(samples[j+1]>rmaxval) rmaxval = samples[j+1];*/
             }
         }
         cur_time = e->get_time();
-        //e->toString();
         bool retval = true;
         switch(e->get_command()) {
         case midi_event::NOTE_OFF: //0x80
@@ -443,27 +240,17 @@ int main(int argc, char* argv[]) {
             meta = e->get_meta();
             if(meta == 0x2f) {
                 cout<<"End of track."<<endl;
-                sf::SoundBuffer sb;
-                cout<<"Loading "<<2 * tick_count * int(OPL_SAMPLE_RATE / TICK_RATE)<<" samples for playback. Should take "<<int(tick_count/120)<<" seconds to play."<<endl;
-                sb.loadFromSamples(&sample_buffer[0], 2* tick_count * int(OPL_SAMPLE_RATE / TICK_RATE), 2, OPL_SAMPLE_RATE);
-                sf::Sound music(sb);
-                if(argc == 3) {
+                if(output_file != "") {
+                    sf::SoundBuffer sb;
+                    sb.loadFromSamples(&sample_buffer[0], 2* tick_count * int(OPL_SAMPLE_RATE / TICK_RATE), 2, OPL_SAMPLE_RATE);
+                    cout<<"Loading "<<2 * tick_count * int(OPL_SAMPLE_RATE / TICK_RATE)<<" samples for output. Should be "<<int(tick_count/120)<<" seconds long."<<endl;
                     bool worked = sb.saveToFile(output_file);
                     if(!worked) cout<<"Couldn't output to the file '"<<output_file<<"'. Sorry."<<endl;
                     else cout<<"Output a rendering of the music to '"<<output_file<<"'."<<endl;
                 }
-                else {
-                    //music.play();
-                    sf::sleep(sf::seconds(1));
-                    //while(music.getStatus() == sf::SoundSource::Playing) {sf::sleep(sf::seconds(1));}
-                    while(ao.getStatus() == sf::SoundSource::Playing) {sf::sleep(sf::seconds(1));}
-                    cout<<"Done playing."<<endl;
-                }
-                delete opl;
-                opl=NULL;
+                return;
                 //output_data(sample_buffer);
                 //cout<<"Left: min: "<<lminval<<" max: "<<lmaxval<<"\tRight: min: "<<rminval<<" max: "<<rmaxval<<endl;
-                return 0;
             }
             else {
                 cout<<"Ignoring meta command"<<endl;
@@ -480,8 +267,195 @@ int main(int argc, char* argv[]) {
 
         e = xmifile.next_event();
     }
-    cout<<"I reached the end of the track without seeing the appropriate command. Weird."<<endl;
-    delete opl;
-    opl=NULL;
-    return 1;
+    return;
 }
+
+//Find the voice playing the given note on the given channel
+//-1 means "not found"
+int8_t opl_music::find_playing(uint8_t channel, uint8_t note) {
+    for(int i=0;i<18;++i) {
+        if(opl_channel_assignment[i] == channel && opl_note_assignment[i] == note)
+            return i;
+    }
+    return -1;
+}
+
+//Find the first voice that's currently empty
+//-1 means 'all in use'
+int8_t opl_music::find_unused() {
+    for(int i=0;i<18;++i) {
+        if(opl_channel_assignment[i] == -1)
+            return i;
+    }
+    cout<<"Couldn't find a free OPL voice."<<endl;
+    return -1;
+}
+
+//Mathematically calculate the best OPL settings to match Midi frequencies
+//Outputs the best matches into the freqs vector of 3-tuples.
+void opl_music::calc_freqs() {
+    double base_freq = 440.0;
+    uint8_t base_mid_num = 69;
+    for(uint16_t mid_num = 0; mid_num < 128; ++mid_num) {
+        double midi_freq = base_freq * pow(2.0, (mid_num - base_mid_num)/12.0);
+        //cout<<"MIDI Number: "<<mid_num<<" Frequency: "<<midi_freq;
+        double diff = 9999999999.0;
+        uint8_t blk = 0;
+        uint16_t f_num = 0;
+        double OPL_freq = 0.0;
+        for(uint32_t block = 0; block < 8; ++block) {
+            for(uint32_t f_number = 0; f_number < 1024; ++f_number) {
+                double opl_freq = double(f_number * /*49716*/ OPL_SAMPLE_RATE ) / pow(2.0, 20 - double(block));
+                if(abs(opl_freq - midi_freq) < diff) {
+                    diff = abs(opl_freq - midi_freq);
+                    f_num = f_number;
+                    blk = block;
+                    OPL_freq = opl_freq;
+                }
+            }
+        }
+        if(diff < 10) {
+            //cout<<" OPL_Blk: "<<uint16_t(blk)<<" F-Num: "<<f_num<<" OPL Freq: "<<OPL_freq<<endl;
+            freqs.push_back(make_tuple(mid_num,blk,f_num));
+        }
+        else {
+            //cout<<" OPL: Out of Range"<<endl;
+        }
+    }
+}
+
+//Methods to do sets of register writes to the OPL synth emulator.
+
+//Write values to the OPL3 emulator to initialize it to defaults
+void opl_music::init_opl3() {
+    opl->Reset();
+    for(int i=0;i<18;++i)
+        opl->SetPanning(i, 0.5,0.5);
+     const uint8_t init_array1[] =
+     {0,0x20,   0,   0,0x60,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //00-0f Turn on waveform select, mask timer interrupts
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //10-1f 
+      1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   //20-2f Frequency mult: 1, voices 0-8
+      1,   1,   1,   1,   1,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //30-3f '                           '
+     63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,   //40-4f Volume attenuation to full
+     63,  63,  63,  63,  63,  63,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //50-5f '                        '
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,   //60-6f Full attack and decay rates
+    255, 255, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //70-7f '                         '
+     15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,   //80-8f Low sustain level, high release rate
+     15,  15,  15,  15,  15,  15,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //90-9f '                                  '
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //a0-af F-Num, lower 8 bits to 0
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,0xc0,   0,   0,   //b0-bf 0 out notes, turn on tremolo and vibrato, turn off rhythm
+   0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,   0,   0,   0,   0,   0,   0,   0,   //c0-cf Turn on output to both speakers
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //d0-df
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //e0-ef Set waveforms to sine
+      0,   0,   0,   0,   0,   0};                                                    //f0-f5 '                   '
+
+     const uint8_t init_array2[] =
+     {0,   0,   0,   0,   0,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //100-10f OPL3 mode enable
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //110-11f
+      1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   //120-12f Frequency mult: 1, voices 9-17
+      1,   1,   1,   1,   1,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //130-13f '                            '
+     63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,  63,   //140-14f volume attenuation to full
+     63,  63,  63,  63,  63,  63,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //150-15f '                        '
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,   //160-16f Full attack and decay rates
+    255, 255, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //170-17f '                         '
+     15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,   //180-18f Low sustain level, high release rate
+     15,  15,  15,  15,  15,  15,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //190-19f '                                  '
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //1a0-1af F-Num, lower 8 bits to 0
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //1b0-1bf 0 out notes, turn on tremolo and vibrato
+   0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,0xf0,   0,   0,   0,   0,   0,   0,   0,   //1c0-1cf Turn on output to both speakers
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //1d0-1df
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //1e0-1ef Set waveforms to sine
+      0,   0,   0,   0,   0, 0};                                                      //1f0-1f5 '                   '
+
+    for(size_t reg = 0; reg < 0xf6; ++reg) {
+        opl->WriteReg(reg,init_array1[reg]);
+        opl->WriteReg(reg+0x100, init_array2[reg]);
+    }
+}
+
+//Copies the given patch data into the given voice slot
+                //OPL voice #, bank #,       instrument patch #
+bool opl_music::copy_patch(uint8_t voice, uint8_t bank, uint8_t patch) {
+    for(auto it = uwpf.bank_data.begin(); it != uwpf.bank_data.end(); ++it) {
+        if(it->bank == bank && it->patch == patch) {
+            uw_patch_file::opl2_patch pat = it->ad_patchdatastruct;
+            //Write the values to the modulator:
+            opl->WriteReg(voice_base[voice]+0x20,(pat.mod_freq_mult&0x0f) +
+                                                 ((pat.mod_env_scaling&1)<<(4)) +
+                                                 ((pat.mod_sustain_sound&1)<<(5)) +
+                                                 ((pat.mod_ampl_vibrato&1)<<(6)) +
+                                                 ((pat.mod_freq_vibrato&1)<<(7)));
+            opl->WriteReg(voice_base[voice]+0x40,(pat.mod_out_lvl&0x3f) +
+                                                 ((pat.mod_key_scale&0x3)<<(6)));
+            opl->WriteReg(voice_base[voice]+0x60,(pat.mod_decay&0xf) +
+                                                 ((pat.mod_attack&0xf)<<(4)));
+            opl->WriteReg(voice_base[voice]+0x80,(pat.mod_release&0xf) +
+                                                 ((pat.mod_sustain_lvl&0xf)<<(4)));
+            opl->WriteReg(voice_base[voice]+0xc0,(pat.connection&1) +
+                                                 ((pat.feedback&7)<<(1)));
+            opl->WriteReg(voice_base[voice]+0xe0,(pat.mod_waveform&7));
+
+            //Write the values to the carrier:
+            opl->WriteReg(voice_base[voice]+0x23,(pat.car_freq_mult&0x0f) +
+                                                 ((pat.car_env_scaling&1)<<(4)) +
+                                                 ((pat.car_sustain_sound&1)<<(5)) +
+                                                 ((pat.car_ampl_vibrato&1)<<(6)) +
+                                                 ((pat.car_freq_vibrato&1)<<(7)));
+            opl->WriteReg(voice_base[voice]+0x43,((pat.car_out_lvl&0x3f) +
+                                                 ((pat.car_key_scale&0x3)<<(6))));
+            opl->WriteReg(voice_base[voice]+0x63,(pat.car_decay&0xf) +
+                                                 ((pat.car_attack&0xf)<<(4)));
+            opl->WriteReg(voice_base[voice]+0x83,(pat.car_release&0xf) +
+                                                 ((pat.car_sustain_lvl&0xf)<<(4)));
+            opl->WriteReg(voice_base[voice]+0xc3,(pat.connection&0x7)+
+                                                 ((pat.feedback&0x7)<<(1)));
+            opl->WriteReg(voice_base[voice]+0xe3,(pat.car_waveform&7));
+            return true;
+        }
+    }
+    cout<<"Bank: "<<int(bank)<<" Patch: "<<int(patch)<<endl;
+    return false;        
+}
+
+// I previously had trouble getting the SoundStream to work. Currently, it doesn't do anything very 
+// smart, like reading from anything but a linear buffer, but my short-term goal was to allow for 
+// immediate playback, rather than the old behavior of having to wait until the whole audio stream 
+// was generated to start playback.
+
+void opl_music::onSeek(sf::Time t) {
+    sample_playback_offset = static_cast<size_t>(t.asSeconds() * getSampleRate() * getChannelCount());
+    std::cout<<"Seeking to time: "<<t.asSeconds()<<" offset: "<<sample_playback_offset<<" buffer size: "<<sample_buffer.size()<<std::endl;
+    assert(sample_playback_offset < sample_buffer.size() || (sample_buffer.size() == 0 && sample_playback_offset == 0));
+}
+
+bool opl_music::onGetData(sf::SoundStream::Chunk& data) {
+    data.sampleCount = 10000;
+    //std::cout<<"Insertion: "<<sample_insertion_offset<<" Playback: "<<sample_playback_offset<<std::endl;
+    if(sample_playback_offset + 10000 < sample_insertion_offset) {
+        data.samples=const_cast<const int16_t *>(&sample_buffer[sample_playback_offset]);
+        sample_playback_offset+=10000;
+    }
+    else if(sample_playback_offset + 10000 >= sample_buffer.size()) {
+        return false;
+    }
+    else {
+        std::cout<<"Buffer underrun by "<<std::dec<<((sample_playback_offset+10000) - sample_insertion_offset)<<" samples"<<std::endl;
+    }
+    return true;
+}
+
+#ifdef STAND_ALONE
+int main(int argc, char* argv[]) {
+    if(argc >= 3) {
+        for(int i=2;i<argc;++i) {
+            std::cout<<"Trying to play \""<<argv[i]<<"\""<<std::endl;
+            opl_music music;
+            music.load(argv[1], argv[i]);
+            music.play();
+            while(music.getStatus() == sf::SoundSource::Playing) {
+                sf::sleep(sf::seconds(1));
+            }
+        }
+    }
+}
+#endif
