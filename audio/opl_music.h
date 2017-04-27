@@ -78,14 +78,6 @@ private:
     //Write values to the OPL3 emulator to initialize it to defaults
     void init_opl3(); 
 
-    //Set the notes of the OPL3 to silent
-    void pause_sound() {
-    }
-
-    //Set the notes of the OPL3 to play again, if previously silenced
-    void unpause_sound() {
-    }
-
     //Copies the given patch data into the given voice slot
                     //OPL voice #, bank #,       instrument patch #
     bool copy_patch(uint8_t voice, uint8_t bank, uint8_t patch);

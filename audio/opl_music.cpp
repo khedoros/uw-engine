@@ -4,9 +4,6 @@
 
 #include<iostream>
 #include "opl_music.h"
-#include "uw_patch.h"
-#include "opl/opl.h"
-#include "xmi.h"
 #include "midi_event.h"
 #include<vector>
 #include<list>
@@ -44,6 +41,8 @@ opl_music::opl_music() {
 
 bool opl_music::load(std::string ad_file, std::string xmi_file) {
 
+}
+
 //Find the voice playing the given note on the given channel
 //-1 means "not found"
 int8_t opl_music::find_playing(uint8_t channel, uint8_t note) {
@@ -67,7 +66,7 @@ int8_t opl::music::find_unused() {
 
 //Mathematically calculate the best OPL settings to match Midi frequencies
 //Outputs the best matches into the freqs vector of 3-tuples.
-void calc_freqs() {
+void opl_music::calc_freqs() {
     double base_freq = 440.0;
     uint8_t base_mid_num = 69;
     for(uint16_t mid_num = 0; mid_num < 128; ++mid_num) {
@@ -101,7 +100,7 @@ void calc_freqs() {
 //Methods to do sets of register writes to the OPL synth emulator.
 
 //Write values to the OPL3 emulator to initialize it to defaults
-void init_opl3() {
+void opl_music::init_opl3() {
     opl->Reset();
     for(int i=0;i<18;++i)
         opl->SetPanning(i, 0.5,0.5);
@@ -147,12 +146,12 @@ void init_opl3() {
     }
 }
 
-//Set the notes of the OPL3 to silent
-void pause_sound() {
+//Set the notes of the OPL3 to play again, if previously silenced
+void opl_music::play() {
 }
 
-//Set the notes of the OPL3 to play again, if previously silenced
-void unpause_sound() {
+//Set the notes of the OPL3 to silent
+void opl_music::pause() {
 }
 
 //Copies the given patch data into the given voice slot
