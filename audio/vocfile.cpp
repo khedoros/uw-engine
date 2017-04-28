@@ -115,7 +115,7 @@ vector<int16_t> vocfile::get_file_dat(std::string& filename) {
     return ret_buff;
 }
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_VOC
 int main(int argc, char *argv[]) {
     string filename(argv[1]);
     vocfile::print_info(filename);

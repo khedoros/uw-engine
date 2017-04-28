@@ -114,7 +114,7 @@ bool uw_patch_file::load(std::string fna, std::string fnm /*= ""*/) {
     }
     if(!load_patches(ina)) return false;
     if(fnm != "" && !load_patches(inm)) return false;
-    #ifdef STAND_ALONE
+    #ifdef STAND_ALONE_PATCH
     for(auto it = bank_data.begin(); it != bank_data.end(); ++it) {
         std::cout<<"Bank: "<<int(it->bank)<<" Patch: "<<int(it->patch);
         if(it->name != "") {
@@ -139,7 +139,7 @@ bool uw_patch_file::load(std::string fna, std::string fnm /*= ""*/) {
     return true;
 }
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_PATCH
 int main(int argc, char *argv[]) {
     uw_patch_file upf;
     if(argc == 3) {

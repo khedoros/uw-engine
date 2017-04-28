@@ -214,7 +214,7 @@ uint32_t xmi::tag(const char inp[5]) {
     return inp[0] + 256 * inp[1] + 65536 * inp[2] + 16777216 * inp[3];
 }
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_XMI
 int main(int argc, char *argv[]) {
     xmi in;
     bool success = in.load(argv[1]);

@@ -80,6 +80,7 @@ bool opl_music::load(std::string ad_file, std::string xmi_file, std::string outp
     tick_count = xmifile.tick_count();
     //pre-allocate the space for the music. Takes roughly 12MB/minute to store
     cout<<"Building a sound output buffer of "<<dec<<2* tick_count * int(OPL_SAMPLE_RATE / TICK_RATE)<<" bytes"<<endl;
+    sample_buffer.resize(0);
     sample_buffer.resize(2 * tick_count * int(OPL_SAMPLE_RATE / TICK_RATE), 0);
 
     //Look up the timbre->bank map in the xmi file
@@ -444,12 +445,12 @@ bool opl_music::onGetData(sf::SoundStream::Chunk& data) {
     return true;
 }
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_OPL
 int main(int argc, char* argv[]) {
     if(argc >= 3) {
+        opl_music music;
         for(int i=2;i<argc;++i) {
             std::cout<<"Trying to play \""<<argv[i]<<"\""<<std::endl;
-            opl_music music;
             music.load(argv[1], argv[i]);
             music.play();
             while(music.getStatus() == sf::SoundSource::Playing) {
