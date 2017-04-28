@@ -2,7 +2,7 @@
 #include <SFML/Audio.hpp>
 //#include "palette.h"
 #include "lpfcut.h"
-#include "vocfile.h"
+#include "audio/vocfile.h"
 
 void play_lpf(sf::RenderWindow *, const char *, sf::SoundBuffer * wait_for_done=NULL);
 void play_snd(sf::Sound * snd, sf::SoundBuffer * sb, bool blocking=true);
@@ -15,12 +15,23 @@ int main(int argc, char *argv[])
         if(cs_file.load(argv[1])) { //Try to load the file as a cutscene, play it if it worked
             std::cout<<"Opened file as cutscene file."<<std::endl;
             // Create the main window
-            sf::RenderWindow App(sf::VideoMode(cs_file.width, cs_file.height), "LPF Cutscene Player");
+            int rwh,rww;
+            if(cs_file.width == 320 && cs_file.width == 200) {
+                rww = 320;
+                rwh = 240;
+            }
+            else {
+                rww = cs_file.width;
+                rwh = cs_file.height;
+            }
+
+            sf::RenderWindow App(sf::VideoMode(rww, rwh), "LPF Cutscene Player");
             //sf::Image my_img;
             sf::Texture my_tex;
             my_tex.create(cs_file.width,cs_file.height);
             sf::Sprite spr;
             spr.setTexture(my_tex);
+            spr.scale(1.0,1.2);
 
             bool update_frame = true;
 

@@ -43,3 +43,6 @@ engine: engine.cpp
 
 uwfont: uwfont.cpp util.cpp util.h uwfont.h
 	g++ -std=c++11 -DSTAND_ALONE uwfont.cpp util.cpp `pkg-config --libs sfml-all` -o uwfont
+
+main: main.cpp lpfcut.cpp lpfcut.h audio/vocfile.cpp audio/vocfile.h
+	g++ -o main -std=c++11 main.cpp lpfcut.cpp audio/vocfile.cpp -lsfml-audio -lsfml-system -lsfml-window -lsfml-graphics
