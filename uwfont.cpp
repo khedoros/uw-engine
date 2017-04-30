@@ -73,17 +73,17 @@ void uwfont::print() {
     uint16_t char_count = font.size();
     for(size_t g = 0; g < char_count; ++g) {
         if(widths[g] == 0) continue;
-        cout<<"Char "<<g<<"("<<int(widths[g])<<" wide) :"<<endl;
+        std::cout<<"Char "<<g<<"("<<int(widths[g])<<" wide) :"<<std::endl;
         uint16_t font_width = widths[g];
         for(size_t r = 0; r < font_height; ++r) {
             for(size_t c = 0; c < font_width; ++c) {
                 for(int i=128;i>0;i/=2)
-                    if((font[g][r][c] & i) > 0) cout<<"##";
-                    else cout<<"  ";
+                    if((font[g][r][c] & i) > 0) std::cout<<"##";
+                    else std::cout<<"  ";
             }
-            cout<<endl;
+            std::cout<<std::endl;
         }
-        cout<<endl;
+        std::cout<<std::endl;
     }
 }
 
@@ -150,19 +150,19 @@ int main(int argc, char* argv[]) {
     uwfont in;
     if(argc == 2) {
         if(!in.load(string(argv[1]))) {
-            cerr<<"Couldn't open the file "<<argv[1]<<endl;
+            std::cerr<<"Couldn't open the file "<<argv[1]<<std::endl;
             return 1;
         }
     }
     else {
-        cerr<<"Provide the path to the font file to open."<<endl;
+        std::cerr<<"Provide the path to the font file to open."<<std::endl;
         return 1;
     }
     //in.print();
     ofstream out("font.bdf");
     out<<in.to_bdf();
     out.close();
-    cout<<"Loaded the file successfully. Output to font.bdf."<<endl;
+    std::cout<<"Loaded the file successfully. Output to font.bdf."<<std::endl;
 
     // Create the main window
     sf::RenderWindow window(sf::VideoMode(800, 600), "SFML window");
