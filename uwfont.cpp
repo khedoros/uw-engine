@@ -179,7 +179,7 @@ int main(int argc, char* argv[]) {
     uint32_t fontsize = 0;
     for(int i=0;i<20;++i) {
         text = sf::Text("A QUICK BROWN FOX JUMPED OVER THE LAZY DOG\na quick brown fox jumped over the lazy dog\n1234567890`~!@#$%^&*()-_[{}]\\|;:'\",<>./?", font, i+1);
-        //std::cout<<"Font size "<<i+1<<" has width: "<<texts[i].getLocalBounds().width<<std::endl;
+        std::cout<<"Font size "<<i+1<<" has width: "<<text.getLocalBounds().width<<std::endl;
         if(text.getLocalBounds().width > 0) {
             fontsize = i+1;
             break;

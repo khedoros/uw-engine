@@ -49,7 +49,7 @@ int main (int argc, char *argv[]) {
                 vector<uint16_t> args(0,0);
                 for (int i = 0; i < arg_counts[val]; ++i) {
                     args.push_back(get_short(infile));
-                    cout << " " << args.last();
+                    cout << " " << args.back();
                 }
                 cout << "\t";
                 seen[val]++;

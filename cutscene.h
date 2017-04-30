@@ -28,8 +28,10 @@ private:
     std::vector<sf::Texture> frame;
     std::vector<cutscene::cut_cmd> cmd;
     std::vector<std::string> strings;
+    sf::Color cur_lpf_pal[256];
     sf::Font cs_font;
     std::string base_dir;
+    uint32_t cut_num;
     uint32_t cur_frame;
     uint32_t cur_n0x;
     int fade_level;

@@ -13,6 +13,7 @@ cutscene::cutscene(): cur_n0x(1), cur_frame(0), fade_level(0), fade_target(0), f
 
 bool cutscene::load(const std::string& data_dir, int cut_num) {
     base_dir = data_dir;
+    this->cut_num = cut_num;
     std::string n00_file(data_dir+"/cuts/cs"+to_octal3(cut_num)+".n00");
     std::string n01_file(data_dir+"/cuts/cs"+to_octal3(cut_num)+".n01");
     std::string font_file(data_dir+"/data/fontbig.sys");
@@ -57,6 +58,7 @@ bool cutscene::load_n00(std::string& filename) {
 
 bool cutscene::load_lpf(std::string& filename) {
     frame.resize(0);
+    cur_frame = 0;
     Lpfcut lpf;
     if(!lpf.load(filename)) {
         std::cerr<<filename<<" didn't open. Fix it." <<std::endl;
@@ -70,6 +72,11 @@ bool cutscene::load_lpf(std::string& filename) {
         f.update(frame_data);
         frame.push_back(f);
         frame_data = (sf::Uint8 *)lpf.getNextFrame();
+    }
+    for(int i=0;i<256;++i) {
+        color temp=lpf.getPalEntry(i);
+        cur_lpf_pal[i] = sf::Color(temp.r,temp.g,temp.b);
+        //std::cout<<"Palette "<<i<<": ("<<std::hex<<cur_lpf_pal[i].toInteger()<<") from ("<<temp.r<<temp.g<<temp.b<<temp.a<<")"<<std::endl;
     }
     if(frame.size() + 1 == lpf.rec_count)
         return true;
@@ -101,18 +108,108 @@ bool cutscene::load_strings(std::string& filename, int cut_num) {
         std::cerr<<"Couldn't load "<<filename<<". Fix it."<<std::endl;
         return false;
     }
-    for(int s=0;s<text.get_string_count(0xc00+cut_num);++s) {
-        strings.push_back(text.get_string(0xc00+cut_num, s));
+    int blocknum = 0;
+    for(int i=0;i<text.get_block_count();++i) {
+        if(text.get_block_num(i) == 0xc00 + cut_num) {
+            blocknum = i;
+            break;
+        }
+    }
+    for(int s=0;s<text.get_string_count(blocknum);++s) {
+        strings.push_back(text.get_string(blocknum, s));
     }
     return true;
 }
 
 void cutscene::play(sf::RenderWindow& screen) {
     //TODO: Start implementing operation interpretation and playback
-    screen.setFramerateLimit(10);
-
+    sf::Sprite spr;
+    spr.scale(2,2);
+    sf::Text txt("", cs_font, 10);
     for(int i=0; i<cmd.size();i++) {
+        screen.setFramerateLimit(5);
+        while(cmd[i].frame - 1 < cur_frame && cur_frame < frame.size()) {
+            spr.setTexture(frame[cur_frame]);
+            screen.draw(spr);
+            screen.draw(txt);
+            screen.display();
+            cur_frame++;
+        }
+        spr.setTexture(frame[cur_frame]);
         switch(cmd[i].cmd_num) {
+            case 0x00: //Display text arg[1] with color arg[0]
+                std::cout<<strings.size()<<"\t"<<cmd[i].args[1]<<"\t"<<cmd[i].args[0]<<std::endl;
+                std::cout<<strings[cmd[i].args[1]]<<std::endl;
+                assert(cmd[i].args[1] < strings.size());
+                txt = sf::Text(strings[cmd[i].args[1]], cs_font, 10);
+                txt.setFillColor(cur_lpf_pal[cmd[i].args[0]]);
+                //std::cout<<"Fill color: 0x"<<std::hex<<cur_lpf_pal[cmd[i].args[0]].toInteger()<<std::endl;
+                txt.setPosition(0,500);
+                screen.draw(spr);
+                screen.draw(txt);
+                screen.display();
+                break;
+            case 0x04: //Play up to frame arg[0] at rate arg[1]
+                screen.setFramerateLimit(2*cmd[i].args[1]+1);
+                for(;cur_frame<cmd[i].args[0];++cur_frame) {
+                    screen.draw(spr);
+                    screen.draw(txt);
+                    screen.display();
+                }
+                break;
+            case 0x05:
+                {
+                    std::string n0x_file(base_dir+"/cuts/cs"+to_octal3(cut_num)+".n"+to_octal2(cmd[i].args[0]));
+                    if(!load_lpf(n0x_file)) {
+                        std::cerr<<"I made a mistake; couldn't use command 5 as an indicator to load "<<n0x_file<<"."<<std::endl;
+                    }
+                    cur_n0x = cmd[i].args[0];
+                }
+                break;
+            case 0x06: //End of cutscene
+                return;
+            case 0x07:
+                for(int rep=0;rep<cmd[i].args[0];++rep) {
+                    for(int rep_frame=0;rep_frame < cmd[i].frame-1;++rep_frame) {
+                        spr.setTexture(frame[rep_frame]);
+                        screen.draw(spr);
+                        screen.display();
+                        std::cout<<"Frame "<<rep_frame<<std::endl;
+                    }
+                }
+                break;
+            case 0x09: //Fade out
+                {
+                    screen.setFramerateLimit(30);
+                    sf::RectangleShape fade(sf::Vector2f(screen.getSize()));
+                    int rate = 16;
+                    if(cmd[i].args[0] != 0) {
+                        rate = 256/(16*cmd[i].args[0]);
+                    }
+                    for(int opacity=0;opacity < 255; opacity+=rate) {
+                        fade.setFillColor(sf::Color(0,0,0,opacity));
+                        screen.draw(spr);
+                        screen.draw(fade);
+                        screen.display();
+                    }
+                }
+                break;
+            case 0x0a: //Fade in
+                {
+                    screen.setFramerateLimit(30);
+                    sf::RectangleShape fade(sf::Vector2f(screen.getSize()));
+                    int rate = 16;
+                    if(cmd[i].args[0] != 0) {
+                        rate = 256/(16*cmd[i].args[0]);
+                    }
+                    for(int opacity=255;opacity >= 0; opacity-=rate) {
+                        fade.setFillColor(sf::Color(0,0,0,opacity));
+                        screen.draw(spr);
+                        screen.draw(fade);
+                        screen.display();
+                    }
+                }
+                break;
             default:
                 std::cout<<cmd[i].tostring()<<std::endl;
                 break;
