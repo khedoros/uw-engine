@@ -4,10 +4,11 @@
 #include<string>
 #include<vector>
 #include<SFML/Graphics.hpp>
+#include<SFML/Audio.hpp>
 
 class cutscene {
 public:
-    cutscene();
+    cutscene(bool subs = true,bool vocs = true);
     bool load(const std::string& dat_dir, int cut_num);
     void play(sf::RenderWindow&);
 private:
@@ -17,6 +18,7 @@ private:
     bool load_lpf(std::string&);
     bool load_font(std::string&);
     bool load_strings(std::string&, int);
+    void play_voc(int);
     class cut_cmd {
     public:
         uint16_t frame;
@@ -29,6 +31,8 @@ private:
     std::vector<cutscene::cut_cmd> cmd;
     std::vector<std::string> strings;
     sf::Color cur_lpf_pal[256];
+    sf::Sound cur_sound;
+    sf::SoundBuffer cur_sb;
     sf::Font cs_font;
     std::string base_dir;
     uint32_t cut_num;
@@ -37,4 +41,6 @@ private:
     int fade_level;
     int fade_target;
     int fade_speed;
+    bool with_subs;
+    bool with_vocs;
 };

@@ -7,7 +7,7 @@
 #include<algorithm>
 using namespace std;
 
-bool vocfile::print_info(std::string& filename) {
+bool vocfile::print_info(const std::string& filename) {
     ifstream a(filename.c_str());
     a.seekg(0,ios::end);
     size_t size = a.tellg();
@@ -62,7 +62,7 @@ bool vocfile::check(char * filename) {
 }
 
 
-tuple<size_t,size_t> vocfile::get_data_loc(std::string& filename) {
+tuple<size_t,size_t> vocfile::get_data_loc(const std::string& filename) {
     ifstream a(filename.c_str());
     a.seekg(0,ios::end);
     size_t filesize = a.tellg();
@@ -101,7 +101,7 @@ tuple<size_t,size_t> vocfile::get_data_loc(std::string& filename) {
     a.close();
 }
 
-vector<int16_t> vocfile::get_file_dat(std::string& filename) {
+vector<int16_t> vocfile::get_file_dat(const std::string& filename) {
     auto data_loc = vocfile::get_data_loc(filename);
     vector<uint8_t> audio;
     audio.resize(get<1>(data_loc));
