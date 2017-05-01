@@ -10,6 +10,7 @@ public:
     Lpfcut(bool rep = true);
     bool load(std::string);
     const uint8_t * getNextFrame();
+    color getPalEntry(int i);
     uint16_t width;
     uint16_t height;
     bool repeat;

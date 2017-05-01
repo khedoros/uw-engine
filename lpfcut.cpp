@@ -149,6 +149,11 @@ const uint8_t * Lpfcut::getNextFrame() {
 
 }
 
+color Lpfcut::getPalEntry(int i) {
+    if(i<256&&i>0) return pal[i];
+    else return color();
+}
+
 bool Lpfcut::load(std::string filename) {
     binifstream filein;
     filein.open(filename.c_str());
