@@ -125,6 +125,7 @@ void cutscene::play_voc(int number) {
     while(cur_sound.getStatus() == sf::SoundSource::Playing) {
         sf::sleep(sf::milliseconds(100));
     }
+    cur_sound.stop();
     std::vector<int16_t> snd_dat = vocfile::get_file_dat(std::string(base_dir+"/sound/"+std::to_string(number)+".voc"));
     //cur_sb.loadFromFile(std::string(base_dir+"/sound/"+std::to_string(number)+".voc"));
     cur_sb.loadFromSamples(&snd_dat[0], snd_dat.size(),1,12048);
@@ -138,31 +139,11 @@ void cutscene::play(sf::RenderWindow& screen) {
     spr.scale(2,2);
     sf::Text txt("", cs_font, 10);
     int last_frame = 0;
+    int fps = 5;
     for(int i=0; i<cmd.size();i++) {
         screen.setFramerateLimit(5);
-        while(cmd[i].frame - 1 < cur_frame && last_frame < cur_frame && cur_frame < frame.size()) {
-            spr.setTexture(frame[cur_frame]);
-            screen.clear();
-            screen.draw(spr);
-            screen.draw(txt);
-            screen.display();
-            last_frame = cur_frame;
-            cur_frame++;
-        }
-
-        if(last_frame >= cur_frame || cur_frame == frame.size()) {
-            std::string n0x_file(base_dir+"/cuts/cs"+to_octal3(cut_num)+".n"+to_octal2(cur_n0x+1));
-            if(!load_lpf(n0x_file)) {
-                std::cerr<<"I made a mistake; I can't assume that I should jump to the next file."<<n0x_file<<"."<<std::endl;
-            }
-            else {
-                cur_n0x++;
-                cur_frame = 0;
-            }
-        }
-
-        spr.setTexture(frame[cur_frame]);
-
+        fps = 5;
+        cur_frame = cmd[i].frame;
         std::cout<<cmd[i].tostring()<<std::endl;
         switch(cmd[i].cmd_num) {
             case 0x00: //Display text arg[1] with color arg[0]
@@ -178,11 +159,21 @@ void cutscene::play(sf::RenderWindow& screen) {
                 screen.draw(txt);
                 screen.display();
                 break;
+            case 0x03:
+                screen.clear();
+                spr.setTexture(frame[cur_frame - 1]);
+                screen.draw(spr);
+                screen.draw(txt);
+                screen.display();
+                sf::sleep(sf::milliseconds(cmd[i].args[0]*500));
+                break;
             case 0x04: //Play up to frame arg[0] at rate arg[1]
-                screen.setFramerateLimit(2*cmd[i].args[1]+1);
-                std::cout<<"Framerate limit: "<<(2*cmd[i].args[1]+1)<<" fps, playing from frame "<<cur_frame<<" to "<<cmd[i].args[0]<<", out of "<<frame.size()<<" frames"<<std::endl;
-                for(;cur_frame<cmd[i].args[0];++cur_frame) {
+                screen.setFramerateLimit(20/(cmd[i].args[1]+1));
+                fps = 20/(cmd[i].args[1]+1);
+                //std::cout<<"Framerate limit: "<<(2*cmd[i].args[1]+1)<<" fps, playing from frame "<<cur_frame<<" to "<<cmd[i].args[0]<<", out of "<<frame.size()<<" frames"<<std::endl;
+                for(;cur_frame<cmd[i].args[0]-1;++cur_frame) {
                     screen.clear();
+                    spr.setTexture(frame[cur_frame-1]);
                     screen.draw(spr);
                     screen.draw(txt);
                     screen.display();
@@ -190,12 +181,13 @@ void cutscene::play(sf::RenderWindow& screen) {
                 break;
             case 0x05:
                 {
-                    std::string n0x_file(base_dir+"/cuts/cs"+to_octal3(cut_num)+".n"+to_octal2(cmd[i].args[0]));
-                    if(!load_lpf(n0x_file)) {
-                        std::cerr<<"I made a mistake; couldn't use command 5 as an indicator to load "<<n0x_file<<"."<<std::endl;
-                    }
-                    cur_n0x = cmd[i].args[0];
-                    cur_frame = 0;
+                    //std::string n0x_file(base_dir+"/cuts/cs"+to_octal3(cut_num)+".n"+to_octal2(cmd[i].args[0]));
+                    //if(!load_lpf(n0x_file)) {
+                    //    std::cerr<<"I made a mistake; couldn't use command 5 as an indicator to load "<<n0x_file<<"."<<std::endl;
+                    //}
+                    //cur_n0x = cmd[i].args[0];
+                    cur_frame = cmd[i].args[0];
+
                 }
                 break;
             case 0x06: //End of cutscene
@@ -207,7 +199,7 @@ void cutscene::play(sf::RenderWindow& screen) {
                         screen.draw(spr);
                         screen.draw(txt);
                         screen.display();
-                        std::cout<<"Frame "<<rep_frame<<std::endl;
+                        //std::cout<<"Frame "<<rep_frame<<std::endl;
                     }
                 }
                 break;
@@ -217,40 +209,41 @@ void cutscene::play(sf::RenderWindow& screen) {
                     if(!load_lpf(n0x_file)) {
                         std::cerr<<"Couldn't load "<<n0x_file<<", even though I was explicitly told to."<<std::endl;
                     }
-                    cur_n0x = cmd[i].args[0];
-                    cur_frame = 0;
+                    cut_num = cmd[i].args[0];
+                    cur_n0x = cmd[i].args[1];
+                    cur_frame = 1;
                 }
                 break;
             case 0x09: //Fade out
                 {
                     screen.setFramerateLimit(30);
                     sf::RectangleShape fade(sf::Vector2f(screen.getSize()));
-                    int rate = 16;
-                    if(cmd[i].args[0] != 0) {
-                        rate = 256/(16*cmd[i].args[0]);
-                    }
+                    spr.setTexture(frame[cur_frame-1]);
+                    int rate = 256/(16*cmd[i].args[0]+1);
                     for(int opacity=0;opacity < 255; opacity+=rate) {
                         fade.setFillColor(sf::Color(0,0,0,opacity));
                         screen.draw(spr);
+                        screen.draw(txt);
                         screen.draw(fade);
                         screen.display();
                     }
+                    screen.setFramerateLimit(fps);
                 }
                 break;
             case 0x0a: //Fade in
                 {
                     screen.setFramerateLimit(30);
                     sf::RectangleShape fade(sf::Vector2f(screen.getSize()));
-                    int rate = 16;
-                    if(cmd[i].args[0] != 0) {
-                        rate = 256/(16*cmd[i].args[0]);
-                    }
+                    spr.setTexture(frame[cur_frame-1]);
+                    int rate = 256/(16*(cmd[i].args[0]+1));
                     for(int opacity=255;opacity >= 0; opacity-=rate) {
                         fade.setFillColor(sf::Color(0,0,0,opacity));
                         screen.draw(spr);
+                        screen.draw(txt);
                         screen.draw(fade);
                         screen.display();
                     }
+                    screen.setFramerateLimit(fps);
                 }
                 break;
             case 0x0d: //Display text arg[1] with color arg[0] and play sound arg[2]
@@ -273,14 +266,14 @@ void cutscene::play(sf::RenderWindow& screen) {
                 break;
             case 0x0e: //Pause for arg[0] if audio is on, arg[1] if audio is off
                 if(with_vocs) {
-                    sf::sleep(sf::seconds(cmd[i].args[0]/2));
+                    sf::sleep(sf::milliseconds(cmd[i].args[0]*500));
                 }
                 else {
-                    sf::sleep(sf::seconds(cmd[i].args[1]/2));
+                    sf::sleep(sf::milliseconds(cmd[i].args[1]*500));
                 }
                 break;
             default:
-                std::cout<<cmd[i].tostring()<<std::endl;
+                std::cout<<"Not implemented: "<<cmd[i].tostring()<<std::endl;
                 break;
         }
     }
