@@ -170,10 +170,14 @@ void cutscene::play(sf::RenderWindow& screen) {
             case 0x04: //Play up to frame arg[0] at rate arg[1]
                 screen.setFramerateLimit(20/(cmd[i].args[1]+1));
                 fps = 20/(cmd[i].args[1]+1);
+                //screen.setFramerateLimit((cmd[i].args[1]+1)*4);
+                //fps = (cmd[i].args[1]+1)*4;
                 //std::cout<<"Framerate limit: "<<(2*cmd[i].args[1]+1)<<" fps, playing from frame "<<cur_frame<<" to "<<cmd[i].args[0]<<", out of "<<frame.size()<<" frames"<<std::endl;
                 for(;cur_frame<cmd[i].args[0]-1;++cur_frame) {
                     screen.clear();
-                    spr.setTexture(frame[cur_frame-1]);
+                    if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
+                        spr.setTexture(frame[cur_frame-1]);
+                    }
                     screen.draw(spr);
                     screen.draw(txt);
                     screen.display();
@@ -186,7 +190,10 @@ void cutscene::play(sf::RenderWindow& screen) {
                     //    std::cerr<<"I made a mistake; couldn't use command 5 as an indicator to load "<<n0x_file<<"."<<std::endl;
                     //}
                     //cur_n0x = cmd[i].args[0];
-                    cur_frame = cmd[i].args[0];
+                    //cur_frame = cmd[i].args[0];
+                    
+                    fps = 20/(cmd[i].args[0]+1);
+                    screen.setFramerateLimit(20/(cmd[i].args[0]+1));
 
                 }
                 break;
@@ -195,7 +202,9 @@ void cutscene::play(sf::RenderWindow& screen) {
             case 0x07:
                 for(int rep=0;rep<cmd[i].args[0];++rep) {
                     for(int rep_frame=0;rep_frame < cmd[i].frame-1;++rep_frame) {
-                        spr.setTexture(frame[rep_frame]);
+                        if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
+                            spr.setTexture(frame[rep_frame]);
+                        }
                         screen.draw(spr);
                         screen.draw(txt);
                         screen.display();
@@ -218,8 +227,11 @@ void cutscene::play(sf::RenderWindow& screen) {
                 {
                     screen.setFramerateLimit(30);
                     sf::RectangleShape fade(sf::Vector2f(screen.getSize()));
-                    spr.setTexture(frame[cur_frame-1]);
+                    if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
+                        spr.setTexture(frame[cur_frame-1]);
+                    }
                     int rate = 256/(16*cmd[i].args[0]+1);
+                    txt = sf::Text("", cs_font, 10);
                     for(int opacity=0;opacity < 255; opacity+=rate) {
                         fade.setFillColor(sf::Color(0,0,0,opacity));
                         screen.draw(spr);
@@ -234,7 +246,10 @@ void cutscene::play(sf::RenderWindow& screen) {
                 {
                     screen.setFramerateLimit(30);
                     sf::RectangleShape fade(sf::Vector2f(screen.getSize()));
-                    spr.setTexture(frame[cur_frame-1]);
+                    if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
+                        spr.setTexture(frame[cur_frame-1]);
+                    }
+                    txt = sf::Text("", cs_font, 10);
                     int rate = 256/(16*(cmd[i].args[0]+1));
                     for(int opacity=255;opacity >= 0; opacity-=rate) {
                         fade.setFillColor(sf::Color(0,0,0,opacity));
@@ -266,10 +281,10 @@ void cutscene::play(sf::RenderWindow& screen) {
                 break;
             case 0x0e: //Pause for arg[0] if audio is on, arg[1] if audio is off
                 if(with_vocs) {
-                    sf::sleep(sf::milliseconds(cmd[i].args[0]*500));
+                    sf::sleep(sf::milliseconds(cmd[i].args[0]*1000));
                 }
                 else {
-                    sf::sleep(sf::milliseconds(cmd[i].args[1]*500));
+                    sf::sleep(sf::milliseconds(cmd[i].args[1]*1000));
                 }
                 break;
             default:
