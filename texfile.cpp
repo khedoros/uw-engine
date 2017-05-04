@@ -7,7 +7,7 @@
 #ifdef STAND_ALONE
 int main(int argc, char *argv[]) {
     if(argc != 3 && argc !=4) {
-        std::cout<<"Use: \n"<<argv[0]<<" palette_file texture_file.tr\n OR\n"<<argv[0]<<" palette_file img_file.gr altpalfile"<<std::endl;
+        std::cerr<<"Use: \n"<<argv[0]<<" palette_file texture_file.tr\n OR\n"<<argv[0]<<" palette_file img_file.gr altpalfile"<<std::endl;
         return 1;
     }
     texfile tf;
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
     }
 
     if(!retval) {
-        std::cout<<"Error opening the files specified. Aborting."<<std::endl;
+        std::cerr<<"Error opening the files specified. Aborting."<<std::endl;
         return 1;
     }
 
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     if(window.isOpen()) {
         std::cout<<"Window opened successfully!"<<std::endl;
     } else {
-        std::cout<<"Window could not be opened."<<std::endl;
+        std::cerr<<"Window could not be opened."<<std::endl;
     }
 
     std::vector<sf::Sprite> sprite;
@@ -130,10 +130,11 @@ int main(int argc, char *argv[]) {
 #endif
 
 bool texfile::load(const std::string& palfile,const std::string& texfile, const std::string& altpalfile) {
-    std::cout<<"Reading palette: "<<palfile<<" texfile: "<<texfile;
-    if(altpalfile != std::string())
+    /*std::cout<<"Reading palette: "<<palfile<<" texfile: "<<texfile;
+    if(altpalfile != std::string()) {
         std::cout<<" altpalfile: "<<altpalfile;
-    std::cout<<std::endl;
+    }
+    std::cout<<std::endl;*/
     bool retval = read_palette(palfile, altpalfile);
     if(!retval) {
         std::cerr<<"Couldn't read palette "<<palfile<<" or "<<altpalfile<<std::endl;
@@ -147,16 +148,16 @@ bool texfile::load(const std::string& palfile,const std::string& texfile, const 
     }
     std::string namecut = texfile.substr(texfile.length() -4, 4);
     if(namecut == ".byt" || namecut == ".BYT") {
-        std::cout<<"Interpreting as a 320x200 bitmap, based on filename."<<std::endl;
+        //std::cout<<"Interpreting as a 320x200 bitmap, based on filename."<<std::endl;
         return load_byt(in, texfile);
     }
     uint8_t bit8 = read8(in);
     if(bit8 == 2) {
-        std::cout<<"First byte is 2. Interpreting as a texture file."<<std::endl;
+        //std::cout<<"First byte is 2. Interpreting as a texture file."<<std::endl;
         retval = load_tr(in);
     }
     else if(bit8 == 1) {
-        std::cout<<"First byte is 1. Interpreting as an image file."<<std::endl;
+        //std::cout<<"First byte is 1. Interpreting as an image file."<<std::endl;
         bool no_hdr = false;
         int main_pal = 0;
         auto missing = std::string::npos;
@@ -172,7 +173,7 @@ bool texfile::load(const std::string& palfile,const std::string& texfile, const 
         retval = load_gr(in, main_pal, no_hdr);
     }
     else {
-        std::cout<<"First byte is "<<int(bit8)<<", which is unexpected."<<std::endl;
+        std::cerr<<"First byte is "<<int(bit8)<<", which is unexpected."<<std::endl;
         return false;
     }
     in.close();
@@ -189,6 +190,7 @@ bool texfile::load_byt(std::ifstream& in, const std::string& name) {
     else if(name.find("opscr.byt") != std::string::npos) palnum = 2;
     else if(name.find("pres1.byt") != std::string::npos || name.find("pres2.byt") != std::string::npos || name.find("presd.byt") != std::string::npos) palnum = 5;
     else if(name.find("win1.byt") != std::string::npos || name.find("win2.byt") != std::string::npos) palnum = 7;
+    std::cout<<"Picture is using palette #"<<int(palnum)<<std::endl;
     std::vector<color> buffer;
     buffer.resize(320*200);
     for(size_t i=0;i<320*200;++i) {
@@ -211,7 +213,7 @@ bool texfile::load_byt(std::ifstream& in, const std::string& name) {
 bool texfile::load_tr(std::ifstream& in) {
     res=read8(in);//res x res is the texture resolution
     uint16_t bit16 = read16(in); //this word contains a count of the number of textures in the file
-    std::cout<<"Res: "<<uint16_t(res)<<"x"<<uint16_t(res)<<", "<<bit16<<" textures in the file."<<std::endl;
+    //std::cout<<"Res: "<<uint16_t(res)<<"x"<<uint16_t(res)<<", "<<bit16<<" textures in the file."<<std::endl;
     if(res < 16 || bit16 == 0)
         return false;
     tex.resize(bit16);
@@ -237,10 +239,10 @@ bool texfile::load_gr(std::ifstream& in, const int palnum, const bool no_img_hdr
     bit16 = read16(in);
     tex.resize(bit16);
     animtex.resize(bit16);
-    std::cout<<"Reading "<<bit16<<" images."<<std::endl;
+    //std::cout<<"Reading "<<bit16<<" images."<<std::endl;
 
     for(size_t i=0;i<tex.size(); ++i) {
-        std::cout<<i<<": ";
+        //std::cout<<i<<": ";
         tex[i]=read_bmp(in, read32(in), palnum, no_img_hdr);
         //tex[i].setSmooth(true);
         tex[i].setRepeated(false);
@@ -291,7 +293,7 @@ bool texfile::read_palette(const std::string& palfile, const std::string& altpal
         in.seekg(0, std::ios::beg);
         assert(altpalsize == 513 || altpalsize == 32); //allpals.dat or weapons.cm
         altpal.resize(altpalsize/16);
-        std::cout<<"Resizing the altpal thing to hold "<<altpalsize/16<<" palettes"<<std::endl;
+        //std::cout<<"Resizing the altpal thing to hold "<<altpalsize/16<<" palettes"<<std::endl;
         for(size_t pal = 0; pal < altpal.size(); ++pal) {
             altpal[pal].resize(16);
             unsigned char buf;
@@ -329,13 +331,14 @@ sf::Texture texfile::read_bmp(std::ifstream& in, const uint32_t offset, const in
     buffer.resize(xres * yres);
     uint8_t altpalnum = 0;
     if(type == 8 || type == 0x0a) altpalnum = read8(in);
-    std::cout<<"Type: "<<int(type)<<" altpalnum: "<<int(altpalnum)<<std::endl;
+    //std::cout<<"Type: "<<int(type)<<" altpalnum: "<<int(altpalnum)<<std::endl;
     if(altpal.size() < altpalnum) altpalnum = 1;
     uint16_t expected_size = read16(in);
     //std::cout<<"Expected size: "<<expected_size<<" ("<<xres*yres<<" by dimensions)"<<std::endl;
     size_t start_offset = in.tellg();
     if(type != 0x04 && type != 0x08 && type != 0x0a) {
-        std::cerr<<"WTF is type "<<int(type)<<"? Definitely not implemented! (offset "<<offset<<")"<<std::endl;
+        //Usually seems like the way to stub out the texture
+        //std::cerr<<"WTF is type "<<int(type)<<"? Definitely not implemented! (offset "<<offset<<")"<<std::endl;
         in.seekg(bookmark, std::ios::beg);
         return sf::Texture();
     }

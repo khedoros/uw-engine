@@ -126,17 +126,39 @@ void cutscene::play_voc(int number) {
         sf::sleep(sf::milliseconds(100));
     }
     cur_sound.stop();
-    std::vector<int16_t> snd_dat = vocfile::get_file_dat(std::string(base_dir+"/sound/"+std::to_string(number)+".voc"));
+    std::string numstr = std::to_string(number);
+    if(number < 10) {
+        numstr = std::string("0")+numstr;
+    }
+    std::vector<int16_t> snd_dat = vocfile::get_file_dat(std::string(base_dir+"/sound/"+numstr+".voc"));
     //cur_sb.loadFromFile(std::string(base_dir+"/sound/"+std::to_string(number)+".voc"));
     cur_sb.loadFromSamples(&snd_dat[0], snd_dat.size(),1,12048);
     cur_sound.setBuffer(cur_sb);
     cur_sound.play();
 }
 
+std::string cutscene::format_string(std::string& input) {
+    std::string output(input);
+    sf::Text txt = sf::Text(output, cs_font, 10);
+    int width = txt.getLocalBounds().width;
+    int line_breaks = width / 320;
+    std::cout<<"Width: "<<width<<" Breaks: "<<line_breaks;
+    if(line_breaks == 0) return output;
+    int spaces = std::count(output.begin(), output.end(), ' ');
+    size_t space_skip = spaces/(line_breaks+1);
+    size_t pos = 0;
+    for(size_t i = 0; i < line_breaks; i++) {
+        for(int j = 0; j < space_skip; ++j) {
+            pos = output.find(' ', pos+1);
+        }
+        output = output.replace(pos,1,1,'\n');
+    }
+} 
+
 void cutscene::play(sf::RenderWindow& screen) {
     //TODO: Start implementing operation interpretation and playback
     sf::Sprite spr;
-    spr.scale(2,2);
+    spr.scale(1,1.2);
     sf::Text txt("", cs_font, 10);
     int last_frame = 0;
     int fps = 5;
@@ -147,13 +169,18 @@ void cutscene::play(sf::RenderWindow& screen) {
         std::cout<<cmd[i].tostring()<<std::endl;
         switch(cmd[i].cmd_num) {
             case 0x00: //Display text arg[1] with color arg[0]
-                //std::cout<<strings.size()<<"\t"<<cmd[i].args[1]<<"\t"<<cmd[i].args[0]<<std::endl;
-                //std::cout<<strings[cmd[i].args[1]]<<std::endl;
-                assert(cmd[i].args[1] < strings.size());
-                txt = sf::Text(strings[cmd[i].args[1]], cs_font, 10);
-                txt.setFillColor(cur_lpf_pal[cmd[i].args[0]]);
-                //std::cout<<"Fill color: 0x"<<std::hex<<cur_lpf_pal[cmd[i].args[0]].toInteger()<<std::endl;
-                txt.setPosition(0,500);
+                {
+                    //std::cout<<strings.size()<<"\t"<<cmd[i].args[1]<<"\t"<<cmd[i].args[0]<<std::endl;
+                    //std::cout<<strings[cmd[i].args[1]]<<std::endl;
+                    assert(cmd[i].args[1] < strings.size());
+                    std::string temp_string = format_string(strings[cmd[i].args[1]]);
+                    txt = sf::Text(temp_string, cs_font, 10);
+                    txt.setFillColor(cur_lpf_pal[cmd[i].args[0]]);
+                    //std::cout<<"Fill color: 0x"<<std::hex<<cur_lpf_pal[cmd[i].args[0]].toInteger()<<std::endl;
+                    int txtw = (320 - txt.getLocalBounds().width)/2;
+                    int txth = 240 - txt.getLocalBounds().height - 10;
+                    txt.setPosition(txtw,txth);
+                }
                 screen.clear();
                 screen.draw(spr);
                 screen.draw(txt);
@@ -266,10 +293,14 @@ void cutscene::play(sf::RenderWindow& screen) {
                 //std::cout<<strings[cmd[i].args[1]]<<std::endl;
                 if(with_subs) {
                     assert(cmd[i].args[1] < strings.size());
-                    txt = sf::Text(strings[cmd[i].args[1]], cs_font, 10);
+                    std::string temp_string = format_string(strings[cmd[i].args[1]]);
+                    txt = sf::Text(temp_string, cs_font, 10);
                     txt.setFillColor(cur_lpf_pal[cmd[i].args[0]]);
                     //std::cout<<"Fill color: 0x"<<std::hex<<cur_lpf_pal[cmd[i].args[0]].toInteger()<<std::endl;
-                    txt.setPosition(0,500);
+                    int txtw = (320 - txt.getLocalBounds().width)/2;
+                    int txth = 240 - txt.getLocalBounds().height - 10;
+                    txt.setPosition(txtw,txth);
+                    std::cout<<"Set text position to "<<txtw<<", "<<txth<<std::endl;
                     screen.clear();
                     screen.draw(spr);
                     screen.draw(txt);
@@ -338,6 +369,7 @@ std::string cutscene::cut_cmd::tostring() {
     }
 }
 
+#ifdef STAND_ALONE_CS
 int main(int argc, char *argv[]) {
     //2 args: directory containing game data (cuts+sound), and a cutscene number.
     sf::RenderWindow window(sf::VideoMode(800, 600), "SFML window");
@@ -347,3 +379,4 @@ int main(int argc, char *argv[]) {
     }
     c.play(window);
 }
+#endif

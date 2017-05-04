@@ -64,11 +64,15 @@ bool vocfile::check(char * filename) {
 
 tuple<size_t,size_t> vocfile::get_data_loc(const std::string& filename) {
     ifstream a(filename.c_str());
+    if(!a.is_open()) {
+        std::cerr<<"Couldn't open file "<<filename<<std::endl;
+        return make_tuple(0,0);
+    }
     a.seekg(0,ios::end);
     size_t filesize = a.tellg();
     a.seekg(0,ios::beg);
     if(filesize > 200000) {
-        cerr<<"Filesize larger than expected. Bailing."<<endl;
+        cerr<<"Filesize larger than expected "<<filesize<<" bytes). Bailing."<<endl;
         return make_tuple(0,0);
     }
     vector<uint8_t> filedata(filesize,10); //10, because it's not a valid block tag

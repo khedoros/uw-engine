@@ -15,7 +15,7 @@ bool simple_map::load(string& filename) {
     //printf("First 8 bytes look like this: %016lx\n",file_ident);
     switch(file_ident) {
         case UW1DEMOTILE:
-            cout<<"UW1 Demo Tilemap"<<endl;
+            //cout<<"UW1 Demo Tilemap"<<endl;
             if(!load_tile(in)) { cout<<"Failed to load tilemap. Aborting."<<endl; return false; }
             loaded_tile = true;
             if(!loaded_tex) {
@@ -26,7 +26,7 @@ bool simple_map::load(string& filename) {
             }
             break;
         case UW1DEMOTEXMAP:
-            cout<<"UW1 Demo Texture Mappings"<<endl;
+            //cout<<"UW1 Demo Texture Mappings"<<endl;
             if(!load_tex(in)) { cout<<"Failed to load texmap. Aborting."<<endl; return false; }
             loaded_tex = true;
             if(!loaded_tile) {
@@ -38,11 +38,11 @@ bool simple_map::load(string& filename) {
             break;
         case UW2MAP: cout<<"UW2 Retail Map. Not implemented yet. Aborting."<<endl; return false;
         case UW1MAP:
-            cout<<"UW1 Retail Map"<<endl;
+            //cout<<"UW1 Retail Map"<<endl;
             if(!load_uw1map(in)) { cout<<"Failed to load the map. Aborting."<<endl; return false; }
             break;
         case UW1DEMOANIMDAT:
-            cout<<"UW1 Demo Animation Overlay"<<endl;
+            //cout<<"UW1 Demo Animation Overlay"<<endl;
             if(!load_anim(in)) { cout<<"Failed to load animation overlay data. Aborting."<<endl; return false; }
             loaded_anim = true;
             if(!loaded_tex) {
@@ -95,7 +95,7 @@ uint16_t  simple_map::get_obj_list_start(uint16_t dat2) {
 
 bool simple_map::load_tile(std::ifstream& in, size_t offset /*= 0*/, size_t index /*= 0*/) {
     if(levels.size() == 0) levels.resize(index+1);
-    cout<<"Loading tilemap data for level "<<index+1<<" located at offset "<<offset<<endl;
+    //cout<<"Loading tilemap data for level "<<index+1<<" located at offset "<<offset<<endl;
     size_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
     for(size_t y_index = 0; y_index < 64; ++y_index)
@@ -110,7 +110,7 @@ bool simple_map::load_tile(std::ifstream& in, size_t offset /*= 0*/, size_t inde
             levels[index].d[x_index][y_index].wall_tex =      get_wall_index(dat2);
             levels[index].d[x_index][y_index].first_obj =     get_obj_list_start(dat2);
         }
-    cout<<"Trying to load object lists for level :"<<index+1<<", starting from offset "<<offset+0x4000<<endl;
+    //cout<<"Trying to load object lists for level :"<<index+1<<", starting from offset "<<offset+0x4000<<endl;
     assert(sizeof(static_obj) == 8);
     assert(sizeof(mobile_obj) == 27);
     //cout<<"Size of static object: "<<sizeof(static_obj)<<" (expect 8)"<<endl;
@@ -131,7 +131,7 @@ bool simple_map::load_tile(std::ifstream& in, size_t offset /*= 0*/, size_t inde
 
 bool simple_map::load_tex(std::ifstream& in, size_t offset /*= 0*/, size_t index /*= 0*/) {
     if(levels.size() == 0) levels.resize(index+1);
-    cout<<"Loading Texture Mapping data for level "<<index+1<<" located at offset "<<offset<<endl;
+    //cout<<"Loading Texture Mapping data for level "<<index+1<<" located at offset "<<offset<<endl;
     size_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
     for(int i=0;i<48;++i)
@@ -147,12 +147,12 @@ bool simple_map::load_tex(std::ifstream& in, size_t offset /*= 0*/, size_t index
 
 bool simple_map::load_anim(std::ifstream& in, size_t offset /*= 0*/, size_t index /*= 0*/) {
     if(levels.size() == 0) levels.resize(index+1);
-    cout<<"Pretending to load animation overlay data for level "<<index+1<<" located at offset "<<offset<<endl;
+    //cout<<"Pretending to load animation overlay data for level "<<index+1<<" located at offset "<<offset<<endl;
     return true;
 }
 
 bool simple_map::load_automap_info(std::ifstream& in, size_t offset /*= 0*/, size_t index /*= 0*/) {
-    cout<<"Pretending to load automap exploration data for level "<<index+1<<" located at offset "<<offset<<endl;
+    //cout<<"Pretending to load automap exploration data for level "<<index+1<<" located at offset "<<offset<<endl;
     size_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
     for(int i=1; i<=4096; ++i) {
@@ -164,7 +164,7 @@ bool simple_map::load_automap_info(std::ifstream& in, size_t offset /*= 0*/, siz
 }
 
 bool simple_map::load_automap_notes(std::ifstream& in, size_t offset /*= 0*/, size_t index /*= 0*/) {
-    cout<<"Pretending to load automap note data for level "<<index+1<<" located at offset "<<offset<<endl;
+    //cout<<"Pretending to load automap note data for level "<<index+1<<" located at offset "<<offset<<endl;
     size_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
     for(int i=1; i<=4096; ++i) {
@@ -182,14 +182,14 @@ bool simple_map::load_uw1map(std::ifstream& in) {
     for(size_t index = 0;index < block_count; ++index) {
         size_t offset = read32(in);
         if(offset != 0) {
-            cout<<"Index: "<<index<<" Offset: "<<offset<<endl;
+            //cout<<"Index: "<<index<<" Offset: "<<offset<<endl;
             switch(index/9) {
                 case 0: if(!load_tile(in,offset,index%9)) return false; break;
                 case 1: if(!load_anim(in,offset,index%9)) return false; break;
                 case 2: if(!load_tex(in,offset,index%9)) return false; break;
                 case 3: if(!load_automap_info(in, offset, index%9)) return false; break;
                 case 4: if(!load_automap_notes(in, offset, index%9)) return false; break;
-                default: cout<<"Skipping data at index "<<index<<"."<<endl;
+                default: break; //cout<<"Skipping data at index "<<index<<"."<<endl;
             }
         }
     }

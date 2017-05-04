@@ -40,15 +40,15 @@ bool UwText::load(std::string filename) {
     binifstream in;
     in.open(filename.c_str(),std::ios::in|std::ios::binary);
     if(!in.is_open()) {
-        std::cout<<"Couldn't open the file "<<filename<<std::endl;
+        std::cerr<<"Couldn't open the file "<<filename<<std::endl;
         return false;
     }
-    std::cout<<"UwText reading strings from "<<filename<<std::endl;
+    //std::cout<<"UwText reading strings from "<<filename<<std::endl;
     in.seekg(0, std::ios::end);
     size_t filesize=in.tellg();
     in.seekg(0, std::ios::beg);
     if(filesize < 180*4 + 2 + 2) {
-        std::cout<<"This file won't even hold the expected file headers."<<std::endl;
+        std::cerr<<"This file won't even hold the expected file headers."<<std::endl;
         return false;
     }
     uint16_t node_count;
@@ -96,13 +96,13 @@ bool UwText::load(std::string filename) {
             //std::cout<<"Number: "<<blocks[i].block_num<<" Offset: "<<blocks[i].block_off<<" Description: "<<blocks[i].name<<std::endl;
     }
     if(filesize<=blocks[block_count-1].block_off) {
-        std::cout<<"File seems to be truncated before the end."<<std::endl;
+        std::cerr<<"File seems to be truncated before the end."<<std::endl;
         return false;
     }
     for(int block=0;block<blocks.size();++block) {
         bool retval=process_block(in, block);
         if(!retval) {
-            std::cout<<"Problem processing block #"<<block<<". Aborting."<<std::endl;
+            std::cerr<<"Problem processing block #"<<block<<". Aborting."<<std::endl;
             return false;
         }
     }

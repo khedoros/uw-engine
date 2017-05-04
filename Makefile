@@ -48,4 +48,4 @@ main: main.cpp lpfcut.cpp lpfcut.h audio/vocfile.cpp audio/vocfile.h
 	g++ -o main -std=c++11 main.cpp lpfcut.cpp audio/vocfile.cpp -lsfml-audio -lsfml-system -lsfml-window -lsfml-graphics
 
 cutscene: cutscene.cpp uwfont.cpp util.cpp lpfcut.cpp UwText.cpp cutscene.h uwfont.h util.h lpfcut.h UwText.h audio/vocfile.cpp audio/vocfile.h
-	g++ -g -std=c++11 -L/usr/local/lib cutscene.cpp uwfont.cpp util.cpp lpfcut.cpp UwText.cpp audio/vocfile.cpp -o cutscene -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
+	g++ -std=c++11 -DSTAND_ALONE_CS -L/usr/local/lib cutscene.cpp uwfont.cpp util.cpp lpfcut.cpp UwText.cpp audio/vocfile.cpp -o cutscene -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio

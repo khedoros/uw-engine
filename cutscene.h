@@ -19,6 +19,7 @@ private:
     bool load_font(std::string&);
     bool load_strings(std::string&, int);
     void play_voc(int);
+    std::string format_string(std::string&);
     class cut_cmd {
     public:
         uint16_t frame;
