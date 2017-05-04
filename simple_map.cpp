@@ -371,7 +371,7 @@ uint16_t simple_map::mobile_obj::get_next() {
     return info.next_index;
 }
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_MAP
 int main(int argc,char *argv[]) {
     cout<<"Using the simple_map class."<<endl;
     if(argc==3) {

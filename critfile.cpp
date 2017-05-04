@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_CRIT
 //Needs a lot of re-work.
 int main(int argc, char* argv[]) {
     if(argc != 3) {

@@ -240,7 +240,7 @@ bool convfile::load(const std::string& cnvfile) {
     return true;
 }
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_CONV
 int main(int argc, char *argv[]) {
     bool retval = false;
     std::string cnvfile;

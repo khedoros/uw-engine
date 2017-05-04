@@ -4,7 +4,7 @@
 #include<iostream>
 #include<string>
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_TEX
 int main(int argc, char *argv[]) {
     if(argc != 3 && argc !=4) {
         std::cerr<<"Use: \n"<<argv[0]<<" palette_file texture_file.tr\n OR\n"<<argv[0]<<" palette_file img_file.gr altpalfile"<<std::endl;

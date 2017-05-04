@@ -8,7 +8,7 @@
 #include "util.h"
 #include "uwfont.h"
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_FONT
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 
@@ -145,7 +145,7 @@ uint32_t uwfont::get_height() {
     return font_height;
 }
 
-#ifdef STAND_ALONE
+#ifdef STAND_ALONE_FONT
 int main(int argc, char* argv[]) {
     uwfont in;
     if(argc == 2) {
