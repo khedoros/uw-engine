@@ -158,7 +158,7 @@ bool Lpfcut::load(std::string filename) {
     binifstream filein;
     filein.open(filename.c_str());
     if(!filein.is_open()) {
-        std::cout<<"Failed to open cutscene file \""<<filename<<"\" (File could not be read.)"<<std::endl;
+        std::cerr<<"Failed to open cutscene file \""<<filename<<"\" (File could not be read.)"<<std::endl;
         frame.resize(0);
         return false;
     }
@@ -182,12 +182,12 @@ bool Lpfcut::load(std::string filename) {
     //Read content type string and the width and height variables
     filein.read(&content_type[0],4);
     filein>>width>>height;
-    std::cout<<"FileID (expecting \"LPF \"): "<<file_id<<"\nLP's in file: "<<lp_count<<"\nRecords in file: "<<rec_count<<"\nContent Type (expecting \"ANIM\"): "<<content_type<<"\nWidth: "<<width<<"\nHeight: "<<height<<std::endl;
+    //std::cout<<"FileID (expecting \"LPF \"): "<<file_id<<"\nLP's in file: "<<lp_count<<"\nRecords in file: "<<rec_count<<"\nContent Type (expecting \"ANIM\"): "<<content_type<<"\nWidth: "<<width<<"\nHeight: "<<height<<std::endl;
 
     if(std::string(file_id) != "LPF " || std::string(content_type) != "ANIM") {
         //std::cout<<"The opening file tags don't look right. This probably isn't an LPF animation file."<<std::endl;
         frame.resize(0);
-        std::cout<<"Failed to open cutscene file \""<<filename<<"\" (File contains data in an unknown format.)"<<std::endl;
+        std::cerr<<"Failed to open cutscene file \""<<filename<<"\" (File contains data in an unknown format.)"<<std::endl;
         return false;
     }
 
@@ -216,7 +216,7 @@ bool Lpfcut::load(std::string filename) {
 
     //Find the "in-order" traversal of the LPDs
     size_t last_found_rec=0;
-    std::cout<<"Record 0: Starts at: 0 Index: "<<lp_order[0]<<std::endl;
+    //std::cout<<"Record 0: Starts at: 0 Index: "<<lp_order[0]<<std::endl;
     for(int i=1;i<lp_count;++i) {
         size_t lowest_found=65536; //arbitrarily large number that handles all the examples I have
         size_t lowest_index=0;
@@ -228,7 +228,7 @@ bool Lpfcut::load(std::string filename) {
         }
         last_found_rec=lowest_found;
         lp_order[i]=lowest_index;
-        std::cout<<"Record "<<i<<": Starts at: "<<last_found_rec<<" Index: "<<lowest_index<<std::endl;
+        //std::cout<<"Record "<<i<<": Starts at: "<<last_found_rec<<" Index: "<<lowest_index<<std::endl;
     }
 
     //Start loading large pages

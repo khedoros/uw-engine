@@ -141,17 +141,35 @@ std::string cutscene::format_string(std::string& input) {
     std::string output(input);
     sf::Text txt = sf::Text(output, cs_font, 10);
     int width = txt.getLocalBounds().width;
+    //300, because I'd rather err toward too many lines than too few, so I'll pretend the screen is a little smaller.
     int line_breaks = width / 320;
-    std::cout<<"Width: "<<width<<" Breaks: "<<line_breaks;
+    //std::cout<<"Width: "<<width<<" Breaks: "<<line_breaks;
     if(line_breaks == 0) return output;
-    int spaces = std::count(output.begin(), output.end(), ' ');
-    size_t space_skip = spaces/(line_breaks+1);
-    size_t pos = 0;
+    //int spaces = std::count(output.begin(), output.end(), ' ');
+    //size_t space_skip = spaces/(line_breaks+1) + 1;
+    size_t char_skip = output.size() / (line_breaks + 1) + 1;
+    //std::cout<<"Char skip: "<<char_skip<<std::endl;
+    //size_t pos = 0;
+    size_t split_loc = char_skip;
     for(size_t i = 0; i < line_breaks; i++) {
-        for(int j = 0; j < space_skip; ++j) {
-            pos = output.find(' ', pos+1);
+        size_t posr = output.find(' ', split_loc);
+        size_t posl = output.substr(split_loc).rfind(' ');
+        size_t pos = 0;
+        assert((posl > 0 && posl < output.size())||posl == std::string::npos);
+        assert((posr > 0 && posr < output.size())||posr == std::string::npos);
+        if(((split_loc - posl) < (posr - split_loc) || posr == std::string::npos) && posl != std::string::npos ) {
+            output = output.replace(posl, 1, 1, '\n');
+            pos = posl;
         }
-        output = output.replace(pos,1,1,'\n');
+        else if(posr != std::string::npos) {
+            output = output.replace(posr, 1, 1, '\n');
+            pos = posr;
+        }
+        else {
+            break;
+            //std::cout<<"Flummoxed by the string: \""<<output<<"\""<<std::endl;
+        }
+        split_loc += char_skip;
     }
 } 
 
@@ -258,7 +276,6 @@ void cutscene::play(sf::RenderWindow& screen) {
                         spr.setTexture(frame[cur_frame-1]);
                     }
                     int rate = 256/(16*cmd[i].args[0]+1);
-                    txt = sf::Text("", cs_font, 10);
                     for(int opacity=0;opacity < 255; opacity+=rate) {
                         fade.setFillColor(sf::Color(0,0,0,opacity));
                         screen.draw(spr);
@@ -266,6 +283,7 @@ void cutscene::play(sf::RenderWindow& screen) {
                         screen.draw(fade);
                         screen.display();
                     }
+                    txt = sf::Text("", cs_font, 10);
                     screen.setFramerateLimit(fps);
                 }
                 break;
@@ -276,7 +294,6 @@ void cutscene::play(sf::RenderWindow& screen) {
                     if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
                         spr.setTexture(frame[cur_frame-1]);
                     }
-                    txt = sf::Text("", cs_font, 10);
                     int rate = 256/(16*(cmd[i].args[0]+1));
                     for(int opacity=255;opacity >= 0; opacity-=rate) {
                         fade.setFillColor(sf::Color(0,0,0,opacity));
@@ -285,6 +302,7 @@ void cutscene::play(sf::RenderWindow& screen) {
                         screen.draw(fade);
                         screen.display();
                     }
+                    txt = sf::Text("", cs_font, 10);
                     screen.setFramerateLimit(fps);
                 }
                 break;
