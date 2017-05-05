@@ -1,13 +1,19 @@
 #include<iostream>
 #include<fstream>
 #include<string>
-#include<stdint.h>
+#include<cstdint>
 #include<vector>
 #include "util.h"
+#include "uw_model.h"
 
 using namespace std;
 
-bool check_offset(uint32_t offset, ifstream& in) {
+const uint32_t uw_model::start_offsets[] = {0x0004e910, 0x0004ccd0, 0x0004e370, 0x0004ec70};
+const uint32_t uw_model::model_table_offsets[] = {0x0004e99e, 0x0004cd5e, 0x0004e3fe, 0x0004ecfe};
+uw_model::uw_model() {
+}
+
+bool uw_model::check_offset(uint32_t offset, ifstream& in) {
     const uint8_t first_bytes[] = {0xb6, 0x4a, 0x06, 0x40};
     uint32_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
@@ -20,7 +26,7 @@ bool check_offset(uint32_t offset, ifstream& in) {
     return true;
 }
 
-int skip_data(ifstream& in) {
+int uw_model::skip_data(ifstream& in) {
     size_t offset = in.tellg();
     cout<<hex<<offset<<dec<<": ";
     uint16_t node_type = read16(in);
@@ -71,9 +77,11 @@ int skip_data(ifstream& in) {
     return retval;
 }
 
+bool uw_model::load(const std::string& uw_exe, int model_number) {
+    return true;
+}
+
 int main(int argc, char *argv[]) {
-    const uint32_t start_offsets[] = {0x0004e910, 0x0004ccd0, 0x0004e370, 0x0004ec70};
-    const uint32_t model_table_offsets[] = {0x0004e99e, 0x0004cd5e, 0x0004e3fe, 0x0004ecfe};
     uint32_t start_offset = 0;
     uint32_t model_table_offset = 0;
     ifstream in;
@@ -86,10 +94,11 @@ int main(int argc, char *argv[]) {
     }
     else { cerr<<"Provide the path to uw.exe"<<endl; return 1;}
 
+    uw_model m;
     for(size_t i=0;i<4;++i) {
-        if(check_offset(start_offsets[i], in)) {
-            start_offset = start_offsets[i];
-            model_table_offset = model_table_offsets[i];
+        if(m.check_offset(m.start_offsets[i], in)) {
+            start_offset = m.start_offsets[i];
+            model_table_offset = m.model_table_offsets[i];
         }
     }
     if(start_offset == 0 || model_table_offset == 0) { cerr<<"Couldn't find expected data pattern. Is this the uw1 executable??"<<endl; return 1; }
@@ -110,7 +119,7 @@ int main(int argc, char *argv[]) {
             x_ext /= 256.0; y_ext /= 256.0; z_ext /= 256.0;
             cout<<": Unknown: "<<hex<<unk<<dec<<" Xext: "<<x_ext<<" Yext: "<<y_ext<<" Zext: "<<z_ext<<" Next model around "<<hex<<model_offsets[i]+unk<<"?"<<dec<<endl;
             while(uint32_t(in.tellg()) - model_offsets[i] < 2048) {
-                int ret = skip_data(in);
+                int ret = m.skip_data(in);
                 if(ret != 0) break;
             }
         }

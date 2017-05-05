@@ -1,6 +1,6 @@
 SFML_LIB :=-L/usr/lib -L/usr/local/lib -lsfml-window -lsfml-graphics -lsfml-system -lsfml-audio
 
-all: texfile play_xmi sfml-fixed-engine sfml-shader-engine simple_map UwText critfile convfile engine 3dmodel uwfont convvm
+all: texfile play_xmi sfml-fixed-engine sfml-shader-engine simple_map UwText critfile convfile engine uw_model uwfont convvm
 
 texfile: texfile.cpp texfile.h util.cpp util.h weapon_offset.cpp weapon_offset.h
 	g++ -std=c++11 texfile.cpp util.cpp weapon_offset.cpp -DSTAND_ALONE_TEX -o texfile $(SFML_LIB)
@@ -38,8 +38,8 @@ convvm: convvm.cpp convvm.h convfile.cpp convfile.h util.cpp util.h UwText.cpp U
 engine: engine.cpp
 	g++ engine.cpp -lGL -lGLU -lglut -o engine
 
-3dmodel: 3dmodel.cpp 3dmodel.h
-	g++ -std=c++11 3dmodel.cpp util.cpp -o 3dmodel
+uw_model: uw_model.cpp uw_model.h util.cpp util.h
+	g++ -std=c++11 uw_model.cpp util.cpp -o uw_model
 
 uwfont: uwfont.cpp util.cpp util.h uwfont.h
 	g++ -std=c++11 -DSTAND_ALONE_FONT uwfont.cpp util.cpp `pkg-config --libs sfml-all` -o uwfont
