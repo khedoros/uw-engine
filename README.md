@@ -22,7 +22,7 @@ I can convert the XMI files to MIDI, read the ad-lib instrument definition files
 
 - The XMI format and format of the \*.ad file were gleaned from the AIL 2.0 (aka Miles Sound System 2.0) documentation and source code.
 - I'm using a C++ port of Robson Cozenday's Java OPL3 emulator, which was distributed under an LGPL 2.1+ license
-- I also include some code from MAME, which I acquired through one of the Doom engine implementations (don't remember which one). I don't think that I actually *use* their OPL3 code, but I'm using their interface to Cozenday's emulator, and I think that it was that project which ported it to C++.
+- I also include some code from MAME, which I acquired through one of the Doom engine implementations (don't remember which one). I don't actually use their OPL3 code itself, but I'm using their interface to Cozenday's emulator, and I think that same Doom engine project is where it got ported to C++.
 - I'm actually not completely happy with my current sequencing code; the output doesn't sound perfectly like the music in the original game. There are some sour notes, and some MIDI control commands that I ignore (FOR loops, velocity on start and stop, probably some others like pitch bends). For that reason, I'm currently working on porting the original AIL2 C+ASM code into modern-ish C++. The whole audio subsystem will be put into its own shared library. Eventually, it'll be configurable to output to an included OPL3 emulator (operating in OPL2 mode, since that's what the game supports), or to talk to the MUNT emulator for Roland music and sound effects.
 
 ###Sound Effects
@@ -37,6 +37,11 @@ Having looked at some of the audio code, I've identified the routines that handl
 - There seem to be 8 word values that get updated per iteration of the effect handler.
 - TVFX blocks in a timbre definition file start with a 2-byte word showing the size (like all the other timbre types). After that, there are 16-byte blocks.
 - The smallest effect has 0xC2 bytes (so 12 * 16-byte blocks, plus 2 size). The next is 0xD2 bytes (13 * 16 + 2). The largest is 0x162 (22 * 16 + 2).
+
+###Further update (actually did this a long while ago, and forgot to update the readme)
+Look at audio/kail/ALE.INC. It's an open implementation of OSI_ALE TVFX (the library used for adlib sound effects). The "TVFX" struct shows the structure of the first 0x36 or 0x3e bytes of a TVFX timbre (the larger ones override the default attack/decay and sustain/release values used by the library).
+
+There are 8 sets of values that can be time-varied: frequency, carrier + modulator volumes, feedback levels, carrier + modulator AVEKM, and modulator + carrier wave selection. Each of those basically has a for-loop: initial value, number of increments to do, ending value, and a pointer into a variable-size data table for the next set of these values (or looping back to previous ones, etc). The whole ASDR note life-cycle is covered. It's possible to build the effects to work as "instruments", but I think the Ultima games only use them as sound effects (one-shot things, no separate note-off message, hardcoded amount of time to run)
 
 ####Playing an effect in the code
 - Checks for an available SFX callback (the code allows up to 4 to play at once)
@@ -57,7 +62,7 @@ Having looked at some of the audio code, I've identified the routines that handl
 - For each struct: Byte 0: Timbre number from bank 1, Byte 1: MIDI note number, Byte 2: Velocity for the note, Byte 3: Not sure. Haven't seen it used. Byte 4: Seems to be a pan value
 
 ###Graphics
-I can load most of the graphics in the game, including cut scenes, wall, floor and 3d object textures, sprites for in-game items, etc. Foreground/in-hand weapon graphics use a variant on the other graphic formats, so that isn't working properly yet.
+I can load most of the graphics in the game, including cut scenes, wall, floor and 3d object textures, sprites for in-game items, etc. Foreground/in-hand weapon graphics use a variant on the other graphic formats, with variable-size images and a separate file of offsets for where to render them onscreen, but I've got most of that working (except some of the mace animations; they don't fit the patterns of the other weapons).
 
 ###Map
 I can read the map, load item/character locations, etc. The function of the minimap needs to be documented.
@@ -70,9 +75,9 @@ These are actually contained in structs in the executable itself. I can interpre
 
 ###Cutscenes
 - N00 files contain the "scripts" for how to run each cutscene. NXX files with higher numbers are DeluxePaint ANM files, aka LPFs (Long Page Files). They contain actual frames of animation. They're also documented elsewhere, so I won't go into their exact format here.
-- For a file CSxyz.Nab, 'xyz' is the cutscene number. 'ab' is the script file (ab == 00), or the image files (ab > 00).
-- N00 files are a series of entries. The first value of an entry is a 1-based frame number. (frames numbered 0 are run before processing any image data). The next value is a function number. In UW1, it's in the range 0-15 (0x0-0xF). In UW2, the range is larger, but I'm not sure how large (maybe 0-31?). Functions have between 0 and 3 arguments that immediately follow the function numbers.
-- A lot of the functions operate on a byte-size bitfield, setting and clearing options that change the behavior of the cutscene state-machine
+- For a file CSxyz.Nab, 'xyz' is the cutscene number, in octal notation. 'ab' is the script file (ab == 00), or the image files (ab > 00, still in octal).
+- N00 files are a series of entries. The first value of an entry is a 1-based frame number. (commands marked as frame 0 are run before processing any image data). The next value is a function number. In UW1, it's in the range 0-15 (0x0-0xF). In UW2, the range is larger, but I'm not sure how large (maybe 0-31?). Functions have between 0 and 3 arguments that immediately follow the function numbers.
+- A lot of the functions operate on a byte-size bitfield, setting and clearing options that change the behavior of the cutscene state-machine. My own code is simplified, probably incorrect, but works anyhow. Look in cutscene.cpp for the current state of the code's ability to playback cutscenes.
 
 Function 0: 2 arguments. The first argument is a palette index from the current nXX file. The second argument is an index into the game's string table (strings.pak is also documented elsewhere). It reads flag bit0, and returns immediately if it isn't set.
 
@@ -80,11 +85,11 @@ Function 1: 0 arguments. I don't know what it does.
 
 Function 2: 2 arguments. Seems to be a no-op.
 
-Function 3: 1 argument. The argument is a number of seconds to pause, displaying the current frame. Current frame is used as a kind of hidden second argument. Clears flag bit1.
+Function 3: 1 argument. The argument is a number of half-seconds to pause, displaying the current frame. Current frame is used as a kind of hidden second argument. Clears flag bit1.
 
-Function 4: 2 arguments. The first seems to be a frame number. The second seems to be a time in seconds. It seems to play the frames from current to the first argument, probably over the course of arg2 seconds.
+Function 4: 2 arguments. The first seems to be a frame number. The second seems to be a time in seconds(maybe? I ended up ignoring it in my code and playing at a constant 5fps). It seems to play the frames from current to the first argument, probably over the course of arg2 seconds.
 
-Function 5: 1 argument. I'm not sure what it does, but the argument isn't used in the function. It just clears a bit in an 8-bit flag that controls flow of the cutscene. Might mean that the next frame's audio shouldn't block playback of the frames.
+Function 5: 1 argument. I'm not sure what it does, but the argument isn't used in the function. It just clears a bit in an 8-bit flag that controls flow of the cutscene. On subsequent investigation, I think it has to do with "static" vs "animating" cutscenes (a space-saving option in the game config).
 
 Function 6: 0 arguments. Marks the end of a cutscene.
 
@@ -102,7 +107,7 @@ Function C: 1 argument. Not sure what it does. The argument is used as a boolean
 
 Function D: 3 arguments. First arg is a palette index. Second is text (these two are the same as function 0). Third arg is the number of a .voc sound file to play.
 
-Function E: 2 arguments. Might pause on current frame for different amounts of time, depending on whether audio is enabled. Current frame is used as a frame number arg. arg0 is used as a time if flag bit5 is clear, arg1 is used if flag bit5 is set. I think bit5 is related to whether digital sound is active or not.
+Function E: 2 arguments. Pauses on current frame for different amounts of time, depending on whether audio is enabled. Current frame is used as a frame number arg. arg0 is used as a time if flag bit5 is clear, arg1 is used if flag bit5 is set. I think bit5 is related to whether digital sound is active or not. I chose to use the same timing as in function 3, and it seems to be about right.
 
 Function F: 0 arguments. Plays the "Klang" sound effect (MIDI bank 1, patch 3, using 0-based numbering)
 
