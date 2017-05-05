@@ -66,10 +66,10 @@ int main (int argc, char *argv[]) {
                         cout<<"Pause for arg[0] seconds";
                         break;
                     case 4:
-                        cout<<"Probably plays up to frame arg[0] at rate arg[1]";
+                        cout<<"Probably plays up to frame arg[0] (at rate arg[1]? playing at 5fps seems pretty close to correct)";
                         break;
                     case 5:
-                        cout<<"Run frames while audio is playing? arg[0] may be while frame to start at?";
+                        cout<<"Probably has to do with setting the frame to show for the static version of the cutscenes";
                         break;
                     case 6:
                         cout<<"End of cutscene"; val = get_short(infile);
@@ -94,6 +94,7 @@ int main (int argc, char *argv[]) {
                         cout<<"Display text arg[1] with palette color arg[0] and play audio arg[2]";
                         break;
                     case 0xe:
+                        cout<<"Wait for arg[0]/2 seconds if audio is on, arg[1] seconds if not";
                         break;
                     case 0xf:
                         cout<<"Play 'klang' sound effect";

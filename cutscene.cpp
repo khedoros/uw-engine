@@ -174,37 +174,42 @@ std::string cutscene::format_string(std::string& input) {
 } 
 
 void cutscene::play(sf::RenderWindow& screen) {
-    //TODO: Start implementing operation interpretation and playback
     sf::Sprite spr;
     spr.scale(1,1.2);
     sf::Text txt("", cs_font, 10);
-    int last_frame = 0;
+    int prev_frame = 1;
     int fps = 5;
     for(int i=0; i<cmd.size();i++) {
         screen.setFramerateLimit(5);
         fps = 5;
         cur_frame = cmd[i].frame;
         std::cout<<cmd[i].tostring()<<std::endl;
+        if(prev_frame < cur_frame) {
+            std::cout<<"Playing from frame "<<prev_frame<<" to frame "<<cur_frame<<std::endl;
+            for(int f = prev_frame;f<cur_frame;++f) {
+                    screen.clear();
+                    spr.setTexture(frame[f - 1]);
+                    screen.draw(spr);
+                    screen.draw(txt);
+                    screen.display();
+            }
+        }
+        if(cmd[i].cmd_num != 1) {
+            prev_frame = cur_frame;
+        }
         switch(cmd[i].cmd_num) {
             case 0x00: //Display text arg[1] with color arg[0]
                 {
-                    //std::cout<<strings.size()<<"\t"<<cmd[i].args[1]<<"\t"<<cmd[i].args[0]<<std::endl;
-                    //std::cout<<strings[cmd[i].args[1]]<<std::endl;
                     assert(cmd[i].args[1] < strings.size());
                     std::string temp_string = format_string(strings[cmd[i].args[1]]);
                     txt = sf::Text(temp_string, cs_font, 10);
                     txt.setFillColor(cur_lpf_pal[cmd[i].args[0]]);
-                    //std::cout<<"Fill color: 0x"<<std::hex<<cur_lpf_pal[cmd[i].args[0]].toInteger()<<std::endl;
                     int txtw = (320 - txt.getLocalBounds().width)/2;
                     int txth = 240 - txt.getLocalBounds().height - 10;
                     txt.setPosition(txtw,txth);
                 }
-                screen.clear();
-                screen.draw(spr);
-                screen.draw(txt);
-                screen.display();
                 break;
-            case 0x03:
+            case 0x03: //Pause for arg[0]/2 seconds
                 screen.clear();
                 spr.setTexture(frame[cur_frame - 1]);
                 screen.draw(spr);
@@ -212,39 +217,23 @@ void cutscene::play(sf::RenderWindow& screen) {
                 screen.display();
                 sf::sleep(sf::milliseconds(cmd[i].args[0]*500));
                 break;
-            case 0x04: //Play up to frame arg[0] at rate arg[1]
-                screen.setFramerateLimit(20/(cmd[i].args[1]+1));
-                fps = 20/(cmd[i].args[1]+1);
-                //screen.setFramerateLimit((cmd[i].args[1]+1)*4);
-                //fps = (cmd[i].args[1]+1)*4;
-                //std::cout<<"Framerate limit: "<<(2*cmd[i].args[1]+1)<<" fps, playing from frame "<<cur_frame<<" to "<<cmd[i].args[0]<<", out of "<<frame.size()<<" frames"<<std::endl;
+            case 0x04: //Play up to frame arg[0] (at rate arg[1]? Doesn't seem necessary)
                 for(;cur_frame<cmd[i].args[0]-1;++cur_frame) {
-                    screen.clear();
                     if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
                         spr.setTexture(frame[cur_frame-1]);
                     }
+                    screen.clear();
                     screen.draw(spr);
                     screen.draw(txt);
                     screen.display();
                 }
+                prev_frame = cur_frame;
                 break;
-            case 0x05:
-                {
-                    //std::string n0x_file(base_dir+"/cuts/cs"+to_octal3(cut_num)+".n"+to_octal2(cmd[i].args[0]));
-                    //if(!load_lpf(n0x_file)) {
-                    //    std::cerr<<"I made a mistake; couldn't use command 5 as an indicator to load "<<n0x_file<<"."<<std::endl;
-                    //}
-                    //cur_n0x = cmd[i].args[0];
-                    //cur_frame = cmd[i].args[0];
-                    
-                    fps = 20/(cmd[i].args[0]+1);
-                    screen.setFramerateLimit(20/(cmd[i].args[0]+1));
-
-                }
+            case 0x05: //Probably related to "static" cutscene settings
                 break;
             case 0x06: //End of cutscene
                 return;
-            case 0x07:
+            case 0x07: //Repeat a section of animation arg[0] times
                 for(int rep=0;rep<cmd[i].args[0];++rep) {
                     for(int rep_frame=0;rep_frame < cmd[i].frame-1;++rep_frame) {
                         if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
@@ -253,11 +242,10 @@ void cutscene::play(sf::RenderWindow& screen) {
                         screen.draw(spr);
                         screen.draw(txt);
                         screen.display();
-                        //std::cout<<"Frame "<<rep_frame<<std::endl;
                     }
                 }
                 break;
-            case 0x08:
+            case 0x08: //Switch to cs{args[0]}.n{args[1]} for playback
                 {
                     std::string n0x_file(base_dir+"/cuts/cs"+to_octal3(cmd[i].args[0])+".n"+to_octal2(cmd[i].args[1]));
                     if(!load_lpf(n0x_file)) {
@@ -266,11 +254,13 @@ void cutscene::play(sf::RenderWindow& screen) {
                     cut_num = cmd[i].args[0];
                     cur_n0x = cmd[i].args[1];
                     cur_frame = 1;
+                    spr.setTexture(frame[cur_frame - 1]);
+                    txt = sf::Text("", cs_font, 10);
                 }
                 break;
             case 0x09: //Fade out
                 {
-                    screen.setFramerateLimit(30);
+                    screen.setFramerateLimit(45);
                     sf::RectangleShape fade(sf::Vector2f(screen.getSize()));
                     if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
                         spr.setTexture(frame[cur_frame-1]);
@@ -289,7 +279,7 @@ void cutscene::play(sf::RenderWindow& screen) {
                 break;
             case 0x0a: //Fade in
                 {
-                    screen.setFramerateLimit(30);
+                    screen.setFramerateLimit(45);
                     sf::RectangleShape fade(sf::Vector2f(screen.getSize()));
                     if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
                         spr.setTexture(frame[cur_frame-1]);
@@ -302,27 +292,19 @@ void cutscene::play(sf::RenderWindow& screen) {
                         screen.draw(fade);
                         screen.display();
                     }
-                    txt = sf::Text("", cs_font, 10);
                     screen.setFramerateLimit(fps);
                 }
                 break;
             case 0x0d: //Display text arg[1] with color arg[0] and play sound arg[2]
-                //std::cout<<strings.size()<<"\t"<<cmd[i].args[1]<<"\t"<<cmd[i].args[0]<<std::endl;
-                //std::cout<<strings[cmd[i].args[1]]<<std::endl;
                 if(with_subs) {
                     assert(cmd[i].args[1] < strings.size());
                     std::string temp_string = format_string(strings[cmd[i].args[1]]);
                     txt = sf::Text(temp_string, cs_font, 10);
                     txt.setFillColor(cur_lpf_pal[cmd[i].args[0]]);
-                    //std::cout<<"Fill color: 0x"<<std::hex<<cur_lpf_pal[cmd[i].args[0]].toInteger()<<std::endl;
                     int txtw = (320 - txt.getLocalBounds().width)/2;
                     int txth = 240 - txt.getLocalBounds().height - 10;
                     txt.setPosition(txtw,txth);
                     std::cout<<"Set text position to "<<txtw<<", "<<txth<<std::endl;
-                    screen.clear();
-                    screen.draw(spr);
-                    screen.draw(txt);
-                    screen.display();
                 }
                 if(with_vocs) {
                     play_voc(cmd[i].args[2]);
@@ -330,7 +312,7 @@ void cutscene::play(sf::RenderWindow& screen) {
                 break;
             case 0x0e: //Pause for arg[0] if audio is on, arg[1] if audio is off
                 if(with_vocs) {
-                    sf::sleep(sf::milliseconds(cmd[i].args[0]*1000));
+                    sf::sleep(sf::milliseconds(cmd[i].args[0]*500));
                 }
                 else {
                     sf::sleep(sf::milliseconds(cmd[i].args[1]*1000));
@@ -390,7 +372,7 @@ std::string cutscene::cut_cmd::tostring() {
 #ifdef STAND_ALONE_CS
 int main(int argc, char *argv[]) {
     //2 args: directory containing game data (cuts+sound), and a cutscene number.
-    sf::RenderWindow window(sf::VideoMode(800, 600), "SFML window");
+    sf::RenderWindow window(sf::VideoMode(320, 240), "SFML window");
     cutscene c;
     if(!c.load(argv[1], std::stoi(argv[2]))) {
         std::cerr<<"Failed to load files using path "<<argv[1]<<std::endl;
