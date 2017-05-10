@@ -21,8 +21,10 @@ class uw_model {
 
     class face {
         bool goraud;
+        bool texture;
         std::vector<point> points;
         float nx, ny, nz; //normal vector
+        int texture_num;  //texture==true && texture_num==-1 if no specific texture was assigned?
     };
     std::vector<point> points;
     std::vector<std::vector<size_t>> faces;

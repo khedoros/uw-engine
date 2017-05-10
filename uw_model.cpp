@@ -78,54 +78,55 @@ int uw_model::skip_data(ifstream& in) {
 }
 
 bool uw_model::load(const std::string& uw_exe, int model_number) {
+    if(model_number < 0 || model_number >= 64) {
+        std::cerr<<"Tried to load invalid model #"<<model_number<<std::endl;
+        return false;
+    }
+    ifstream in;
+    in.open(uw_exe.c_str());
+    if(!in.is_open()) {
+        std::cerr<<"Couldn't open file at "<<uw_exe<<std::endl;
+        return false;
+    }
+
+    size_t start_offset = 0;
+    size_t model_table_offset = 0;
+
+    for(size_t i=0;i<4;++i) {
+        if(check_offset(start_offsets[i], in)) {
+            start_offset = start_offsets[i];
+            model_table_offset = model_table_offsets[i];
+        }
+    }
+
+    if(start_offset == 0 || model_table_offset == 0) {
+        std::cerr<<"Given file \""<<uw_exe<<" doesn't look like a supported Underworld binary."<<endl;
+        return false;
+    }
+
+    in.seekg(start_offset + model_number * 2);
+    size_t model_offset = read16(in) + model_table_offset;
+    in.seekg(model_offset);
+
+    uint32_t junk32 = read32(in); //Unknown meaning for the first 4 bytes
+    extent_x = fix2float(read16(in));
+    extent_y = fix2float(read16(in));
+    extent_z = fix2float(read16(in));
+
+    if(extent_x == 0.0 || extent_y == 0.0 || extent_z == 0.0) {
+        std::cerr<<"Model "<<model_number<<" has extents ("<<extent_x<<", "<<extent_y<<", "<<extent_z<<"), which look invalid."<<std::endl;
+        return false;
+    }
+
+    //TODO: Traverse model data nodes and load data into my vertex+face lists
+
+    in.close();
     return true;
 }
 
 int main(int argc, char *argv[]) {
-    uint32_t start_offset = 0;
-    uint32_t model_table_offset = 0;
-    ifstream in;
-    if(argc == 2) {
-        in.open(argv[1], ios::binary|ios::in);
-        if(!in.is_open()) {
-            cerr<<"Failed to open "<<argv[1]<<endl;
-            return 1;
-        }
-    }
-    else { cerr<<"Provide the path to uw.exe"<<endl; return 1;}
-
     uw_model m;
-    for(size_t i=0;i<4;++i) {
-        if(m.check_offset(m.start_offsets[i], in)) {
-            start_offset = m.start_offsets[i];
-            model_table_offset = m.model_table_offsets[i];
-        }
-    }
-    if(start_offset == 0 || model_table_offset == 0) { cerr<<"Couldn't find expected data pattern. Is this the uw1 executable??"<<endl; return 1; }
-    uint32_t model_offsets[64];
 
-
-    in.seekg(start_offset, ios::beg);
-    for(size_t i = 0; i<64; ++i) {
-        in.seekg(start_offset + i * 2);
-        model_offsets[i] = read16(in) + model_table_offset;
-        cout<<"Model "<<hex<<i<<" at "<<model_offsets[i]<<dec;
-        in.seekg(model_offsets[i],ios::beg);
-        uint32_t unk = read32(in);
-        float x_ext = read16(in);
-        float y_ext = read16(in);
-        float z_ext = read16(in);
-        if(x_ext != 0.0 && y_ext != 0.0 && z_ext != 0.0) {
-            x_ext /= 256.0; y_ext /= 256.0; z_ext /= 256.0;
-            cout<<": Unknown: "<<hex<<unk<<dec<<" Xext: "<<x_ext<<" Yext: "<<y_ext<<" Zext: "<<z_ext<<" Next model around "<<hex<<model_offsets[i]+unk<<"?"<<dec<<endl;
-            while(uint32_t(in.tellg()) - model_offsets[i] < 2048) {
-                int ret = m.skip_data(in);
-                if(ret != 0) break;
-            }
-        }
-        else cout<<": Skipped (seems invalid)"<<" Next model around "<<hex<<model_offsets[i]+unk<<"?"<<dec<<endl;
-        in.clear();
-    }
 
     return 0;   
 }
