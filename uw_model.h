@@ -28,6 +28,8 @@ class uw_model {
     };
     std::vector<point> points;
     std::vector<std::vector<size_t>> faces;
+    float cent_x, cent_y, cent_z;
+    float extent_x, extent_y, extent_z;
 
     private:
     bool check_offset(uint32_t, std::ifstream&);
