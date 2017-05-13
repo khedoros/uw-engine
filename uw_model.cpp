@@ -26,13 +26,14 @@ bool uw_model::check_offset(uint32_t offset, ifstream& in) {
     return true;
 }
 
-int uw_model::skip_data(ifstream& in) {
+int uw_model::process_node(ifstream& in) {
     size_t offset = in.tellg();
-    cout<<hex<<offset<<dec<<": ";
     uint16_t node_type = read16(in);
+    cout<<hex<<offset<<": type 0x"<<node_type<<dec<<" ";
     uint8_t dat_size = 0;
     int retval = 0;
     switch(node_type) {
+        /*
         case 0x0000: cout<<"end node"<<endl; dat_size = 0; return 1;
         case 0x0006: cout<<"define sort node, arbitrary heading"; dat_size = 16; break;
         case 0x000C: cout<<"define sort node, ZY plane"; dat_size = 12; break;
@@ -50,7 +51,17 @@ int uw_model::skip_data(ifstream& in) {
         case 0x0066: cout<<"define face plane Z"; dat_size = 6; break;
         case 0x0068: cout<<"define face plane Y"; dat_size = 6; break;
         case 0x0078: cout<<"define model center"; dat_size = 0x0a; break;
-        case 0x007A: cout<<"define initial vertex"; dat_size = 8; break;
+        */
+        case 0x007A: 
+             base_pt.x = fix2float(read16(in));
+             base_pt.y = fix2float(read16(in));
+             base_pt.z = fix2float(read16(in));
+             base_pt.vertno = read16(in)>>(3);
+             base_pt.var_height = false;
+             points.push_back(base_pt);
+             std::cout<<"Define initial vertex ("<<base_pt.x<<", "<<base_pt.y<<", "<<base_pt.z<<") as num "<<base_pt.vertno<<std::endl;; 
+             break;
+        /*
         case 0x007E: cout<<"define face vertices"; {uint16_t vcount = read16(in); dat_size = vcount*2;} break;
         case 0x0082: cout<<"define initial vertices"; {uint16_t vcount = read16(in); dat_size = vcount * 6 + 2;} break;
         case 0x0086: cout<<"define vertex offset X"; dat_size = 6; break;
@@ -69,11 +80,14 @@ int uw_model::skip_data(ifstream& in) {
         case 0x00D2: cout<<"??? shorthand face definition"; dat_size = 6; break;
         case 0x00D4: cout<<"define dark vertex face (?)"; {uint16_t vcount = read16(in); dat_size = vcount * 3 + 2;} if(dat_size%2==1) dat_size++; break;
         case 0x00D6: cout<<"define gouraud shading"; dat_size = 0; break;
+        */
         default: cout<<"UNKNOWN 3D ELEMENT ("<<node_type<<")"; dat_size = 20; retval = 2;
     }
-    cout<<": ";
-    for(int i=0;i<dat_size;++i) cout<<hex<<int(read8(in))<<" ";
-    cout<<endl<<dec;
+    if(retval) {
+        cout<<": ";
+        for(int i=0;i<dat_size;++i) cout<<hex<<int(read8(in))<<" ";
+        cout<<endl<<dec;
+    }
     return retval;
 }
 
@@ -119,7 +133,7 @@ int main(int argc, char *argv[]) {
             x_ext /= 256.0; y_ext /= 256.0; z_ext /= 256.0;
             cout<<": Unknown: "<<hex<<unk<<dec<<" Xext: "<<x_ext<<" Yext: "<<y_ext<<" Zext: "<<z_ext<<" Next model around "<<hex<<model_offsets[i]+unk<<"?"<<dec<<endl;
             while(uint32_t(in.tellg()) - model_offsets[i] < 2048) {
-                int ret = m.skip_data(in);
+                int ret = m.process_node(in);
                 if(ret != 0) break;
             }
         }
