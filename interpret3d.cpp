@@ -341,6 +341,7 @@ void translate_nodes(uint32_t model_index, uint32_t base, vector<uint8_t>& d) {
     }
     exit_while:
     if(v_list.size() > 0 && f_list.size() > 0) {
+        cout<<"Writing "<<v_list.size()<<" vertices and "<<f_list.size()<<" faces"<<endl;
         ofstream out(model_names[model_index]+".obj", ios::out|ios::trunc);
         if(!out.is_open()) {
             cerr<<"Couldn't open file \""<<model_names[model_index]+".obj"<<"\". Aborting the export."<<endl;
