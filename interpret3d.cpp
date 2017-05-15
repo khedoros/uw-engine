@@ -80,6 +80,10 @@ void translate_nodes(uint32_t model_index, uint32_t base, vector<uint8_t>& d) {
                 v_base = get16(d,base+off)/8; off+=2;
                 cout<<dec<<"#Vert1: "<<v_num<<" Vert2: "<<v_base<<" Color value: "<<hex<<unk16<<endl;
                 break;
+            case 0x2e:
+                off+=2;
+                cout<<"Skip unknown node"<<endl;
+                break;
             case 0x40: //start face definition?
                 //just skip it, because it goes right to a face
                 //cout<<"TAG 0x40 data: "<<get16(d,base+off)<<" "<<get16(d,base+off+1)<<" "<<get16(d,base+off+2)<<" "<<get16(d,base+off+3)<<endl;
@@ -375,16 +379,20 @@ void translate_models(vector<uint32_t>& o, vector<uint8_t>& d) {
 }
 
 bool check_offset(uint32_t offset, vector<uint8_t>& in) {
-    const uint8_t first_bytes[] = {0xb6, 0x4a, 0x06, 0x40};
+    const uint8_t uw1_first_bytes[] = {0xb6, 0x4a, 0x06, 0x40};
+    const uint8_t uw2_first_bytes[] = {0xd4, 0x64, 0xaa, 0x59};
     for(int i=0;i<4;++i)
-        if(in[offset+i] != first_bytes[i]) {
+        if(in[offset+i] != uw1_first_bytes[i] && in[offset+i] != uw2_first_bytes[i]) {
             return false;
         }
     return true;
 }
 
 int main(int argc, char *argv[]) {
-    if(argc != 2) return 1;
+    if(argc != 2) {
+        cerr<<"Provide path to a uw executable."<<endl;
+        return 1;
+    }
     ifstream in(argv[1]);
     vector<uint8_t> file;
     in.seekg(0,ios::end);
@@ -397,9 +405,9 @@ int main(int argc, char *argv[]) {
 
     size_t oto = 0; //offset of model offset table
     size_t mbase = 0; //base offset of model data
-    const uint32_t start_offsets[] = {0x0004e910, 0x0004ccd0, 0x0004e370, 0x0004ec70};
-    const uint32_t model_table_offsets[] = {0x0004e99e, 0x0004cd5e, 0x0004e3fe, 0x0004ecfe};
-    for(size_t i=0;i<4;++i) {
+    const uint32_t start_offsets[] =       {0x0004e910, 0x0004ccd0, 0x0004e370, 0x0004ec70, 0x00054cf0, 0x000550e0};
+    const uint32_t model_table_offsets[] = {0x0004e99e, 0x0004cd5e, 0x0004e3fe, 0x0004ecfe, 0x00054d8a, 0x0005517a};
+    for(size_t i=0;i<6;++i) {
         if(check_offset(start_offsets[i], file)) {
             oto = start_offsets[i];
             mbase = model_table_offsets[i];

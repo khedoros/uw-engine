@@ -11,8 +11,7 @@ class uw_model {
     uw_model();
     bool load(const std::string&, int);
 
-    class point {
-        public:
+    struct point {
         point() {}
         point(float nx, float ny, float nz, int vn, bool vh) : x(nx), y(ny), z(nz), vertno(vn), var_height(vh) {}
         float x,y,z;
@@ -20,12 +19,12 @@ class uw_model {
         bool var_height; //Some points are "variable height", reaching all the way to the ceiling, etc.
     };
 
-    class uv {
+    struct uv {
         color c; //rgba from util
         float u,v;
     };
 
-    class face {
+    struct face {
         public:
         face() {}
         face(bool gor, bool tex, float nxv, float nyv, float nzv, float dx, float dy, float dz, int texnum) : 
@@ -48,7 +47,7 @@ class uw_model {
 
     private:
     bool check_offset(uint32_t, std::ifstream&);
-    int process_node(std::ifstream&);
+    int process_nodes(std::ifstream&);
     static const uint32_t start_offsets[];
     static const uint32_t model_table_offsets[];
     point base_pt;
