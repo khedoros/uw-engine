@@ -17,10 +17,9 @@ class uw_model {
         float x,y,z;
         int vertno; //vertex number, as separate from its index in an array of vertices for a model or face
         bool var_height; //Some points are "variable height", reaching all the way to the ceiling, etc.
-    };
-
-    struct uv {
-        color c; //rgba from util
+        //color c; //rgba from util
+        uint16_t c;//variable address, which can be used to look up a palette entry
+        int shade;
         float u,v;
     };
 
@@ -32,7 +31,6 @@ class uw_model {
         bool goraud;
         bool texture;
         std::vector<point> points;
-        std::vector<uv>    point_attribs; //UV and color values are unique to points, but can vary by face
         float nx, ny, nz; //normal vector
         float dist_x, dist_y, dist_z; //vector for distance from center
         int texture_num;  //texture==true && texture_num==-1 if no specific texture was assigned?
@@ -51,6 +49,5 @@ class uw_model {
     static const uint32_t start_offsets[];
     static const uint32_t model_table_offsets[];
     point base_pt;
-    uv    base_pt_attr;
     face base_face;
 };
