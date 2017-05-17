@@ -796,7 +796,7 @@ int main(int argc, char *argv[]) {
 }
 
 void gameloop() {
-    sf::RenderWindow window(sf::VideoMode(winW,winH,32), "Ultima Underworld Engine Remake Attempt");
+    sf::RenderWindow window(sf::VideoMode(winW,winH,32), "Ultima Underworld Engine Remake Attempt", sf::Style::Default, sf::ContextSettings(32,0,0,3,3));
     window.setKeyRepeatEnabled(false);
     window.setFramerateLimit(20);
 

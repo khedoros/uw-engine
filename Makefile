@@ -12,7 +12,7 @@ sfml-fixed-engine: sfml-fixed-engine.cpp simple_map.cpp simple_map.h util.cpp ut
 	g++ -std=c++11 sfml-fixed-engine.cpp simple_map.cpp util.cpp texfile.cpp UwText.cpp critfile.cpp $(SFML_LIB) -lGL -lGLU -o sfml-fixed-engine
 
 sfml-shader-engine: sfml-shader-engine.cpp simple_map.cpp simple_map.h util.cpp util.h texfile.cpp texfile.h UwText.cpp UwText.h critfile.cpp critfile.h
-	g++ -std=c++11 sfml-shader-engine.cpp simple_map.cpp util.cpp texfile.cpp UwText.cpp critfile.cpp $(SFML_LIB) -lGL -lGLU -o sfml-shader-engine
+	g++ -std=c++11 sfml-shader-engine.cpp simple_map.cpp util.cpp texfile.cpp UwText.cpp critfile.cpp $(SFML_LIB) -lGL -lGLU -lGLEW -o sfml-shader-engine
 
 simple_map: simple_map.cpp simple_map.h util.cpp util.h UwText.cpp UwText.h
 	 g++ simple_map.cpp util.cpp UwText.cpp -DSTAND_ALONE_MAP $(SFML_LIB) -o simple_map

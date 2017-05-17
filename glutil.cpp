@@ -1,0 +1,94 @@
+#include "glutil.h"
+#include<iostream>
+#include<fstream>
+#include<vector>
+
+GLuint LoadShaders(const std::string& vertex_file_path, const std::string& fragment_file_path) {
+    GLuint vsid = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fsid = glCreateShader(GL_FRAGMENT_SHADER);
+    std::string vsCode;
+    std::ifstream vsStream(vertex_file_path.c_str(), std::ios::in);
+    if(vsStream.is_open()) {
+        std::string Line = "";
+        while(getline(vsStream, Line)) {
+            vsCode += "\n" + Line;
+        }
+        vsStream.close();
+    } else {
+        std::cout<<"Impossible to open "<<vertex_file_path<<". Are you in the right directory ? Don't forget to read the FAQ !"<<std::endl;
+        return 0;
+    }
+
+    std::string fsCode;
+    std::ifstream fsStream(fragment_file_path.c_str(), std::ios::in);
+    if(fsStream.is_open()) {
+        std::string Line = "";
+        while(getline(fsStream, Line)) {
+            fsCode += "\n" + Line;
+        }
+        fsStream.close();
+    }
+
+    GLint Result = GL_FALSE;
+    int InfoLogLength;
+
+
+    // Compile Vertex Shader
+    std::cout<<"Compiling shader : "<<vertex_file_path<<std::endl;
+    char const * VertexSourcePointer = vsCode.c_str();
+    glShaderSource(vsid, 1, &VertexSourcePointer , NULL);
+    glCompileShader(vsid);
+
+    // Check Vertex Shader
+    glGetShaderiv(vsid, GL_COMPILE_STATUS, &Result);
+    glGetShaderiv(vsid, GL_INFO_LOG_LENGTH, &InfoLogLength);
+    if ( InfoLogLength > 0 ){
+        std::vector<char> vsErrorMessage(InfoLogLength+1);
+        glGetShaderInfoLog(vsid, InfoLogLength, NULL, &vsErrorMessage[0]);
+        std::cerr<<&vsErrorMessage[0]<<std::endl;
+    }
+
+
+
+    // Compile Fragment Shader
+    std::cout<<"Compiling shader : "<<fragment_file_path.c_str()<<std::endl;
+    char const * FragmentSourcePointer = fsCode.c_str();
+    glShaderSource(fsid, 1, &FragmentSourcePointer , NULL);
+    glCompileShader(fsid);
+
+    // Check Fragment Shader
+    glGetShaderiv(fsid, GL_COMPILE_STATUS, &Result);
+    glGetShaderiv(fsid, GL_INFO_LOG_LENGTH, &InfoLogLength);
+    if ( InfoLogLength > 0 ){
+        std::vector<char> fsErrorMessage(InfoLogLength+1);
+        glGetShaderInfoLog(fsid, InfoLogLength, NULL, &fsErrorMessage[0]);
+        std::cerr<<&fsErrorMessage[0]<<std::endl;
+    }
+
+
+
+    // Link the program
+    std::cout<<"Linking program"<<std::endl;
+    GLuint ProgramID = glCreateProgram();
+    glAttachShader(ProgramID, vsid);
+    glAttachShader(ProgramID, fsid);
+    glLinkProgram(ProgramID);
+
+    // Check the program
+    glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
+    glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+    if ( InfoLogLength > 0 ){
+        std::vector<char> ProgramErrorMessage(InfoLogLength+1);
+        glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
+        std::cerr<<&ProgramErrorMessage[0]<<std::endl;
+    }
+
+
+    glDetachShader(ProgramID, vsid);
+    glDetachShader(ProgramID, fsid);
+
+    glDeleteShader(vsid);
+    glDeleteShader(fsid);
+
+    return ProgramID;
+}
