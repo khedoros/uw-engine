@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
-#include <GL/gl.h>
+#include<SFML/OpenGL.hpp>
+//#include <GL/gl.h>
 #include <GL/glu.h>
 #include <cstdio>
 #include <cmath>
@@ -108,7 +109,10 @@ typedef enum {
 
 game_mode gmode = TITLE;
 
+int nasty_global = 0;
+
 void draw_objs(const std::vector<sprite_info>& info) {
+    nasty_blobal %= 256;
     uint8_t x = 0, y = 0;
     uint16_t first_obj = 0;
     //cout<<"X: "<<camXPos<<" Y: "<<camYPos<<" Z: "<<camZPos<<endl;
@@ -201,8 +205,9 @@ void draw_objs(const std::vector<sprite_info>& info) {
                 yloc -= 0.01*cos(heading);
                 //cout<<"index: "<<first_obj - 256<<" id: "<<obj_id<<"("<<strings.get_string(3,obj_id)<<") is_quant: "<<obj.quantitied<<" quant: "<<obj.quantity<<" quality: "<<obj.quality<<" owner: "<<obj.owner<<endl;
             }
-            else
+            else {
                 tex = &(objs.tex[obj_id]);
+            }
             wh = tex->getSize();
             w = wh.x;
             h = wh.y;
@@ -216,23 +221,46 @@ void draw_objs(const std::vector<sprite_info>& info) {
         } else {
             glColor3f(1.0,1.0,1.0);
         }
-        sf::Texture::bind(tex);
         glPushMatrix();
           glTranslatef(xloc,zloc,yloc); //Move object where you want it to show up
           glRotatef(obj_theta, 0.0, 1.0, 0.0); //Rotate around y to face camera
           glRotatef(obj_phi,   1.0, 0.0, 0.0); //Rotate around model's X axis to face camera
           //Define quad in modelspace
-          glBegin(GL_QUADS);
-            glTexCoord2f(0.0,1.0); glVertex3f(0.0-(w/2.0), 0.0, 0.0);
-            glTexCoord2f(1.0,1.0); glVertex3f(0.0+(w/2.0), 0.0, 0.0);
-            glTexCoord2f(1.0,0.0); glVertex3f(0.0+(w/2.0), 0.0+h, 0.0);
-            glTexCoord2f(0.0,0.0); glVertex3f(0.0-(w/2.0), 0.0+h, 0.0);
+          const float tex_coords[] = {
+              0.0, 1.0,
+              1.0, 1.0,
+              1.0, 0,0,
+              0.0, 0.0,
 
-            glTexCoord2f(1.0,1.0); glVertex3f(0.0+(w/2.0), 0.0, 0.0);
-            glTexCoord2f(0.0,1.0); glVertex3f(0.0-(w/2.0), 0.0, 0.0);
-            glTexCoord2f(0.0,0.0); glVertex3f(0.0-(w/2.0), 0.0+h, 0.0);
-            glTexCoord2f(1.0,0.0); glVertex3f(0.0+(w/2.0), 0.0+h, 0.0);
-          glEnd();
+              1.0, 0.0,
+              0.0, 0.0,
+              0.0, 1.0,
+              1.0, 1.0,
+          };
+          const float vert_coords[] = {
+              0.0-(w/2.0), 0.0,   0.0,
+              0.0+(w/2.0), 0.0,   0.0,
+              0.0+(w/2.0), 0.0+h, 0.0,
+              0.0-(w/2.0), 0.0+h, 0.0,
+              
+              0.0+(w/2.0), 0.0,   0.0,
+              0.0-(w/2.0), 0.0,   0.0,
+              0.0-(w/2.0), 0.0+h, 0.0,
+              0.0+(w/2.0), 0.0+h, 0.0
+          };
+
+          sf::Texture::bind(tex);
+
+          glVertexPointer(3, GL_FLOAT, 0, vert_coords);
+          glEnableClientState(GL_VERTEX_ARRAY);
+
+          glTexCoordPointer(2, GL_FLOAT, 0, tex_coords);
+          glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+          glDrawArrays(GL_QUADS, 0, 8);
+
+          glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+          glDisableClientState(GL_VERTEX_ARRAY);
         glPopMatrix();
     }
 }
@@ -325,8 +353,6 @@ void draw_level_bounds() {
                          {1,0,1},
                          {1,0,0},
                          {0,0,0}};
-    //glPushMatrix();
-    //glBegin(GL_QUADS);
     for(int i=0;i<6;++i) {
           glPushMatrix();
           switch(i) {
@@ -414,6 +440,9 @@ void render_3d() {
     //Render the actual map tiles
     for(int x = 0;x<64;++x) {
         for(int z = 0;z<64;++z) {
+            std::vector<float> quads(0);
+            std::vector<float> tris(0);
+
             int x_index = 63 - x; //I want x to go in the other direction
             simple_map::map_data tiledat = level.d[x_index][z];
             uint16_t fti = level.floor_tex_index[tiledat.floor_tex];
@@ -476,7 +505,10 @@ void render_3d() {
             }
 
             //If no animated floor texture exists, bind the static one. Otherwise, bind the appropriate frame of the animated texture.
-            if(floors.animtex[fti].size() == 0)
+            if(t == simple_map::SOLID_TILE) {
+                sf::Texture::bind(NULL);
+            }
+            else if(floors.animtex[fti].size() == 0)
                 sf::Texture::bind(&(floors.tex[fti]));
             else {
                 sf::Texture::bind(&(floors.animtex[fti][anim_framecount % floors.animtex[fti].size()]));
@@ -485,13 +517,32 @@ void render_3d() {
 
             //Draw the floor
             glStencilFunc(GL_ALWAYS, ST_FLOOR, -1);
-            glBegin(GL_QUADS);
-              glTexCoord2f(1.0,1.0); glVertex3f(2*x,neb,2*z+2);
-              glTexCoord2f(0.0,1.0); glVertex3f(2*x+2,nwb,2*z+2);
-              glTexCoord2f(0.0,0.0); glVertex3f(2*x+2,swb,2*z);
-              glTexCoord2f(1.0,0.0); glVertex3f(2*x,seb,2*z);
-            glEnd();
 
+            const float floor_tex_coords[] = {
+                1.0, 1.0,
+                0.0, 1.0,
+                0.0, 0.0,
+                1.0, 0,0,
+            };
+            const float floor_vert_coords[] = {
+                2*x,   neb, 2*z+2,
+                2*x+2, nwb, 2*z+2,
+                2*x+2, swb, 2*z,
+                2*x,   seb, 2*z
+            };
+
+            glVertexPointer(3, GL_FLOAT, 0, floor_vert_coords);
+            glEnableClientState(GL_VERTEX_ARRAY);
+
+            if(t != simple_map::SOLID_TILE) {
+                glTexCoordPointer(2, GL_FLOAT, 0, floor_tex_coords);
+                glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+            }
+
+            glDrawArrays(GL_QUADS, 0, 4);
+
+            glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+            glDisableClientState(GL_VERTEX_ARRAY);
 
             if(t == simple_map::SOLID_TILE) continue;
 
@@ -596,16 +647,16 @@ void render_3d() {
 
                 //Draw NE top cap
                 glEnd();
+
                 glColor3f(0.0,0.0,0.0);
                 glBegin(GL_TRIANGLES);
                   glVertex3f(2*x+2,8.0,2*z+2);
                   glVertex3f(2*x+2,8.0,2*z);
                   glVertex3f(2*x,8.0,2*z);
                 glEnd();
+
                 glColor3f(1.0,1.0,1.0);
                 glBegin(GL_QUADS);
-
-
                   glTexCoord2f(1.0,0.0);            glVertex3f(2*x+2,8.0,2*z+2);
                   glTexCoord2f(0.0,0.0);            glVertex3f(2*x,8.0,2*z);
                   glTexCoord2f(0.0,(8.0-h)/2.0); glVertex3f(2*x,h,2*z);

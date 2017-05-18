@@ -10,6 +10,7 @@ class uw_model {
     public:
     uw_model();
     bool load(const std::string&, int);
+    std::vector<float> get_verts();
 
     struct point {
         point() {}

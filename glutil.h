@@ -1,7 +1,8 @@
 #pragma once
 #include<string>
 #include<GL/glew.h>
-#include<GL/gl.h>
+//#include<GL/gl.h>
+#include<SFML/OpenGL.hpp>
 #include<GL/glu.h>
 
 namespace glutil {

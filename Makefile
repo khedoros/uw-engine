@@ -12,8 +12,8 @@ play_xmi: play_xmi.cpp
 sfml-fixed-engine: sfml-fixed-engine.cpp simple_map.cpp simple_map.h util.cpp util.h texfile.cpp texfile.h UwText.cpp UwText.h critfile.cpp critfile.h
 	g++ -std=c++11 sfml-fixed-engine.cpp simple_map.cpp util.cpp texfile.cpp UwText.cpp critfile.cpp $(SFML_LIB) -lGL -lGLU -o sfml-fixed-engine
 
-sfml-shader-engine: sfml-shader-engine.cpp simple_map.cpp simple_map.h util.cpp util.h texfile.cpp texfile.h UwText.cpp UwText.h critfile.cpp critfile.h glutil.cpp glutil.h
-	g++ -std=c++11 sfml-shader-engine.cpp glutil.cpp $(SFML_LIB) $(OGL_LIB) -o sfml-shader-engine
+sfml-shader-engine: sfml-shader-engine.cpp simple_map.cpp simple_map.h util.cpp util.h texfile.cpp texfile.h UwText.cpp UwText.h critfile.cpp critfile.h glutil.cpp glutil.h uw_model.cpp uw_model.h
+	g++ -std=c++11 sfml-shader-engine.cpp glutil.cpp uw_model.cpp $(SFML_LIB) $(OGL_LIB) -o sfml-shader-engine
 
 simple_map: simple_map.cpp simple_map.h util.cpp util.h UwText.cpp UwText.h
 	 g++ simple_map.cpp util.cpp UwText.cpp -DSTAND_ALONE_MAP $(SFML_LIB) -o simple_map
@@ -40,7 +40,7 @@ engine: engine.cpp
 	g++ engine.cpp -lGL -lGLU -lglut -o engine
 
 uw_model: uw_model.cpp uw_model.h util.cpp util.h
-	g++ -std=c++11 uw_model.cpp util.cpp -o uw_model
+	g++ -std=c++11 uw_model.cpp util.cpp -DSTAND_ALONE_MODEL -o uw_model
 
 uwfont: uwfont.cpp util.cpp util.h uwfont.h
 	g++ -std=c++11 -DSTAND_ALONE_FONT uwfont.cpp util.cpp `pkg-config --libs sfml-all` -o uwfont

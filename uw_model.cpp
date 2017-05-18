@@ -519,6 +519,7 @@ bool uw_model::load(const std::string& uw_exe, int model_number) {
     else return false;
 }
 
+#ifdef STAND_ALONE_MODEL
 int main(int argc, char *argv[]) {
     uw_model m;
     if(argc == 2) {
@@ -533,3 +534,4 @@ int main(int argc, char *argv[]) {
 
     return 0;   
 }
+#endif
