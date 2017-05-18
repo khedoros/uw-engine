@@ -15,7 +15,7 @@ GLuint glutil::LoadShaders(const std::string& vertex_file_path, const std::strin
         }
         vsStream.close();
     } else {
-        std::cout<<"Impossible to open "<<vertex_file_path<<". Are you in the right directory ? Don't forget to read the FAQ !"<<std::endl;
+        std::cerr<<"Impossible to open "<<vertex_file_path<<". Check file path."<<std::endl;
         return 0;
     }
 
@@ -27,6 +27,9 @@ GLuint glutil::LoadShaders(const std::string& vertex_file_path, const std::strin
             fsCode += "\n" + Line;
         }
         fsStream.close();
+    } else {
+        std::cerr<<"Impossible to open "<<fragment_file_path<<". Check file path."<<std::endl;
+        return 0;
     }
 
     GLint Result = GL_FALSE;
@@ -42,10 +45,12 @@ GLuint glutil::LoadShaders(const std::string& vertex_file_path, const std::strin
     // Check Vertex Shader
     glGetShaderiv(vsid, GL_COMPILE_STATUS, &Result);
     glGetShaderiv(vsid, GL_INFO_LOG_LENGTH, &InfoLogLength);
-    if ( InfoLogLength > 0 ){
+    if ( InfoLogLength > 1 ){
+        std::cerr<<"error. (log length: "<<InfoLogLength<<")"<<std::endl;
         std::vector<char> vsErrorMessage(InfoLogLength+1);
         glGetShaderInfoLog(vsid, InfoLogLength, NULL, &vsErrorMessage[0]);
         std::cerr<<std::endl<<&vsErrorMessage[0]<<std::endl;
+        return 0;
     }
     else {
         std::cout<<"compiled."<<std::endl;
@@ -62,10 +67,12 @@ GLuint glutil::LoadShaders(const std::string& vertex_file_path, const std::strin
     // Check Fragment Shader
     glGetShaderiv(fsid, GL_COMPILE_STATUS, &Result);
     glGetShaderiv(fsid, GL_INFO_LOG_LENGTH, &InfoLogLength);
-    if ( InfoLogLength > 0 ){
+    if ( InfoLogLength > 1 ){
+        std::cerr<<"error. (log length: "<<InfoLogLength<<")"<<std::endl;
         std::vector<char> fsErrorMessage(InfoLogLength+1);
         glGetShaderInfoLog(fsid, InfoLogLength, NULL, &fsErrorMessage[0]);
         std::cerr<<std::endl<<&fsErrorMessage[0]<<std::endl;
+        return 0;
     }
     else {
         std::cout<<"compiled."<<std::endl;
@@ -82,10 +89,12 @@ GLuint glutil::LoadShaders(const std::string& vertex_file_path, const std::strin
     // Check the program
     glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
     glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-    if ( InfoLogLength > 0 ){
+    if ( InfoLogLength > 1 ){
+        std::cerr<<"error. (log length: "<<InfoLogLength<<")"<<std::endl;
         std::vector<char> ProgramErrorMessage(InfoLogLength+1);
         glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
         std::cerr<<std::endl<<&ProgramErrorMessage[0]<<std::endl;
+        return 0;
     }
     else {
         std::cout<<"linked."<<std::endl;

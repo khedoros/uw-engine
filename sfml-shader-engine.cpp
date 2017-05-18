@@ -41,7 +41,15 @@ int main() {                         //32-bit depth, 0-bit stencil, level-0 anti
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
 
-    GLuint programID = glutil::LoadShaders("shaders/vertex-basic.glsl", "shaders/fragment-basic.glsl");
+    GLuint programID = glutil::LoadShaders("shaders/vertex-basic-33.glsl", "shaders/fragment-basic-33.glsl");
+    if(programID == 0) {
+        std::cerr<<"Shader processing for version 3.3 failed. Trying to fall back to 2.1."<<std::endl;
+        programID = glutil::LoadShaders("shaders/vertex-basic-21.glsl", "shaders/fragment-basic-21.glsl");
+        if(programID == 0) {
+            std::cerr<<"Shader processing for version 2.1 failed. Aborting."<<std::endl;
+            return 1;
+        }
+    }
 
     while(window.isOpen()) {
         sf::Event event;
@@ -57,7 +65,6 @@ int main() {                         //32-bit depth, 0-bit stencil, level-0 anti
         draw(vertexbuffer, programID);
         window.display();
     }
-    //cout<<"Completely unimplemented yet"<<endl;
 }
 
 void draw(GLuint vertexbuffer, GLuint programID) {
