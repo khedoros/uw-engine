@@ -3,7 +3,7 @@
 #include<fstream>
 #include<vector>
 
-GLuint LoadShaders(const std::string& vertex_file_path, const std::string& fragment_file_path) {
+GLuint glutil::LoadShaders(const std::string& vertex_file_path, const std::string& fragment_file_path) {
     GLuint vsid = glCreateShader(GL_VERTEX_SHADER);
     GLuint fsid = glCreateShader(GL_FRAGMENT_SHADER);
     std::string vsCode;
@@ -34,7 +34,7 @@ GLuint LoadShaders(const std::string& vertex_file_path, const std::string& fragm
 
 
     // Compile Vertex Shader
-    std::cout<<"Compiling shader : "<<vertex_file_path<<std::endl;
+    std::cout<<"Compiling shader : "<<vertex_file_path<<" ... ";
     char const * VertexSourcePointer = vsCode.c_str();
     glShaderSource(vsid, 1, &VertexSourcePointer , NULL);
     glCompileShader(vsid);
@@ -45,13 +45,16 @@ GLuint LoadShaders(const std::string& vertex_file_path, const std::string& fragm
     if ( InfoLogLength > 0 ){
         std::vector<char> vsErrorMessage(InfoLogLength+1);
         glGetShaderInfoLog(vsid, InfoLogLength, NULL, &vsErrorMessage[0]);
-        std::cerr<<&vsErrorMessage[0]<<std::endl;
+        std::cerr<<std::endl<<&vsErrorMessage[0]<<std::endl;
+    }
+    else {
+        std::cout<<"compiled."<<std::endl;
     }
 
 
 
     // Compile Fragment Shader
-    std::cout<<"Compiling shader : "<<fragment_file_path.c_str()<<std::endl;
+    std::cout<<"Compiling shader : "<<fragment_file_path.c_str()<<" ... ";
     char const * FragmentSourcePointer = fsCode.c_str();
     glShaderSource(fsid, 1, &FragmentSourcePointer , NULL);
     glCompileShader(fsid);
@@ -62,13 +65,15 @@ GLuint LoadShaders(const std::string& vertex_file_path, const std::string& fragm
     if ( InfoLogLength > 0 ){
         std::vector<char> fsErrorMessage(InfoLogLength+1);
         glGetShaderInfoLog(fsid, InfoLogLength, NULL, &fsErrorMessage[0]);
-        std::cerr<<&fsErrorMessage[0]<<std::endl;
+        std::cerr<<std::endl<<&fsErrorMessage[0]<<std::endl;
+    }
+    else {
+        std::cout<<"compiled."<<std::endl;
     }
 
 
-
     // Link the program
-    std::cout<<"Linking program"<<std::endl;
+    std::cout<<"Linking program"<<" ... ";
     GLuint ProgramID = glCreateProgram();
     glAttachShader(ProgramID, vsid);
     glAttachShader(ProgramID, fsid);
@@ -80,9 +85,11 @@ GLuint LoadShaders(const std::string& vertex_file_path, const std::string& fragm
     if ( InfoLogLength > 0 ){
         std::vector<char> ProgramErrorMessage(InfoLogLength+1);
         glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
-        std::cerr<<&ProgramErrorMessage[0]<<std::endl;
+        std::cerr<<std::endl<<&ProgramErrorMessage[0]<<std::endl;
     }
-
+    else {
+        std::cout<<"linked."<<std::endl;
+    }
 
     glDetachShader(ProgramID, vsid);
     glDetachShader(ProgramID, fsid);

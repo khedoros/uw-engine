@@ -6,15 +6,17 @@
 #include<SFML/Window.hpp>
 #include<SFML/Graphics.hpp>
 #include<SFML/OpenGL.hpp>
+#include "glutil.h"
 using namespace std;
 
-void draw(GLuint vertexbuffer);
+void draw(GLuint vertexbuffer, GLuint programID);
 
 int main() {                         //32-bit depth, 0-bit stencil, level-0 anti-aliasing, GL version 3.3, compatibility profile
-    sf::RenderWindow window(sf::VideoMode(640, 480), "UW shader pipeline renderer", sf::Style::Default, sf::ContextSettings(32,0,0,3,3));
+    sf::RenderWindow window(sf::VideoMode(640, 480), "UW shader pipeline renderer", sf::Style::Default, sf::ContextSettings(32,0,0,3,3, sf::ContextSettings::Default));
     window.setKeyRepeatEnabled(false);
     window.setFramerateLimit(20);
 
+    glewExperimental = GL_TRUE;
     if(glewInit() != GLEW_OK) {
         std::cerr<<"Failed to init GLEW"<<std::endl;
         return 1;
@@ -24,7 +26,7 @@ int main() {                         //32-bit depth, 0-bit stencil, level-0 anti
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
 
-    glClearColor (0.0, 0.0, 0.0, 0.0);
+    glClearColor (0.0, 0.0, 0.4, 0.0);
     glClearDepth (1.0);
     glClearStencil(0);
 
@@ -39,6 +41,8 @@ int main() {                         //32-bit depth, 0-bit stencil, level-0 anti
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
 
+    GLuint programID = glutil::LoadShaders("shaders/vertex-basic.glsl", "shaders/fragment-basic.glsl");
+
     while(window.isOpen()) {
         sf::Event event;
         while(window.pollEvent(event)) {
@@ -49,15 +53,16 @@ int main() {                         //32-bit depth, 0-bit stencil, level-0 anti
         }
 
         //update game state
-        window.clear();
         //draw stuff
-        draw(vertexbuffer);
+        draw(vertexbuffer, programID);
         window.display();
     }
     //cout<<"Completely unimplemented yet"<<endl;
 }
 
-void draw(GLuint vertexbuffer) {
+void draw(GLuint vertexbuffer, GLuint programID) {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(programID);
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
     glVertexAttribPointer(
