@@ -10,6 +10,7 @@
 #include "texfile.h"
 #include "UwText.h"
 #include "critfile.h"
+#include "uw_model.h"
 
 using namespace std;
 
@@ -311,6 +312,10 @@ void update_state(sf::RenderWindow &window) {
     }
 }
 
+uw_model test;
+std::vector<float> model(0);
+int framecount = 0;
+
 void draw_level_bounds() {
     float plane[4][3] = {{0,0,1}, //plane, normal pointing along the +Y axis
                          {1,0,1},
@@ -367,8 +372,29 @@ void draw_level_bounds() {
           glEnd();
         glPopMatrix();
     }
-    //glEnd();
-    //glPopMatrix();
+
+    //Draw the car!
+    glPushMatrix();
+    glColor3f(1.0,1.0,1.0); //ceiling Y Axis (bright green)
+    glTranslatef(64.0,30.0, 64.0);
+    glScalef(10.0,10.0,10.0);
+    if(walls.animtex[206].size() == 0)
+        sf::Texture::bind(&(walls.tex[206]));
+    else
+        sf::Texture::bind(&(walls.animtex[206][anim_framecount % walls.animtex[206].size()]));
+    glVertexPointer(3, GL_FLOAT, 0, &model[0]);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glTexCoordPointer(2, GL_FLOAT, 0, &model[0]);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    framecount--;
+    if(framecount < 0 ) framecount = (model.size() / 3) - 1;
+    glDrawArrays(GL_TRIANGLES, 0, (model.size() / 3) - framecount); //3 = number of coordinates per vertex
+
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glPopMatrix();
+
 }
 
 void push_vert(std::vector<float>& t, std::vector<float>& vert, float u, float v, float x, float y, float z) {
@@ -387,6 +413,9 @@ void update_level_map() {
     if(!map_needs_update) {
         return;
     }
+
+    test.load("../cd/uw2/uw2.exe", "../cd/uw2/data/pals.dat", 4);
+    model = test.get_verts(uw_model::geometry);
 
 #ifdef DEVBUILD
     tris.resize(0);

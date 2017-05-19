@@ -9,8 +9,8 @@ texfile: texfile.cpp texfile.h util.cpp util.h weapon_offset.cpp weapon_offset.h
 play_xmi: play_xmi.cpp
 	g++ play_xmi.cpp -ltimidity $(SFML_LIB) -o play_xmi
 
-sfml-fixed-engine: sfml-fixed-engine.cpp simple_map.cpp simple_map.h util.cpp util.h texfile.cpp texfile.h UwText.cpp UwText.h critfile.cpp critfile.h
-	g++ -std=c++11 sfml-fixed-engine.cpp simple_map.cpp util.cpp texfile.cpp UwText.cpp critfile.cpp $(SFML_LIB) -lGL -lGLU -o sfml-fixed-engine
+sfml-fixed-engine: sfml-fixed-engine.cpp simple_map.cpp simple_map.h util.cpp util.h texfile.cpp texfile.h UwText.cpp UwText.h critfile.cpp critfile.h uw_model.cpp uw_model.h palette.cpp palette.h
+	g++ -std=c++11 -DDEVBUILD sfml-fixed-engine.cpp simple_map.cpp util.cpp texfile.cpp UwText.cpp critfile.cpp uw_model.cpp palette.cpp $(SFML_LIB) -lGL -lGLU -o sfml-fixed-engine
 
 sfml-shader-engine: sfml-shader-engine.cpp simple_map.cpp simple_map.h util.cpp util.h texfile.cpp texfile.h UwText.cpp UwText.h critfile.cpp critfile.h glutil.cpp glutil.h uw_model.cpp uw_model.h
 	g++ -std=c++11 sfml-shader-engine.cpp glutil.cpp uw_model.cpp util.cpp $(SFML_LIB) $(OGL_LIB) -o sfml-shader-engine
@@ -39,8 +39,8 @@ convvm: convvm.cpp convvm.h convfile.cpp convfile.h util.cpp util.h UwText.cpp U
 engine: engine.cpp
 	g++ engine.cpp -lGL -lGLU -lglut -o engine
 
-uw_model: uw_model.cpp uw_model.h util.cpp util.h
-	g++ -std=c++11 uw_model.cpp util.cpp -DSTAND_ALONE_MODEL -o uw_model
+uw_model: uw_model.cpp uw_model.h util.cpp util.h palette.cpp palette.h
+	g++ -std=c++11 uw_model.cpp util.cpp palette.cpp -DSTAND_ALONE_MODEL -o uw_model
 
 uwfont: uwfont.cpp util.cpp util.h uwfont.h
 	g++ -std=c++11 -DSTAND_ALONE_FONT uwfont.cpp util.cpp `pkg-config --libs sfml-all` -o uwfont

@@ -469,11 +469,16 @@ int uw_model::process_nodes(ifstream& in) {
     return retval;
 }
 
-bool uw_model::load(const std::string& uw_exe, int model_number) {
+bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, int model_number) {
     if(model_number < 0 || model_number >= 64) {
         std::cerr<<"Tried to load invalid model #"<<model_number<<std::endl;
         return false;
     }
+
+    if(!pal.load(pal_filename, 0)) {
+        std::cerr<<"Couldn't open palette file at "<<pal_filename<<std::endl;
+    }
+
     ifstream in;
     in.open(uw_exe.c_str());
     if(!in.is_open()) {
@@ -519,23 +524,54 @@ bool uw_model::load(const std::string& uw_exe, int model_number) {
     else return false;
 }
 
-std::vector<float> uw_model::get_verts() {
-    return std::vector<float>();
+std::vector<float> uw_model::get_verts(output_type type) {
+    std::vector<float> ret;
+    switch(type) {
+        case geometry:
+            for(int f = 0; f < faces.size(); f++) {
+                for(int p = 0; p < faces[f].points.size() - 2; p++) { //Emulate GL_TRIANGLE_FAN traversal
+                    ret.push_back(faces[f].points[0].x - cent_x);   ret.push_back(faces[f].points[0].z - cent_z);   ret.push_back(faces[f].points[0].y - cent_y);
+                    ret.push_back(faces[f].points[p+1].x - cent_x); ret.push_back(faces[f].points[p+1].z - cent_z); ret.push_back(faces[f].points[p+1].y - cent_y);
+                    ret.push_back(faces[f].points[p+2].x - cent_x); ret.push_back(faces[f].points[p+2].z - cent_z); ret.push_back(faces[f].points[p+2].y - cent_y);
+                }
+            }
+            break;
+        default: //Not implemented, return empty
+            return ret;
+    }
+    return ret;
 }
 
 #ifdef STAND_ALONE_MODEL
 int main(int argc, char *argv[]) {
     uw_model m;
-    if(argc == 2) {
-        m.load(std::string(argv[1]), 1);
+    if(argc == 3) {
+        if(!m.load(std::string(argv[1]), std::string(argv[2]), 1)) {
+            std::cerr<<"Problem loading model #1 from "<<argv[1]<<" using palette "<<argv[2]<<std::endl;
+            return 1;
+        }
     }
-    else if(argc == 3) {
-        m.load(std::string(argv[1]), std::stoi(argv[2]));
+    else if(argc == 4) {
+        if(!m.load(std::string(argv[1]), std::string(argv[2]), std::stoi(argv[3]))) {
+            std::cerr<<"Problem loading model #"<<argv[3]<<" from "<<argv[1]<<" using palette "<<argv[2]<<std::endl;
+            return 1;
+        }
     }
     else {
-        std::cerr<<"Give the path of the Underworld Executable"<<std::endl;
+        std::cerr<<"Give the path of the Underworld Executable, a palette, and an optional model number (defaults to 1)"<<std::endl;
     }
 
+    auto v = m.get_verts(uw_model::geometry);
+    std::cout<<std::dec<<"Found "<<v.size()/3<<" points ("<<v.size()/9<<" triangular faces)"<<std::endl;
+    for(int i = 0; i < v.size(); i+=3) {
+        std::cout<<"("<<v[i]<<", "<<v[i+1]<<", "<<v[i+2];
+        if(((i+3)%9) != 0) {
+            std::cout<<") -> ";
+        }
+        else {
+            std::cout<<")"<<std::endl;
+        }
+    }
     return 0;   
 }
 #endif

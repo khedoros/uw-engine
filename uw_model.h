@@ -5,12 +5,22 @@
 #include<cstdint>
 #include<fstream>
 #include "util.h"
+#include "palette.h"
 
 class uw_model {
     public:
+
+    typedef enum {
+        geometry,
+        normals,
+        colors,
+        texcoords,
+        shading
+    } output_type;
+
     uw_model();
-    bool load(const std::string&, int);
-    std::vector<float> get_verts();
+    bool load(const std::string&, const std::string&, int);
+    std::vector<float> get_verts(output_type);
 
     struct point {
         point() {}
@@ -40,6 +50,7 @@ class uw_model {
     };
     std::vector<point> points;
     std::vector<face>  faces;
+    palette pal;
     float cent_x, cent_y, cent_z;
     int cent_vert;
     float extent_x, extent_y, extent_z;
