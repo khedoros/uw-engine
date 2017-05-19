@@ -109,10 +109,7 @@ typedef enum {
 
 game_mode gmode = TITLE;
 
-int nasty_global = 0;
-
 void draw_objs(const std::vector<sprite_info>& info) {
-    nasty_blobal %= 256;
     uint8_t x = 0, y = 0;
     uint16_t first_obj = 0;
     //cout<<"X: "<<camXPos<<" Y: "<<camYPos<<" Z: "<<camZPos<<endl;
@@ -238,15 +235,15 @@ void draw_objs(const std::vector<sprite_info>& info) {
               1.0, 1.0,
           };
           const float vert_coords[] = {
-              0.0-(w/2.0), 0.0,   0.0,
-              0.0+(w/2.0), 0.0,   0.0,
-              0.0+(w/2.0), 0.0+h, 0.0,
-              0.0-(w/2.0), 0.0+h, 0.0,
+              0.0f-(w/2.0f), 0.0f,   0.0f,
+              0.0f+(w/2.0f), 0.0f,   0.0f,
+              0.0f+(w/2.0f), 0.0f+h, 0.0f,
+              0.0f-(w/2.0f), 0.0f+h, 0.0f,
               
-              0.0+(w/2.0), 0.0,   0.0,
-              0.0-(w/2.0), 0.0,   0.0,
-              0.0-(w/2.0), 0.0+h, 0.0,
-              0.0+(w/2.0), 0.0+h, 0.0
+              0.0f+(w/2.0f), 0.0f,   0.0f,
+              0.0f-(w/2.0f), 0.0f,   0.0f,
+              0.0f-(w/2.0f), 0.0f+h, 0.0f,
+              0.0f+(w/2.0f), 0.0f+h, 0.0f
           };
 
           sf::Texture::bind(tex);
@@ -525,10 +522,10 @@ void render_3d() {
                 1.0, 0,0,
             };
             const float floor_vert_coords[] = {
-                2*x,   neb, 2*z+2,
-                2*x+2, nwb, 2*z+2,
-                2*x+2, swb, 2*z,
-                2*x,   seb, 2*z
+                2.0f*x,      neb, 2.0f*z+2.0f,
+                2.0f*x+2.0f, nwb, 2.0f*z+2.0f,
+                2.0f*x+2.0f, swb, 2.0f*z,
+                2.0f*x,      seb, 2.0f*z
             };
 
             glVertexPointer(3, GL_FLOAT, 0, floor_vert_coords);
