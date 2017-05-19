@@ -376,49 +376,37 @@ void push_vert(std::vector<float>& t, std::vector<float>& vert, float u, float v
     vert.push_back(x); vert.push_back(y); vert.push_back(z);
 }
 
-void render_3d() {
-    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    glLoadIdentity ();
+#ifdef DEVBUILD
+std::vector<float> tris(0); //Triangular "top" caps
+#endif
+std::vector<std::vector<float>> quads(512);
+std::vector<std::vector<float>> tex(512);
+bool map_needs_update = true;
 
-    glRotatef(theta, 0.0, 1.0, 0.0); //Rotate perspective around Y axis
-    glRotatef(phi, cos(thetaR), 0.0, sin(thetaR)); //Rotate pespective around camera's X axis
+void update_level_map() {
+    if(!map_needs_update) {
+        return;
+    }
 
-    glTranslatef(-1.0*camXPos, -1.0*camYPos, -1.0*camZPos); //Translate the world to where the camera expects it to be
+#ifdef DEVBUILD
+    tris.resize(0);
+#endif
+    for(int texnum=0;texnum < 512; texnum++) {
+        quads[texnum].resize(0);
+        tex[texnum].resize(0);
+    }
 
-    //Draw a bounding/orientation box around the level
-    draw_level_bounds();
-
-    simple_map::level level = sm.levels[cur_lev];
-    uint16_t cti = level.ceil_tex_index;
-
-    //Draw the ceiling
-    glColor3f(1.0,1.0,1.0);
-    sf::Texture::bind(&(floors.tex[cti]));
-    glBegin(GL_QUADS);
-      glTexCoord2f(64.0,64.0); glVertex3f(0.0,8.0,0.0);
-      glTexCoord2f(0.0,64.0); glVertex3f(128.0,8.0,0.0);
-      glTexCoord2f(0.0,0.0); glVertex3f(128.0,8.0,128.0);
-      glTexCoord2f(64.0,0.0); glVertex3f(0.0,8.0,128.0);
-    glEnd();
-
-    std::vector<sprite_info> sprite_sorter;
-    sprite_sorter.reserve(1024);
-
-    //Render the actual map tiles
-    std::vector<float> tris(0);
+    //Build geometry for the actual map tiles
     for(int x = 0;x<64;++x) {
         for(int z = 0;z<64;++z) {
-            std::vector<float> quads(0);
-            std::vector<float> tex(0);
 
             int x_index = 63 - x; //I want x to go in the other direction
+            simple_map::level level = sm.levels[cur_lev];
             simple_map::map_data tiledat = level.d[x_index][z];
             uint16_t fti = level.floor_tex_index[tiledat.floor_tex];
             uint16_t wti = level.wall_tex_index[tiledat.wall_tex];
             uint16_t cti = level.ceil_tex_index;
             
-            bool door = tiledat.is_door;
-
             //Set type of current tile and its neighbors
             simple_map::tile_type t = tiledat.type;
             simple_map::tile_type nt = (z<63)?       level.d[x_index][z+1].type : simple_map::INVALID;
@@ -464,194 +452,261 @@ void render_3d() {
                 wswt = (wt == simple_map::SLOPE_S || wt == simple_map::SLOPE_E)?wh+0.5:wh;
             }
 
-            if(door) {
-                glColor3f(1.0,0.0,1.0);
-            } else if(t == simple_map::SOLID_TILE) {
+            if(t == simple_map::SOLID_TILE) {
                 glColor3f(0.0,0.0,0.0);
             } else {
                 glColor3f(1.0,1.0,1.0);
             }
 
-            //If no animated floor texture exists, bind the static one. Otherwise, bind the appropriate frame of the animated texture.
+            int index = 0;
             if(t == simple_map::SOLID_TILE) {
-                sf::Texture::bind(NULL);
+                //sf::Texture::bind(NULL);
+                index = floors.tex.size();
             }
-            else if(floors.animtex[fti].size() == 0)
-                sf::Texture::bind(&(floors.tex[fti]));
+            //else if(floors.animtex[fti].size() == 0)
+            //    sf::Texture::bind(&(floors.tex[fti]));
             else {
-                sf::Texture::bind(&(floors.animtex[fti][anim_framecount % floors.animtex[fti].size()]));
+                //sf::Texture::bind(&(floors.animtex[fti][anim_framecount % floors.animtex[fti].size()]));
                 //cout<<"Tex "<<fti<<" using frame "<<(anim_framecount%floors.animtex[fti].size())<<endl;
+                index = fti;
             }
+
+#ifndef DEVBUILD
+            if(t == simple_map::SOLID_TILE) continue;
+#endif
 
             //Draw the floor
-
-            const float floor_tex_coords[] = {
-                1.0, 1.0,
-                0.0, 1.0,
-                0.0, 0.0,
-                1.0, 0,0,
-            };
-            const float floor_vert_coords[] = {
-                2.0f*x,      neb, 2.0f*z+2.0f,
-                2.0f*x+2.0f, nwb, 2.0f*z+2.0f,
-                2.0f*x+2.0f, swb, 2.0f*z,
-                2.0f*x,      seb, 2.0f*z
-            };
-
-            glVertexPointer(3, GL_FLOAT, 0, floor_vert_coords);
-            glEnableClientState(GL_VERTEX_ARRAY);
-
-            if(t != simple_map::SOLID_TILE) {
-                glTexCoordPointer(2, GL_FLOAT, 0, floor_tex_coords);
-                glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-            }
-
-            glDrawArrays(GL_QUADS, 0, 4);
-
-            glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-            glDisableClientState(GL_VERTEX_ARRAY);
+            push_vert(tex[index], quads[index], 1.0, 1.0, 2.0f*x,      neb, 2.0f*z+2.0f);
+            push_vert(tex[index], quads[index], 0.0, 1.0, 2.0f*x+2.0f, nwb, 2.0f*z+2.0f);
+            push_vert(tex[index], quads[index], 0.0, 0.0, 2.0f*x+2.0f, swb, 2.0f*z     );
+            push_vert(tex[index], quads[index], 1.0, 0.0, 2.0f*x,      seb, 2.0f*z     );
 
             if(t == simple_map::SOLID_TILE) continue;
 
             //If no animated texture wall exists, bind the static one. Otherwise, bind the appropriate frame of the animated texture.
-            if(walls.animtex[wti].size() == 0)
-                sf::Texture::bind(&(walls.tex[wti]));
-            else
-                sf::Texture::bind(&(walls.animtex[wti][anim_framecount % walls.animtex[wti].size()]));
+            //if(walls.animtex[wti].size() == 0)
+            //    sf::Texture::bind(&(walls.tex[wti]));
+            //else
+            //    sf::Texture::bind(&(walls.animtex[wti][anim_framecount % walls.animtex[wti].size()]));
+
+            //Indexes 0-255 are for the floors, 256-511 are for the walls.
+            index = wti + 256;
 
             //Draw the walls
               if(t == simple_map::OPEN_TILE || t == simple_map::SLOPE_N || t == simple_map::SLOPE_S || t == simple_map::SLOPE_E || t == simple_map::SLOPE_W ||
                  t == simple_map::DIAG_SE || t == simple_map::DIAG_SW || t == simple_map::DIAG_NE || t == simple_map::DIAG_NW) {
                 //North wall
                 if(nnet > neb || nnwt > nwb) {
-                    push_vert(tex, quads, 1.0, 0.0,            2*x,   nnet, 2*z+2); 
-                    push_vert(tex, quads, 0.0, 0.0,            2*x+2, nnwt, 2*z+2);
-                    push_vert(tex, quads, 0.0,(nnwt-nwb)/2.0,  2*x+2, nwb,  2*z+2);
-                    push_vert(tex, quads, 1.0,(nnet-neb)/2.0,  2*x,   neb,  2*z+2);
+                    push_vert(tex[index], quads[index], 1.0, 0.0,            2*x,   nnet, 2*z+2); 
+                    push_vert(tex[index], quads[index], 0.0, 0.0,            2*x+2, nnwt, 2*z+2);
+                    push_vert(tex[index], quads[index], 0.0,(nnwt-nwb)/2.0,  2*x+2, nwb,  2*z+2);
+                    push_vert(tex[index], quads[index], 1.0,(nnet-neb)/2.0,  2*x,   neb,  2*z+2);
                 }
                 //South wall
                 if(sset > seb || sswt > swb) {
-                    push_vert(tex, quads, 1.0, 0.0,            2*x+2,sswt,2*z);
-                    push_vert(tex, quads, 0.0, 0.0,            2*x,  sset,2*z);
-                    push_vert(tex, quads, 0.0, (sswt-swb)/2.0, 2*x,  seb, 2*z);
-                    push_vert(tex, quads, 1.0, (sset-seb)/2.0, 2*x+2,swb, 2*z);
+                    push_vert(tex[index], quads[index], 1.0, 0.0,            2*x+2,sswt,2*z);
+                    push_vert(tex[index], quads[index], 0.0, 0.0,            2*x,  sset,2*z);
+                    push_vert(tex[index], quads[index], 0.0, (sswt-swb)/2.0, 2*x,  seb, 2*z);
+                    push_vert(tex[index], quads[index], 1.0, (sset-seb)/2.0, 2*x+2,swb, 2*z);
                 }
                 //East wall
                 if(enet > neb || eset > seb) {
-                    push_vert(tex, quads, 1.0, 0.0,            2*x,eset,2*z);
-                    push_vert(tex, quads, 0.0, 0.0,            2*x,enet,2*z+2);
-                    push_vert(tex, quads, 0.0, (enet-neb)/2.0, 2*x,neb, 2*z+2);
-                    push_vert(tex, quads, 1.0, (eset-seb)/2.0, 2*x,seb, 2*z);
+                    push_vert(tex[index], quads[index], 1.0, 0.0,            2*x,eset,2*z);
+                    push_vert(tex[index], quads[index], 0.0, 0.0,            2*x,enet,2*z+2);
+                    push_vert(tex[index], quads[index], 0.0, (enet-neb)/2.0, 2*x,neb, 2*z+2);
+                    push_vert(tex[index], quads[index], 1.0, (eset-seb)/2.0, 2*x,seb, 2*z);
                 }
                 //West wall
                 if(wnwt > nwb || wswt > swb) {
-                    push_vert(tex, quads, 1.0, 0.0,            2*x+2,wnwt,2*z+2);
-                    push_vert(tex, quads, 0.0, 0.0,            2*x+2,wswt,2*z);
-                    push_vert(tex, quads, 0.0, (wswt-swb)/2.0, 2*x+2,swb,2*z);
-                    push_vert(tex, quads, 1.0, (wnwt-nwb)/2.0, 2*x+2,nwb,2*z+2);
+                    push_vert(tex[index], quads[index], 1.0, 0.0,            2*x+2,wnwt,2*z+2);
+                    push_vert(tex[index], quads[index], 0.0, 0.0,            2*x+2,wswt,2*z);
+                    push_vert(tex[index], quads[index], 0.0, (wswt-swb)/2.0, 2*x+2,swb,2*z);
+                    push_vert(tex[index], quads[index], 1.0, (wnwt-nwb)/2.0, 2*x+2,nwb,2*z+2);
                 }
             }
             if(t == simple_map::DIAG_SE) {
             //Draw SE top cap
+#ifdef DEVBUILD
                 tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
                 tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
                 tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
+#endif
 
-                push_vert(tex, quads, 1.0,0.0,2*x,8.0,2*z+2);
-                push_vert(tex, quads, 0.0,0.0,2*x+2,8.0,2*z);
-                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x+2,h,2*z);
-                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x,h,2*z+2);
+                push_vert(tex[index], quads[index], 1.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex[index], quads[index], 0.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x+2,h,2*z);
+                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x,h,2*z+2);
             }
             else if(t == simple_map::DIAG_NW) {
             //Draw NW top cap
+#ifdef DEVBUILD
                 tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
                 tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
                 tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
+#endif
 
-                push_vert(tex, quads, 1.0,0.0,2*x+2,8.0,2*z);
-                push_vert(tex, quads, 0.0,0.0,2*x,8.0,2*z+2);
-                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x,h,2*z+2);
-                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x+2,h,2*z);
+                push_vert(tex[index], quads[index], 1.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex[index], quads[index], 0.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x,h,2*z+2);
+                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x+2,h,2*z);
             }
             else if(t == simple_map::DIAG_SW) {
             //Draw SW top cap
+#ifdef DEVBUILD
                 tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
                 tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
                 tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
+#endif
 
-                push_vert(tex, quads, 1.0,0.0,2*x,8.0,2*z);
-                push_vert(tex, quads, 0.0,0.0,2*x+2,8.0,2*z+2);
-                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
-                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x,h,2*z);
+                push_vert(tex[index], quads[index], 1.0,0.0,2*x,8.0,2*z);
+                push_vert(tex[index], quads[index], 0.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
+                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x,h,2*z);
             }
             else if(t == simple_map::DIAG_NE) {
             //Draw NE top cap
+#ifdef DEVBUILD
                 tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
                 tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
                 tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
+#endif
 
-                push_vert(tex, quads, 1.0,0.0,2*x+2,8.0,2*z+2);
-                push_vert(tex, quads, 0.0,0.0,2*x,8.0,2*z);
-                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x,h,2*z);
-                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
+                push_vert(tex[index], quads[index], 1.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex[index], quads[index], 0.0,0.0,2*x,8.0,2*z);
+                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x,h,2*z);
+                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
             }
             //South wall
             if(st != simple_map::SOLID_TILE && (t == simple_map::DIAG_NW || t == simple_map::DIAG_NE)) {
-                push_vert(tex, quads, 1.0,0.0,2*x,8.0,2*z);
-                push_vert(tex, quads, 0.0,0.0,2*x+2,8.0,2*z);
-                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x+2,swb,2*z);
-                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x,seb,2*z);
+                push_vert(tex[index], quads[index], 1.0,0.0,2*x,8.0,2*z);
+                push_vert(tex[index], quads[index], 0.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x+2,swb,2*z);
+                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x,seb,2*z);
             }
             //North wall
             if(nt != simple_map::SOLID_TILE && (t == simple_map::DIAG_SW || t == simple_map::DIAG_SE)) {
-                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x,neb,2*z+2);
-                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
-                push_vert(tex, quads, 1.0,0.0,2*x+2,8.0,2*z+2);
-                push_vert(tex, quads, 0.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x,neb,2*z+2);
+                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
+                push_vert(tex[index], quads[index], 1.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex[index], quads[index], 0.0,0.0,2*x,8.0,2*z+2);
             }
             //East wall
             if(et != simple_map::SOLID_TILE && (t == simple_map::DIAG_NW || t == simple_map::DIAG_SW)) {
-                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x,seb,2*z);
-                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x,neb,2*z+2);
-                push_vert(tex, quads, 1.0,0.0,2*x,8.0,2*z+2);
-                push_vert(tex, quads, 0.0,0.0,2*x,8.0,2*z);
+                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x,seb,2*z);
+                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x,neb,2*z+2);
+                push_vert(tex[index], quads[index], 1.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex[index], quads[index], 0.0,0.0,2*x,8.0,2*z);
             }
             //West wall
             if(wt != simple_map::SOLID_TILE && (t == simple_map::DIAG_NE || t == simple_map::DIAG_SE)) {
-                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
-                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x+2,swb,2*z);
-                push_vert(tex, quads, 1.0,0.0,2*x+2,8.0,2*z);
-                push_vert(tex, quads, 0.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
+                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x+2,swb,2*z);
+                push_vert(tex[index], quads[index], 1.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex[index], quads[index], 0.0,0.0,2*x+2,8.0,2*z+2);
             }
 
-            glVertexPointer(3, GL_FLOAT, 0, &quads[0]);
-            glEnableClientState(GL_VERTEX_ARRAY);
-            glTexCoordPointer(2, GL_FLOAT, 0, &tex[0]);
-            glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        }
+    }
+    map_needs_update = false;
+}
 
-            glDrawArrays(GL_QUADS, 0, quads.size() / 3);
+void render_3d() {
+    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glLoadIdentity ();
 
-            glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-            glDisableClientState(GL_VERTEX_ARRAY);
+    glRotatef(theta, 0.0, 1.0, 0.0); //Rotate perspective around Y axis
+    glRotatef(phi, cos(thetaR), 0.0, sin(thetaR)); //Rotate pespective around camera's X axis
 
+    glTranslatef(-1.0*camXPos, -1.0*camYPos, -1.0*camZPos); //Translate the world to where the camera expects it to be
+
+#ifdef DEVBUILD
+    //Draw a bounding/orientation box around the level
+    draw_level_bounds();
+#endif
+
+    simple_map::level level = sm.levels[cur_lev];
+    uint16_t cti = level.ceil_tex_index;
+
+    //Draw the ceiling
+    glColor3f(1.0,1.0,1.0);
+    sf::Texture::bind(&(floors.tex[cti]));
+    glBegin(GL_QUADS);
+      glTexCoord2f(64.0,64.0); glVertex3f(0.0,8.0,0.0);
+      glTexCoord2f(0.0,64.0); glVertex3f(128.0,8.0,0.0);
+      glTexCoord2f(0.0,0.0); glVertex3f(128.0,8.0,128.0);
+      glTexCoord2f(64.0,0.0); glVertex3f(0.0,8.0,128.0);
+    glEnd();
+
+    std::vector<sprite_info> sprite_sorter;
+    sprite_sorter.reserve(1024);
+
+    update_level_map();
+    //Draw the floors and walls. "index" is the texture number to use.
+    for(int index = 0; index < 512; index++) {
+        if(quads[index].size() == 0) {
+            continue;
+        }
+
+        if(index < 256) { //Floors
+            if(index >= floors.tex.size()) {
+                //Condition only applies to tiles that don't have anything in them
+                sf::Texture::bind(NULL);
+            }
+            else if(floors.animtex[index].size() == 0) {
+                sf::Texture::bind(&(floors.tex[index]));
+            }
+            else {
+                sf::Texture::bind(&(floors.animtex[index][anim_framecount % floors.animtex[index].size()]));
+                //cout<<"Tex "<<fti<<" using frame "<<(anim_framecount%floors.animtex[fti].size())<<endl;
+            }
+        }
+        else { //Walls
+            //If no animated texture wall exists, bind the static one. Otherwise, bind the appropriate frame of the animated texture.
+            if(index - 256 >= walls.tex.size()) {
+                //Shouldn't ever be true
+                sf::Texture::bind(NULL);
+            }
+            else if(walls.animtex[index - 256].size() == 0) {
+                sf::Texture::bind(&(walls.tex[index - 256]));
+            }
+            else {
+                sf::Texture::bind(&(walls.animtex[index - 256][anim_framecount % walls.animtex[index - 256].size()]));
+            }
+        }
+
+        glVertexPointer(3, GL_FLOAT, 0, &quads[index][0]);
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glTexCoordPointer(2, GL_FLOAT, 0, &tex[index][0]);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+        glDrawArrays(GL_QUADS, 0, quads[index].size() / 3); //3 = number of coordinates per vertex
+
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        glDisableClientState(GL_VERTEX_ARRAY);
+    }
+
+    for(int x = 0;x<64;++x) {
+        for(int z = 0;z<64;++z) {
+            int x_index = 63 - x; //I want x to go in the other direction
+            simple_map::map_data tiledat = level.d[x_index][z];
             //Draw objects on this tile
-            if(tiledat.first_obj != 0) {
-                uint16_t index = tiledat.first_obj;
-                while(index != 0) {
-                    sprite_sorter.push_back(sprite_info(x,z,index));
-                    if(index < 256) index = sm.levels[cur_lev].npcs[index].get_next();
-                    else            index = sm.levels[cur_lev].items[index - 256].get_next();
-                }
+            uint16_t index = tiledat.first_obj;
+            while(index != 0) {
+                sprite_sorter.push_back(sprite_info(x,z,index));
+                if(index < 256) index = sm.levels[cur_lev].npcs[index].get_next();
+                else            index = sm.levels[cur_lev].items[index - 256].get_next();
             }
         }
     }
 
-    //Draw the top caps of the level
+#ifdef DEVBUILD
+    //Draw the triangular top caps of the level
     sf::Texture::bind(NULL);
     glVertexPointer(3, GL_FLOAT, 0, &tris[0]);
     glEnableClientState(GL_VERTEX_ARRAY);
-    glDrawArrays(GL_TRIANGLES, 0, tris.size() / 3);
+    glDrawArrays(GL_TRIANGLES, 0, tris.size() / 3); //3 = number of coordinates per vertex
     glDisableClientState(GL_VERTEX_ARRAY);
+#endif
 
     if(sprite_sorter.size() != 0) {
         std::sort(sprite_sorter.begin(), sprite_sorter.end(), sprite_info::comp);
