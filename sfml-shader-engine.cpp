@@ -51,22 +51,20 @@ int main(int argc, char **argv) {
     glClearDepth (1.0);
     glClearStencil(0);
 
-    /*
     static const GLfloat g_vertex_buffer_data[] = {
         -1.0f, -1.0f, 0.0f,
         1.0f, -1.0f, 0.0f,
         0.0f, 1.0f, 0.0f
     };
-    */
+    triangle_num = 3;
 
     GLuint vertexbuffer;
     glGenBuffers(1, &vertexbuffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-    /*
     glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-    */
+    /*
     glBufferData(GL_ARRAY_BUFFER, model_verts.size() * sizeof(float), &model_verts[0], GL_STATIC_DRAW);
-
+*/
     GLuint programID = glutil::LoadShaders("shaders/vertex-basic-33.glsl", "shaders/fragment-basic-33.glsl");
     if(programID == 0) {
         std::cerr<<"Shader processing for version 3.3 failed. Trying to fall back to 2.1."<<std::endl;

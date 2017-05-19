@@ -519,6 +519,10 @@ bool uw_model::load(const std::string& uw_exe, int model_number) {
     else return false;
 }
 
+std::vector<float> uw_model::get_verts() {
+    return std::vector<float>();
+}
+
 #ifdef STAND_ALONE_MODEL
 int main(int argc, char *argv[]) {
     uw_model m;

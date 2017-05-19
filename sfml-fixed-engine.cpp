@@ -74,29 +74,6 @@ class sprite_info {
     uint16_t index;
 };
 
-//Stencil definitions
-const int ST_NOTHING = 0; //Nothing rendered there
-const int ST_FLOOR = 1;   //Looking at a floor poly
-const int ST_WALL = 2;    //Looking at a wall poly
-const int ST_CEIL = 3;    //The Ceiling
-const int ST_NPC = 4;     //Some NPC Guy
-const int ST_ITEM = 5;    //Some item
-const int ST_UI = 6;      //Looking at some part of the UI
-
-typedef struct {
-    uint8_t st_type; //Uses the stencil definitions
-    uint16_t id; //Definition-specific id
-    float xpos;
-    float ypos;
-    float zpos;
-} ST_INFO_STRUCT;
-
-//Determine information about what the player is currently pointing at
-ST_INFO_STRUCT get_type() {
-    ST_INFO_STRUCT a;
-    return a;
-}
-
 typedef enum {
     TITLE, //Opening developer logos, opening screen
     CUTSCENE, //Any cutscene, including the first
@@ -173,6 +150,7 @@ void draw_objs(const std::vector<sprite_info>& info) {
             obj_id = obj.obj_id;
             heading = obj.heading;
             heading *= 45.0;
+            heading = 180 - heading;
             xloc = float(x) * 2.0 + (2.0 - float(obj.xpos) / 4.0);
             yloc = float(y) * 2.0 + (float(obj.ypos) / 4.0);
             zloc = float(obj.zpos) / 16.0;
@@ -181,11 +159,10 @@ void draw_objs(const std::vector<sprite_info>& info) {
             else if(obj_id >= 368 && obj_id < 384) { //replace switches with the right pics from the other texture file
                 tex = &(switches.tex[obj_id - 368]);
                 obj_phi = 0;
-                heading = 360 - heading;
                 obj_theta = heading;
                 heading = (heading * M_PI) / 180.0;
-                xloc -= 0.01*sin(heading);
-                yloc -= 0.01*cos(heading);
+                xloc += 0.01*sin(heading);
+                yloc += 0.01*cos(heading);
             }
                     //a lever       a switch          some writing
             else if(obj_id == 353 || obj_id == 354 || obj_id == 358) {
@@ -195,11 +172,10 @@ void draw_objs(const std::vector<sprite_info>& info) {
                 else if(obj_id == 354) tex = &(tmobj.tex[12]);
                 else if(obj_id == 358) tex = &(tmobj.tex[20]);
                 obj_phi = 0;
-                heading = 360 - heading;
                 obj_theta = heading;
                 heading = (heading * M_PI) / 180.0;
-                xloc -= 0.01*sin(heading);
-                yloc -= 0.01*cos(heading);
+                xloc += 0.01*sin(heading);
+                yloc += 0.01*cos(heading);
                 //cout<<"index: "<<first_obj - 256<<" id: "<<obj_id<<"("<<strings.get_string(3,obj_id)<<") is_quant: "<<obj.quantitied<<" quant: "<<obj.quantity<<" quality: "<<obj.quality<<" owner: "<<obj.owner<<endl;
             }
             else {
@@ -228,22 +204,12 @@ void draw_objs(const std::vector<sprite_info>& info) {
               1.0, 1.0,
               1.0, 0,0,
               0.0, 0.0,
-
-              1.0, 0.0,
-              0.0, 0.0,
-              0.0, 1.0,
-              1.0, 1.0,
           };
           const float vert_coords[] = {
               0.0f-(w/2.0f), 0.0f,   0.0f,
               0.0f+(w/2.0f), 0.0f,   0.0f,
               0.0f+(w/2.0f), 0.0f+h, 0.0f,
               0.0f-(w/2.0f), 0.0f+h, 0.0f,
-              
-              0.0f+(w/2.0f), 0.0f,   0.0f,
-              0.0f-(w/2.0f), 0.0f,   0.0f,
-              0.0f-(w/2.0f), 0.0f+h, 0.0f,
-              0.0f+(w/2.0f), 0.0f+h, 0.0f
           };
 
           sf::Texture::bind(tex);
@@ -254,7 +220,7 @@ void draw_objs(const std::vector<sprite_info>& info) {
           glTexCoordPointer(2, GL_FLOAT, 0, tex_coords);
           glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-          glDrawArrays(GL_QUADS, 0, 8);
+          glDrawArrays(GL_QUADS, 0, 4);
 
           glDisableClientState(GL_TEXTURE_COORD_ARRAY);
           glDisableClientState(GL_VERTEX_ARRAY);
@@ -405,6 +371,11 @@ void draw_level_bounds() {
     //glPopMatrix();
 }
 
+void push_vert(std::vector<float>& t, std::vector<float>& vert, float u, float v, float x, float y, float z) {
+    t.push_back(u); t.push_back(v);
+    vert.push_back(x); vert.push_back(y); vert.push_back(z);
+}
+
 void render_3d() {
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glLoadIdentity ();
@@ -423,7 +394,6 @@ void render_3d() {
     //Draw the ceiling
     glColor3f(1.0,1.0,1.0);
     sf::Texture::bind(&(floors.tex[cti]));
-    glStencilFunc(GL_ALWAYS, ST_CEIL, -1);
     glBegin(GL_QUADS);
       glTexCoord2f(64.0,64.0); glVertex3f(0.0,8.0,0.0);
       glTexCoord2f(0.0,64.0); glVertex3f(128.0,8.0,0.0);
@@ -435,10 +405,11 @@ void render_3d() {
     sprite_sorter.reserve(1024);
 
     //Render the actual map tiles
+    std::vector<float> tris(0);
     for(int x = 0;x<64;++x) {
         for(int z = 0;z<64;++z) {
             std::vector<float> quads(0);
-            std::vector<float> tris(0);
+            std::vector<float> tex(0);
 
             int x_index = 63 - x; //I want x to go in the other direction
             simple_map::map_data tiledat = level.d[x_index][z];
@@ -513,7 +484,6 @@ void render_3d() {
             }
 
             //Draw the floor
-            glStencilFunc(GL_ALWAYS, ST_FLOOR, -1);
 
             const float floor_tex_coords[] = {
                 1.0, 1.0,
@@ -550,145 +520,119 @@ void render_3d() {
                 sf::Texture::bind(&(walls.animtex[wti][anim_framecount % walls.animtex[wti].size()]));
 
             //Draw the walls
-            glStencilFunc(GL_ALWAYS, ST_WALL, -1);
-            glBegin(GL_QUADS);
               if(t == simple_map::OPEN_TILE || t == simple_map::SLOPE_N || t == simple_map::SLOPE_S || t == simple_map::SLOPE_E || t == simple_map::SLOPE_W ||
                  t == simple_map::DIAG_SE || t == simple_map::DIAG_SW || t == simple_map::DIAG_NE || t == simple_map::DIAG_NW) {
-                  //North wall
-                  if(nnet > neb || nnwt > nwb) {
-                      glTexCoord2f(1.0,0.0);            glVertex3f(2*x,nnet,2*z+2);
-                      glTexCoord2f(0.0,0.0);            glVertex3f(2*x+2,nnwt,2*z+2);
-                      glTexCoord2f(0.0,(nnwt-nwb)/2.0); glVertex3f(2*x+2,nwb,2*z+2);
-                      glTexCoord2f(1.0,(nnet-neb)/2.0); glVertex3f(2*x,neb,2*z+2);
-                  }
-                  //South wall
-                  if(sset > seb || sswt > swb) {
-                      glTexCoord2f(1.0,0.0);            glVertex3f(2*x+2,sswt,2*z);
-                      glTexCoord2f(0.0,0.0);            glVertex3f(2*x,sset,2*z);
-                      glTexCoord2f(0.0,(sswt-swb)/2.0); glVertex3f(2*x,seb,2*z);
-                      glTexCoord2f(1.0,(sset-seb)/2.0); glVertex3f(2*x+2,swb,2*z);
-                  }
-                  //East wall
-                  if(enet > neb || eset > seb) {
-                      glTexCoord2f(1.0,0.0);            glVertex3f(2*x,eset,2*z);
-                      glTexCoord2f(0.0,0.0);            glVertex3f(2*x,enet,2*z+2);
-                      glTexCoord2f(0.0,(enet-neb)/2.0); glVertex3f(2*x,neb,2*z+2);
-                      glTexCoord2f(1.0,(eset-seb)/2.0); glVertex3f(2*x,seb,2*z);
-                  }
-                  //West wall
-                  if(wnwt > nwb || wswt > swb) {
-                      glTexCoord2f(1.0,0.0);            glVertex3f(2*x+2,wnwt,2*z+2);
-                      glTexCoord2f(0.0,0.0);            glVertex3f(2*x+2,wswt,2*z);
-                      glTexCoord2f(0.0,(wswt-swb)/2.0); glVertex3f(2*x+2,swb,2*z);
-                      glTexCoord2f(1.0,(wnwt-nwb)/2.0); glVertex3f(2*x+2,nwb,2*z+2);
-                  }
-              }
-              if(t == simple_map::DIAG_SE) {
+                //North wall
+                if(nnet > neb || nnwt > nwb) {
+                    push_vert(tex, quads, 1.0, 0.0,            2*x,   nnet, 2*z+2); 
+                    push_vert(tex, quads, 0.0, 0.0,            2*x+2, nnwt, 2*z+2);
+                    push_vert(tex, quads, 0.0,(nnwt-nwb)/2.0,  2*x+2, nwb,  2*z+2);
+                    push_vert(tex, quads, 1.0,(nnet-neb)/2.0,  2*x,   neb,  2*z+2);
+                }
+                //South wall
+                if(sset > seb || sswt > swb) {
+                    push_vert(tex, quads, 1.0, 0.0,            2*x+2,sswt,2*z);
+                    push_vert(tex, quads, 0.0, 0.0,            2*x,  sset,2*z);
+                    push_vert(tex, quads, 0.0, (sswt-swb)/2.0, 2*x,  seb, 2*z);
+                    push_vert(tex, quads, 1.0, (sset-seb)/2.0, 2*x+2,swb, 2*z);
+                }
+                //East wall
+                if(enet > neb || eset > seb) {
+                    push_vert(tex, quads, 1.0, 0.0,            2*x,eset,2*z);
+                    push_vert(tex, quads, 0.0, 0.0,            2*x,enet,2*z+2);
+                    push_vert(tex, quads, 0.0, (enet-neb)/2.0, 2*x,neb, 2*z+2);
+                    push_vert(tex, quads, 1.0, (eset-seb)/2.0, 2*x,seb, 2*z);
+                }
+                //West wall
+                if(wnwt > nwb || wswt > swb) {
+                    push_vert(tex, quads, 1.0, 0.0,            2*x+2,wnwt,2*z+2);
+                    push_vert(tex, quads, 0.0, 0.0,            2*x+2,wswt,2*z);
+                    push_vert(tex, quads, 0.0, (wswt-swb)/2.0, 2*x+2,swb,2*z);
+                    push_vert(tex, quads, 1.0, (wnwt-nwb)/2.0, 2*x+2,nwb,2*z+2);
+                }
+            }
+            if(t == simple_map::DIAG_SE) {
+            //Draw SE top cap
+                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
+                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
+                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
 
-                //Draw SE top cap
-                glEnd();
-                glColor3f(0.0,0.0,0.0);
-                glBegin(GL_TRIANGLES);
-                  glVertex3f(2*x+2,8.0,2*z);
-                  glVertex3f(2*x,8.0,2*z+2);
-                  glVertex3f(2*x+2,8.0,2*z+2);
-                glEnd();
-                glColor3f(1.0,1.0,1.0);
-                glBegin(GL_QUADS);
-                
+                push_vert(tex, quads, 1.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex, quads, 0.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x+2,h,2*z);
+                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x,h,2*z+2);
+            }
+            else if(t == simple_map::DIAG_NW) {
+            //Draw NW top cap
+                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
+                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
+                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
 
-                  glTexCoord2f(1.0,0.0);            glVertex3f(2*x,8.0,2*z+2);
-                  glTexCoord2f(0.0,0.0);            glVertex3f(2*x+2,8.0,2*z);
-                  glTexCoord2f(0.0,(8.0-h)/2.0); glVertex3f(2*x+2,h,2*z);
-                  glTexCoord2f(1.0,(8.0-h)/2.0); glVertex3f(2*x,h,2*z+2);
-              }
-              else if(t == simple_map::DIAG_NW) {
+                push_vert(tex, quads, 1.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex, quads, 0.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x,h,2*z+2);
+                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x+2,h,2*z);
+            }
+            else if(t == simple_map::DIAG_SW) {
+            //Draw SW top cap
+                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
+                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
+                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
 
-                //Draw NW top cap
-                glEnd();
-                glColor3f(0.0,0.0,0.0);
-                glBegin(GL_TRIANGLES);
-                  glVertex3f(2*x,8.0,2*z+2);
-                  glVertex3f(2*x+2,8.0,2*z);
-                  glVertex3f(2*x,8.0,2*z);
-                glEnd();
-                glColor3f(1.0,1.0,1.0);
-                glBegin(GL_QUADS);
+                push_vert(tex, quads, 1.0,0.0,2*x,8.0,2*z);
+                push_vert(tex, quads, 0.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
+                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x,h,2*z);
+            }
+            else if(t == simple_map::DIAG_NE) {
+            //Draw NE top cap
+                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
+                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
+                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
 
+                push_vert(tex, quads, 1.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex, quads, 0.0,0.0,2*x,8.0,2*z);
+                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x,h,2*z);
+                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
+            }
+            //South wall
+            if(st != simple_map::SOLID_TILE && (t == simple_map::DIAG_NW || t == simple_map::DIAG_NE)) {
+                push_vert(tex, quads, 1.0,0.0,2*x,8.0,2*z);
+                push_vert(tex, quads, 0.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x+2,swb,2*z);
+                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x,seb,2*z);
+            }
+            //North wall
+            if(nt != simple_map::SOLID_TILE && (t == simple_map::DIAG_SW || t == simple_map::DIAG_SE)) {
+                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x,neb,2*z+2);
+                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
+                push_vert(tex, quads, 1.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex, quads, 0.0,0.0,2*x,8.0,2*z+2);
+            }
+            //East wall
+            if(et != simple_map::SOLID_TILE && (t == simple_map::DIAG_NW || t == simple_map::DIAG_SW)) {
+                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x,seb,2*z);
+                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x,neb,2*z+2);
+                push_vert(tex, quads, 1.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex, quads, 0.0,0.0,2*x,8.0,2*z);
+            }
+            //West wall
+            if(wt != simple_map::SOLID_TILE && (t == simple_map::DIAG_NE || t == simple_map::DIAG_SE)) {
+                push_vert(tex, quads, 0.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
+                push_vert(tex, quads, 1.0,(8.0-h)/2.0,2*x+2,swb,2*z);
+                push_vert(tex, quads, 1.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex, quads, 0.0,0.0,2*x+2,8.0,2*z+2);
+            }
 
-                  glTexCoord2f(1.0,0.0);            glVertex3f(2*x+2,8.0,2*z);
-                  glTexCoord2f(0.0,0.0);            glVertex3f(2*x,8.0,2*z+2);
-                  glTexCoord2f(0.0,(8.0-h)/2.0); glVertex3f(2*x,h,2*z+2);
-                  glTexCoord2f(1.0,(8.0-h)/2.0); glVertex3f(2*x+2,h,2*z);
-              }
-              else if(t == simple_map::DIAG_SW) {
+            glVertexPointer(3, GL_FLOAT, 0, &quads[0]);
+            glEnableClientState(GL_VERTEX_ARRAY);
+            glTexCoordPointer(2, GL_FLOAT, 0, &tex[0]);
+            glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-                //Draw SW top cap
-                glEnd();
-                glColor3f(0.0,0.0,0.0);
-                glBegin(GL_TRIANGLES);
-                  glVertex3f(2*x+2,8.0,2*z+2);
-                  glVertex3f(2*x,8.0,2*z);
-                  glVertex3f(2*x,8.0,2*z+2);
-                glEnd();
-                glColor3f(1.0,1.0,1.0);
-                glBegin(GL_QUADS);
+            glDrawArrays(GL_QUADS, 0, quads.size() / 3);
 
-
-                  glTexCoord2f(1.0,0.0);            glVertex3f(2*x,8.0,2*z);
-                  glTexCoord2f(0.0,0.0);            glVertex3f(2*x+2,8.0,2*z+2);
-                  glTexCoord2f(0.0,(8.0-h)/2.0); glVertex3f(2*x+2,h,2*z+2);
-                  glTexCoord2f(1.0,(8.0-h)/2.0); glVertex3f(2*x,h,2*z);
-              }
-              else if(t == simple_map::DIAG_NE) {
-
-                //Draw NE top cap
-                glEnd();
-
-                glColor3f(0.0,0.0,0.0);
-                glBegin(GL_TRIANGLES);
-                  glVertex3f(2*x+2,8.0,2*z+2);
-                  glVertex3f(2*x+2,8.0,2*z);
-                  glVertex3f(2*x,8.0,2*z);
-                glEnd();
-
-                glColor3f(1.0,1.0,1.0);
-                glBegin(GL_QUADS);
-                  glTexCoord2f(1.0,0.0);            glVertex3f(2*x+2,8.0,2*z+2);
-                  glTexCoord2f(0.0,0.0);            glVertex3f(2*x,8.0,2*z);
-                  glTexCoord2f(0.0,(8.0-h)/2.0); glVertex3f(2*x,h,2*z);
-                  glTexCoord2f(1.0,(8.0-h)/2.0); glVertex3f(2*x+2,h,2*z+2);
-              }
-              //South wall
-              if(st != simple_map::SOLID_TILE && (t == simple_map::DIAG_NW || t == simple_map::DIAG_NE)) {
-                  glTexCoord2f(1.0,0.0);            glVertex3f(2*x,8.0,2*z);
-                  glTexCoord2f(0.0,0.0);            glVertex3f(2*x+2,8.0,2*z);
-                  glTexCoord2f(0.0,(8.0-h)/2.0); glVertex3f(2*x+2,swb,2*z);
-                  glTexCoord2f(1.0,(8.0-h)/2.0); glVertex3f(2*x,seb,2*z);
-              }
-              //North wall
-              if(nt != simple_map::SOLID_TILE && (t == simple_map::DIAG_SW || t == simple_map::DIAG_SE)) {
-                  glTexCoord2f(0.0,(8.0-h)/2.0); glVertex3f(2*x,neb,2*z+2);
-                  glTexCoord2f(1.0,(8.0-h)/2.0); glVertex3f(2*x+2,nwb,2*z+2);
-                  glTexCoord2f(1.0,0.0);            glVertex3f(2*x+2,8.0,2*z+2);
-                  glTexCoord2f(0.0,0.0);            glVertex3f(2*x,8.0,2*z+2);
-              }
-              //East wall
-              if(et != simple_map::SOLID_TILE && (t == simple_map::DIAG_NW || t == simple_map::DIAG_SW)) {
-                  glTexCoord2f(0.0,(8.0-h)/2.0); glVertex3f(2*x,seb,2*z);
-                  glTexCoord2f(1.0,(8.0-h)/2.0); glVertex3f(2*x,neb,2*z+2);
-                  glTexCoord2f(1.0,0.0);            glVertex3f(2*x,8.0,2*z+2);
-                  glTexCoord2f(0.0,0.0);            glVertex3f(2*x,8.0,2*z);
-              }
-              //West wall
-              if(wt != simple_map::SOLID_TILE && (t == simple_map::DIAG_NE || t == simple_map::DIAG_SE)) {
-                  glTexCoord2f(0.0,(8.0-h)/2.0); glVertex3f(2*x+2,nwb,2*z+2);
-                  glTexCoord2f(1.0,(8.0-h)/2.0); glVertex3f(2*x+2,swb,2*z);
-                  glTexCoord2f(1.0,0.0);            glVertex3f(2*x+2,8.0,2*z);
-                  glTexCoord2f(0.0,0.0);            glVertex3f(2*x+2,8.0,2*z+2);
-              }
-            glEnd();
-            glStencilFunc(GL_ALWAYS, ST_NOTHING, -1);
+            glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+            glDisableClientState(GL_VERTEX_ARRAY);
 
             //Draw objects on this tile
             if(tiledat.first_obj != 0) {
@@ -701,6 +645,14 @@ void render_3d() {
             }
         }
     }
+
+    //Draw the top caps of the level
+    sf::Texture::bind(NULL);
+    glVertexPointer(3, GL_FLOAT, 0, &tris[0]);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glDrawArrays(GL_TRIANGLES, 0, tris.size() / 3);
+    glDisableClientState(GL_VERTEX_ARRAY);
+
     if(sprite_sorter.size() != 0) {
         std::sort(sprite_sorter.begin(), sprite_sorter.end(), sprite_info::comp);
         draw_objs(sprite_sorter);
@@ -850,7 +802,6 @@ void gameloop() {
 
     glClearColor (0.0, 0.0, 0.0, 0.0);
     glClearDepth (1.0);
-    glClearStencil(0);
     glShadeModel (GL_FLAT);
     glViewport (0, 0, (GLsizei) winW, (GLsizei) winH);
     glMatrixMode (GL_PROJECTION);
@@ -862,8 +813,6 @@ void gameloop() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glEnable(GL_TEXTURE_2D);
-    glEnable(GL_STENCIL_TEST);
-    glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
 
     bool redraw = true;
     while(window.isOpen()) {
