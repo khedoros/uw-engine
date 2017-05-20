@@ -41,17 +41,25 @@ int uw_model::process_nodes(ifstream& in) {
         while(!exit) {
             uint16_t node_type = read16(in);
             offset = in.tellg();
+#ifdef STAND_ALONE_MODEL
             cout<<hex<<offset<<": type 0x"<<node_type<<dec<<" ";
+#endif
             uint8_t dat_size = 0;
             uint16_t unk16;
             switch(node_type) {
                 case 0x0000:
+#ifdef STAND_ALONE_MODEL
                     cout<<"end node (";
+#endif
                     if(offsets.size() > 0) {
+#ifdef STAND_ALONE_MODEL
                         cout<<"end of section)"<<endl;
+#endif
                     }
                     else {
+#ifdef STAND_ALONE_MODEL
                         cout<<"end of model)"<<endl;
+#endif
                     }
                     exit = true;
                     break;
@@ -65,7 +73,9 @@ int uw_model::process_nodes(ifstream& in) {
                         std::streamoff offset2 = read16(in);
                         offsets.push_back(in.tellg() + offset2);
                     }
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define sort node, arbitrary heading";
+#endif
                     break;
                 case 0x000C: 
                     for(int i=0;i<4;++i) {
@@ -77,7 +87,9 @@ int uw_model::process_nodes(ifstream& in) {
                         std::streamoff offset2 = read16(in);
                         offsets.push_back(in.tellg() + offset2);
                     }
+#ifdef STAND_ALONE_MODEL
                     cout<<"define sort node, ZY plane";
+#endif
                     break;
                 case 0x000E: 
                     for(int i=0;i<4;++i) {
@@ -89,7 +101,9 @@ int uw_model::process_nodes(ifstream& in) {
                         std::streamoff offset2 = read16(in);
                         offsets.push_back(in.tellg() + offset2);
                     }
+#ifdef STAND_ALONE_MODEL
                     cout<<"define sort node, XY plane";
+#endif
                     break;
                 case 0x0010: 
                     for(int i=0;i<4;++i) {
@@ -101,20 +115,32 @@ int uw_model::process_nodes(ifstream& in) {
                         std::streamoff offset2 = read16(in);
                         offsets.push_back(in.tellg() + offset2);
                     }
+#ifdef STAND_ALONE_MODEL
                     cout<<"define sort node, XZ plane";
+#endif
                     break;
                 case 0x0014: 
+#ifdef STAND_ALONE_MODEL
                     cout<<"??? color definition (Skip, because not enough info) "<<(read16(in)>>(3))<<"\t"<<int(read8(in))<<"\t"<<int(read8(in))<<"\t"<<(read16(in)>>(3))<<endl;
+#else
+                    read16(in); read16(in); read16(in);
+#endif
                     break;
                 case 0x002E:
                     unk16 = read16(in);
+#ifdef STAND_ALONE_MODEL
                     cout<<"??? Used a lot in the Lotus model!"<<endl;
+#endif
                     break;
                 case 0x0040: 
+#ifdef STAND_ALONE_MODEL
                     cout<<"??? seems to do nothing but introduce a face definition"<<endl;
+#endif
                     break;
                 case 0x0044: 
+#ifdef STAND_ALONE_MODEL
                     cout<<"??? this one too (seems to intro a face def)"<<endl;
+#endif
                     break;
                 case 0x0058:
                     unk16 = read16(in); //Bytes to skip when not visible
@@ -124,7 +150,9 @@ int uw_model::process_nodes(ifstream& in) {
                     base_face.dist_y = fix2float(read16(in));
                     base_face.nz = fix2float(read16(in));
                     base_face.dist_z = fix2float(read16(in));
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define face plane, arbitrary heading, ("<<base_face.nx<<", "<<base_face.ny<<", "<<base_face.nz<<")"<<endl;
+#endif
                     break;
                 case 0x005E:
                     unk16 = read16(in); //Bytes to skip when not visible
@@ -134,7 +162,9 @@ int uw_model::process_nodes(ifstream& in) {
                     base_face.dist_z = fix2float(read16(in));
                     base_face.ny = fix2float(read16(in));
                     base_face.dist_y = fix2float(read16(in));
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define face plane, Z/Y, ("<<base_face.nx<<", "<<base_face.ny<<", "<<base_face.nz<<")"<<endl;
+#endif
                     break;
                 case 0x0060:
                     unk16 = read16(in); //Bytes to skip when not visible
@@ -144,7 +174,9 @@ int uw_model::process_nodes(ifstream& in) {
                     base_face.dist_z = 0;
                     base_face.ny = fix2float(read16(in));
                     base_face.dist_y = fix2float(read16(in));
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define face plane, X/Y, ("<<base_face.nx<<", "<<base_face.ny<<", "<<base_face.nz<<")"<<endl;
+#endif
                     break;
                 case 0x0062:
                     unk16 = read16(in); //Bytes to skip when not visible
@@ -154,7 +186,9 @@ int uw_model::process_nodes(ifstream& in) {
                     base_face.dist_z = fix2float(read16(in));
                     base_face.ny = 0;
                     base_face.dist_y = 0;
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define face plane, X/Z, ("<<base_face.nx<<", "<<base_face.ny<<", "<<base_face.nz<<")"<<endl;
+#endif
                     break;
                 case 0x0064:
                     unk16 = read16(in); //Bytes to skip when not visible
@@ -164,7 +198,9 @@ int uw_model::process_nodes(ifstream& in) {
                     base_face.dist_z = 0;
                     base_face.ny = 0;
                     base_face.dist_y = 0;
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define face plane, X, ("<<base_face.nx<<", "<<base_face.ny<<", "<<base_face.nz<<")"<<endl;
+#endif
                     break;
                 case 0x0066:
                     unk16 = read16(in); //Bytes to skip when not visible
@@ -174,7 +210,9 @@ int uw_model::process_nodes(ifstream& in) {
                     base_face.dist_z = fix2float(read16(in));
                     base_face.ny = 0;
                     base_face.dist_y = 0;
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define face plane, Z, ("<<base_face.nx<<", "<<base_face.ny<<", "<<base_face.nz<<")"<<endl;
+#endif
                     break;
                 case 0x0068:
                     unk16 = read16(in); //Bytes to skip when not visible
@@ -184,7 +222,9 @@ int uw_model::process_nodes(ifstream& in) {
                     base_face.dist_z = 0;
                     base_face.ny = fix2float(read16(in));
                     base_face.dist_y = fix2float(read16(in));
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define face plane, Y, ("<<base_face.nx<<", "<<base_face.ny<<", "<<base_face.nz<<")"<<endl;
+#endif
                     break;
                 case 0x0078:
                     cent_vert = read16(in)>>(3);
@@ -196,7 +236,9 @@ int uw_model::process_nodes(ifstream& in) {
                         points.resize(cent_vert + 1);
                     }
                     points[cent_vert] = point(cent_x,cent_y,cent_z, cent_vert, false);
+#ifdef STAND_ALONE_MODEL
                     std::cout<<"Define model center ("<<cent_x<<", "<<cent_y<<", "<<cent_z<<") as num "<<cent_vert<<std::endl;
+#endif
                     break;
                 case 0x007A: 
                     base_pt.x = fix2float(read16(in));
@@ -208,35 +250,47 @@ int uw_model::process_nodes(ifstream& in) {
                         points.resize(base_pt.vertno + 1);
                     }
                     points[base_pt.vertno] = base_pt;
+#ifdef STAND_ALONE_MODEL
                     std::cout<<"Define initial vertex ("<<base_pt.x<<", "<<base_pt.y<<", "<<base_pt.z<<") as num "<<base_pt.vertno<<std::endl;; 
+#endif
                     break;
                 case 0x007E: 
                     base_face.points.resize(0);
                     {
                         int vcount = read16(in);
                         base_face.points.resize(vcount);
+#ifdef STAND_ALONE_MODEL
                         cout<<"Define face vertices ("<<vcount<<", "<<base_face.points.size()<<"): ";
+#endif
                     }
                     for(int i = 0; i < base_face.points.size(); ++i) {
                         int vnum = read16(in)>>(3);
+#ifdef STAND_ALONE_MODEL
                         cout<<vnum<<" ";
+#endif
                         assert(vnum < points.size());
                         base_face.points[i] = points[vnum];
                     }
+#ifdef STAND_ALONE_MODEL
                     cout<<endl;
+#endif
                     faces.push_back(base_face);
                     break;
                 case 0x0082: {
                         int nverts = read16(in);
                         int start_vnum = read16(in)>>(3);
+#ifdef STAND_ALONE_MODEL
                         cout<<"Define "<<nverts<<" initial vertices, starting at #"<<start_vnum<<endl;
+#endif
                         //assert(points.size() == 0);
                         points.resize(nverts+start_vnum);
                         for(int i = 0; i < nverts; i++) {
                             points[start_vnum + i].x = fix2float(read16(in));
                             points[start_vnum + i].y = fix2float(read16(in));
                             points[start_vnum + i].z = fix2float(read16(in));
+#ifdef STAND_ALONE_MODEL
                             cout<<"\tvert ("<<points[start_vnum + i].x<<", "<<points[start_vnum + i].y<<", "<<points[start_vnum + i].z<<")"<<endl;
+#endif
                         }
                     }
                     break;
@@ -250,7 +304,9 @@ int uw_model::process_nodes(ifstream& in) {
                         }
                         points[temp.vertno] = temp;
                         assert(points.size() > temp.vertno);
+#ifdef STAND_ALONE_MODEL
                         cout<<"Define vertex offset X ("<<temp.x<<", "<<temp.y<<", "<<temp.z<<") as num "<<temp.vertno<<endl;
+#endif
                     }
                     break;
                 case 0x0088: {
@@ -263,7 +319,9 @@ int uw_model::process_nodes(ifstream& in) {
                         }
                         points[temp.vertno] = temp;
                         assert(points.size() > temp.vertno);
+#ifdef STAND_ALONE_MODEL
                         cout<<"Define vertex offset Z ("<<temp.x<<", "<<temp.y<<", "<<temp.z<<") as num "<<temp.vertno<<endl;
+#endif
                     }
                     break;
                 case 0x008A: {
@@ -276,7 +334,9 @@ int uw_model::process_nodes(ifstream& in) {
                         }
                         points[temp.vertno] = temp;
                         assert(points.size() > temp.vertno);
+#ifdef STAND_ALONE_MODEL
                         cout<<"Define vertex offset Y ("<<temp.x<<", "<<temp.y<<", "<<temp.z<<") as num "<<temp.vertno<<endl;
+#endif
                     }
                     break;
                 case 0x008C: {
@@ -289,8 +349,13 @@ int uw_model::process_nodes(ifstream& in) {
                             points.resize(temp.vertno + 1);
                         }
                         points[temp.vertno] = temp;
+
+                        //My map height is 16, and I'm going to scale these by 2 later
+                        points[temp.vertno].z = 2.0;
                         assert(points.size() > temp.vertno);
+#ifdef STAND_ALONE_MODEL
                         cout<<"Set vertex num "<<base_vert<<" to variable height, as num "<<temp.vertno<<endl;
+#endif
                     }
                     break;
                 case 0x0090: {
@@ -306,7 +371,9 @@ int uw_model::process_nodes(ifstream& in) {
                         }
                         points[temp.vertno] = temp;
                         assert(points.size() > temp.vertno);
+#ifdef STAND_ALONE_MODEL
                         cout<<"Define vertex offset X,Z ("<<temp.x<<", "<<temp.y<<", "<<temp.z<<") as num "<<temp.vertno<<endl;
+#endif
                     }
                     break;
                 case 0x0092: {
@@ -322,7 +389,9 @@ int uw_model::process_nodes(ifstream& in) {
                         }
                         points[temp.vertno] = temp;
                         assert(points.size() > temp.vertno);
+#ifdef STAND_ALONE_MODEL
                         cout<<"Define vertex offset X,Y ("<<temp.x<<", "<<temp.y<<", "<<temp.z<<") as num "<<temp.vertno<<endl;
+#endif
                     }
                     break;
                 case 0x0094: {
@@ -338,29 +407,41 @@ int uw_model::process_nodes(ifstream& in) {
                         }
                         points[temp.vertno] = temp;
                         assert(points.size() > temp.vertno);
+#ifdef STAND_ALONE_MODEL
                         cout<<"Define vertex offset Y,Z ("<<temp.x<<", "<<temp.y<<", "<<temp.z<<") as num "<<temp.vertno<<endl;
+#endif
                     }
                     break;
                 case 0x00A0:
                     unk16=read16(in);
                     base_face.points.resize(4);
+                    {
+                        uint8_t vertno[4];
+                        vertno[3] = read8(in);
+                        vertno[2] = read8(in);
+                        vertno[1] = read8(in);
+                        vertno[0] = read8(in);
 
-                    base_face.points[0] = points[read8(in)];
-                    base_face.points[0].u = frac2float(0);
-                    base_face.points[0].v = frac2float(0);
+                        base_face.points[0] = points[vertno[0]];
+                        base_face.points[0].u = frac2float(0);
+                        base_face.points[0].v = frac2float(0);
 
-                    base_face.points[1] = points[read8(in)];
-                    base_face.points[1].u = frac2float(65535);
-                    base_face.points[1].v = frac2float(0);
+                        base_face.points[1] = points[vertno[1]];
+                        base_face.points[1].u = frac2float(65535);
+                        base_face.points[1].v = frac2float(0);
 
-                    base_face.points[2] = points[read8(in)];
-                    base_face.points[2].u = frac2float(65535);
-                    base_face.points[2].v = frac2float(65535);
+                        base_face.points[2] = points[vertno[2]];
+                        base_face.points[2].u = frac2float(65535);
+                        base_face.points[2].v = frac2float(65535);
 
-                    base_face.points[3] = points[read8(in)];
-                    base_face.points[3].u = frac2float(0);
-                    base_face.points[3].v = frac2float(65535);
-                    cout<<"??? shorthand face definition (guessing at UV order)"<<endl;
+                        base_face.points[3] = points[vertno[3]];
+                        base_face.points[3].u = frac2float(0);
+                        base_face.points[3].v = frac2float(65535);
+                        faces.push_back(base_face);
+#ifdef STAND_ALONE_MODEL
+                        cout<<"??? shorthand face definition (guessing at UV order), vertices "<<int(vertno[0])<<", "<<int(vertno[1])<<", "<<int(vertno[2])<<", and "<<int(vertno[3])<<endl;
+#endif
+                    }
                     break;
                 case 0x00A8:
                     base_face.points.resize(0);
@@ -380,7 +461,9 @@ int uw_model::process_nodes(ifstream& in) {
                     }
                     //cout<<endl;
                     faces.push_back(base_face);
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define texture-mapped face ("<<base_face.points.size()<<" vertices with U,V pairs), tex num: "<<base_face.texture_num<<endl;
+#endif
                     break;
                 case 0x00B4:
                     base_face.points.resize(0);
@@ -389,7 +472,9 @@ int uw_model::process_nodes(ifstream& in) {
                         base_face.points.resize(vcount);
                         //cout<<"Define face vertices ("<<vcount<<", "<<base_face.points.size()<<"): ";
                     }
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define texture-mapped face ("<<base_face.points.size()<<" vertices with U,V pairs)"<<endl;
+#endif
                     for(int i = 0; i < base_face.points.size(); ++i) {
                         int vnum = read16(in)>>(3);
                         //cout<<vnum<<" ";
@@ -397,7 +482,9 @@ int uw_model::process_nodes(ifstream& in) {
                         base_face.points[i] = points[vnum];
                         base_face.points[i].u = frac2float(read16(in));
                         base_face.points[i].v = frac2float(read16(in));
+#ifdef STAND_ALONE_MODEL
                         cout<<"\tvert ("<<points[vnum].x<<", "<<points[vnum].y<<", "<<points[vnum].z<<"), UV: ("<<base_face.points[i].u<<", "<<base_face.points[i].v<<")"<<endl;
+#endif
                     }
                     //cout<<endl;
                     faces.push_back(base_face);
@@ -405,13 +492,19 @@ int uw_model::process_nodes(ifstream& in) {
                 case 0x00BC:
                     base_face.c = read16(in);
                     base_face.shade = read16(in);
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define face shade color: "<<base_face.c<<", shade: "<<base_face.shade<<endl; 
+#endif
                     break;
                 case 0x00BE:
                     unk16 = read16(in);
+#ifdef STAND_ALONE_MODEL
                     cout<<hex<<"??? seems to define 2 shades ("<<unk16;
+#endif
                     unk16 = read16(in);
+#ifdef STAND_ALONE_MODEL
                     cout<<" and "<<unk16<<")"<<dec<<endl;
+#endif
                     break;
                 case 0x00CE:
                     base_face.points.resize(0);
@@ -430,7 +523,9 @@ int uw_model::process_nodes(ifstream& in) {
                     }
                     //cout<<endl;
                     faces.push_back(base_face);
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define texture-mapped face (B4 clone) ("<<base_face.points.size()<<" vertices with U,V pairs)"<<endl;
+#endif
                     break;
                 /*
                 case 0x00D2: cout<<"??? shorthand face definition"; dat_size = 6; break;
@@ -443,20 +538,27 @@ int uw_model::process_nodes(ifstream& in) {
                             uint8_t shade = read8(in);
                             if(vertnum >= points.size()) {
                                 points.resize(vertnum+1);
+#ifdef STAND_ALONE_MODEL
                                 cout<<"Expanded point list size to "<<points.size()<<" because the color list referenced a vertex that high."<<endl;
+#endif
                             }
                             points[vertnum].c = color;
                             points[vertnum].shade = shade;
                         }
                         if(nverts % 2 == 1) unk16 = read8(in); //Maintains alignment, I guess?
+#ifdef STAND_ALONE_MODEL
                         cout<<"Define vertex colors (?) for "<<nverts<<" vertices"<<endl; 
+#endif
                     }
                     break;
                 case 0x00D6:
                     base_face.goraud = true;
+#ifdef STAND_ALONE_MODEL
                     cout<<"Define gouraud shading"<<endl;
+#endif
                     break;
-                default: cout<<"UNKNOWN 3D ELEMENT ("<<node_type<<")"; dat_size = 20; retval = 2;
+                default: 
+                    cout<<"UNKNOWN 3D ELEMENT ("<<node_type<<")"; dat_size = 20; retval = 2;
             }
             if(retval) {
                 cout<<": ";
@@ -511,7 +613,9 @@ bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, 
     extent_z = fix2float(read16(in));
 
     if(extent_x == 0.0 || extent_y == 0.0 || extent_z == 0.0) {
+#ifdef STAND_ALONE_MODEL
         std::cerr<<"Model "<<model_number<<" has extents ("<<extent_x<<", "<<extent_y<<", "<<extent_z<<"), which look invalid."<<std::endl;
+#endif
         //return false;
     }
 
@@ -530,9 +634,13 @@ std::vector<float> uw_model::get_verts(output_type type) {
         case geometry:
             for(int f = 0; f < faces.size(); f++) {
                 for(int p = 0; p < faces[f].points.size() - 2; p++) { //Emulate GL_TRIANGLE_FAN traversal
-                    ret.push_back(faces[f].points[0].x - cent_x);   ret.push_back(faces[f].points[0].z - cent_z);   ret.push_back(faces[f].points[0].y - cent_y);
-                    ret.push_back(faces[f].points[p+1].x - cent_x); ret.push_back(faces[f].points[p+1].z - cent_z); ret.push_back(faces[f].points[p+1].y - cent_y);
-                    ret.push_back(faces[f].points[p+2].x - cent_x); ret.push_back(faces[f].points[p+2].z - cent_z); ret.push_back(faces[f].points[p+2].y - cent_y);
+                    //ret.push_back(faces[f].points[0].x - cent_x);   ret.push_back(faces[f].points[0].z - cent_z);   ret.push_back(faces[f].points[0].y - cent_y);
+                    //ret.push_back(faces[f].points[p+1].x - cent_x); ret.push_back(faces[f].points[p+1].z - cent_z); ret.push_back(faces[f].points[p+1].y - cent_y);
+                    //ret.push_back(faces[f].points[p+2].x - cent_x); ret.push_back(faces[f].points[p+2].z - cent_z); ret.push_back(faces[f].points[p+2].y - cent_y);
+
+                    ret.push_back(faces[f].points[0].x );   ret.push_back(faces[f].points[0].z );   ret.push_back(faces[f].points[0].y );
+                    ret.push_back(faces[f].points[p+1].x ); ret.push_back(faces[f].points[p+1].z ); ret.push_back(faces[f].points[p+1].y );
+                    ret.push_back(faces[f].points[p+2].x ); ret.push_back(faces[f].points[p+2].z ); ret.push_back(faces[f].points[p+2].y );
                 }
             }
             break;

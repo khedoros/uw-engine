@@ -44,6 +44,19 @@ texfile tmobj;
 
 int cur_lev = 0;
 
+#ifdef DEVBUILD
+std::vector<float> tris(0); //Triangular "top" caps
+#endif
+std::vector<std::vector<float>> quads(512);
+std::vector<std::vector<float>> tex(512);
+
+std::vector<uw_model> model;
+std::vector<std::vector<float>> mod_vertex;
+int modnum = 1;
+int moddir = 0;
+
+bool map_needs_update = true;
+
 class sprite_info;
 
 class sprite_info {
@@ -87,6 +100,36 @@ typedef enum {
 
 game_mode gmode = TITLE;
 
+void draw_model(float xloc, float yloc, float zloc, float heading, int model_num, simple_map::static_obj& obj) {
+    //Draw the car!
+    glPushMatrix();
+    glColor3f(1.0,1.0,1.0); //ceiling Y Axis (bright green)
+    glTranslatef(xloc, zloc, yloc);
+    glRotatef(heading, 0.0, 1.0, 0.0); //Rotate around y to face camera
+    glScalef(2.0,2.0,2.0);
+
+    if(mod_vertex[modnum].size() < 3) {
+        return;
+    }
+    if(walls.animtex[206].size() == 0) {
+        sf::Texture::bind(&(walls.tex[206]));
+    }
+    else {
+        sf::Texture::bind(&(walls.animtex[206][anim_framecount % walls.animtex[206].size()]));
+    }
+    glVertexPointer(3, GL_FLOAT, 0, &mod_vertex[model_num][0]);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glTexCoordPointer(2, GL_FLOAT, 0, &mod_vertex[model_num][0]);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    glDrawArrays(GL_TRIANGLES, 0, (mod_vertex[model_num].size() / 3)); //3 = number of coordinates per vertex
+
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glPopMatrix();
+}
+
+
 void draw_objs(const std::vector<sprite_info>& info) {
     uint8_t x = 0, y = 0;
     uint16_t first_obj = 0;
@@ -114,8 +157,8 @@ void draw_objs(const std::vector<sprite_info>& info) {
             simple_map::mobile_obj obj = sm.levels[cur_lev].npcs[first_obj];
             obj_id = obj.info.obj_id;
             uint8_t whoami = (obj_id & 0x3f); //sm.levels[cur_lev].npcs[first_obj].info.owner - 1;
-            xloc = float(x) * 2.0 + (2.0 - float(obj.info.xpos) / 3.5);
-            yloc = float(y) * 2.0 + (float(obj.info.ypos) / 3.5);
+            xloc = float(x) * 2.0 + (2.0 - float(obj.info.xpos) / 4.0);
+            yloc = float(y) * 2.0 + (float(obj.info.ypos) / 4.0);
             zloc = float(obj.info.zpos) / 16.0;
             heading = obj.info.heading;
             heading *= 45.0;
@@ -155,8 +198,34 @@ void draw_objs(const std::vector<sprite_info>& info) {
             xloc = float(x) * 2.0 + (2.0 - float(obj.xpos) / 4.0);
             yloc = float(y) * 2.0 + (float(obj.ypos) / 4.0);
             zloc = float(obj.zpos) / 16.0;
-            if(obj_id >= 232 && obj_id < 256) //replace runestones with the generic image
+            if(obj_id >= 232 && obj_id < 256) { //replace runestones with the generic image
                 tex = &(objs.tex[224]);
+            }
+            else if(obj_id >= 320 && obj_id < 368) { //3d objects
+                int model_num[] = { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+                                    0x03, 0x08, 0x08, 0x07, 0x07, 0x06, 0x05, 0x0b, 0x18, 0x09, 0x17, 0x1b, 0x1c, 0x19, 0x1a, 0x04,
+                                    0x0a, 0x10, 0x11, 0x0d, 0x02, 0x13, 0x12, 0x1d, 0x1e, 0x1f, 
+                                    
+                                    0x07, 0x07, 0x07, 0x07, 0x07, 0x07 };
+                draw_model(xloc, yloc, zloc, heading, model_num[obj_id - 320], obj);
+                //a lever       a switch          some writing
+                if(obj_id == 353 || obj_id == 354 || obj_id == 358) {
+                    //FIXME: dunno how the state of the levers/switches are stored.
+                    //       also dunno how to figure out which strings go to which writing
+                    if(obj_id == 353) tex = &(tmobj.tex[4]);
+                    else if(obj_id == 354) tex = &(tmobj.tex[12]);
+                    else if(obj_id == 358) tex = &(tmobj.tex[20]);
+                    obj_phi = 0;
+                    obj_theta = heading;
+                    heading = (heading * M_PI) / 180.0;
+                    xloc += 0.01*sin(heading);
+                    yloc += 0.01*cos(heading);
+                    //cout<<"index: "<<first_obj - 256<<" id: "<<obj_id<<"("<<strings.get_string(3,obj_id)<<") is_quant: "<<obj.quantitied<<" quant: "<<obj.quantity<<" quality: "<<obj.quality<<" owner: "<<obj.owner<<endl;
+                }
+                else {
+                    continue;
+                }
+            }
             else if(obj_id >= 368 && obj_id < 384) { //replace switches with the right pics from the other texture file
                 tex = &(switches.tex[obj_id - 368]);
                 obj_phi = 0;
@@ -164,20 +233,6 @@ void draw_objs(const std::vector<sprite_info>& info) {
                 heading = (heading * M_PI) / 180.0;
                 xloc += 0.01*sin(heading);
                 yloc += 0.01*cos(heading);
-            }
-                    //a lever       a switch          some writing
-            else if(obj_id == 353 || obj_id == 354 || obj_id == 358) {
-                //FIXME: dunno how the state of the levers/switches are stored.
-                //       also dunno how to figure out which strings go to which writing
-                if(obj_id == 353) tex = &(tmobj.tex[4]);
-                else if(obj_id == 354) tex = &(tmobj.tex[12]);
-                else if(obj_id == 358) tex = &(tmobj.tex[20]);
-                obj_phi = 0;
-                obj_theta = heading;
-                heading = (heading * M_PI) / 180.0;
-                xloc += 0.01*sin(heading);
-                yloc += 0.01*cos(heading);
-                //cout<<"index: "<<first_obj - 256<<" id: "<<obj_id<<"("<<strings.get_string(3,obj_id)<<") is_quant: "<<obj.quantitied<<" quant: "<<obj.quantity<<" quality: "<<obj.quality<<" owner: "<<obj.owner<<endl;
             }
             else {
                 tex = &(objs.tex[obj_id]);
@@ -254,6 +309,26 @@ void update_state(sf::RenderWindow &window) {
         theta += float(mouseDelt.x) * 0.05;
         phi   += float(mouseDelt.y) * 0.05;
     }
+    if(keys[sf::Keyboard::LBracket]) {
+        keys[sf::Keyboard::LBracket] = false;
+        moddir = -1;
+    }
+    else if(keys[sf::Keyboard::RBracket]) {
+        keys[sf::Keyboard::RBracket] = false;
+        moddir = 1;
+    }
+    modnum += moddir;
+
+    while(moddir) {
+        if(modnum < 0) modnum = 31;
+        if(modnum > 31) modnum = 0;
+        if(mod_vertex[modnum].size() > 3) {
+            moddir = 0;
+        }
+        else {
+            modnum += moddir;
+        }
+    }
 
     if(phi > 90.0) phi = 90.0;
     if(phi < -90.0) phi = -90.0;
@@ -305,16 +380,14 @@ void update_state(sf::RenderWindow &window) {
     if(keys[sf::Keyboard::Equal] && cur_lev < sm.levels.size() - 1) {
         keys[sf::Keyboard::Equal] = false;
         cur_lev++;
+        map_needs_update = true;
     }
     if(keys[sf::Keyboard::Dash]  && cur_lev > 0) {
         keys[sf::Keyboard::Dash] = false;
         cur_lev--;
+        map_needs_update = true;
     }
 }
-
-uw_model test;
-std::vector<float> model(0);
-int framecount = 0;
 
 void draw_level_bounds() {
     float plane[4][3] = {{0,0,1}, //plane, normal pointing along the +Y axis
@@ -372,29 +445,6 @@ void draw_level_bounds() {
           glEnd();
         glPopMatrix();
     }
-
-    //Draw the car!
-    glPushMatrix();
-    glColor3f(1.0,1.0,1.0); //ceiling Y Axis (bright green)
-    glTranslatef(64.0,30.0, 64.0);
-    glScalef(10.0,10.0,10.0);
-    if(walls.animtex[206].size() == 0)
-        sf::Texture::bind(&(walls.tex[206]));
-    else
-        sf::Texture::bind(&(walls.animtex[206][anim_framecount % walls.animtex[206].size()]));
-    glVertexPointer(3, GL_FLOAT, 0, &model[0]);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glTexCoordPointer(2, GL_FLOAT, 0, &model[0]);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    framecount--;
-    if(framecount < 0 ) framecount = (model.size() / 3) - 1;
-    glDrawArrays(GL_TRIANGLES, 0, (model.size() / 3) - framecount); //3 = number of coordinates per vertex
-
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glPopMatrix();
-
 }
 
 void push_vert(std::vector<float>& t, std::vector<float>& vert, float u, float v, float x, float y, float z) {
@@ -402,20 +452,10 @@ void push_vert(std::vector<float>& t, std::vector<float>& vert, float u, float v
     vert.push_back(x); vert.push_back(y); vert.push_back(z);
 }
 
-#ifdef DEVBUILD
-std::vector<float> tris(0); //Triangular "top" caps
-#endif
-std::vector<std::vector<float>> quads(512);
-std::vector<std::vector<float>> tex(512);
-bool map_needs_update = true;
-
 void update_level_map() {
     if(!map_needs_update) {
         return;
     }
-
-    test.load("../cd/uw2/uw2.exe", "../cd/uw2/data/pals.dat", 4);
-    model = test.get_verts(uw_model::geometry);
 
 #ifdef DEVBUILD
     tris.resize(0);
@@ -776,7 +816,7 @@ void render() {
 
 //Handle loading files that the engine already pays attention to
 bool load_data(string& fn) {
-    string level, wall, floor, pal, strs, crf, obj, apals, sw, tm;
+    string level, wall, floor, pal, strs, crf, obj, apals, sw, tm, exe;
     level = fn+"/data/level13.st";
     wall = fn+"/data/dw64.tr";
     floor = fn+"/data/df32.tr";
@@ -787,6 +827,7 @@ bool load_data(string& fn) {
     apals = fn+"/data/allpals.dat";
     sw = fn+"/data/tmflat.gr";
     tm = fn+"/data/tmobj.gr";
+    exe = fn+"/uw_demo.exe";
     if(!sm.load(level)) {
         level = fn+"/DATA/LEVEL13.ST";
         wall = fn+"/DATA/DW64.TR";
@@ -798,6 +839,7 @@ bool load_data(string& fn) {
         apals = fn+"/DATA/ALLPALS.DAT";
         sw = fn+"/DATA/TMFLAT.GR";
         tm = fn+"/DATA/TMOBJ.GR";
+        exe = fn+"/UW_DEMO.EXE";
         if(!sm.load(level)) {
             level = fn+"/data/lev.ark";
             wall = fn+"/data/w64.tr";
@@ -809,6 +851,7 @@ bool load_data(string& fn) {
             apals = fn+"/data/allpals.dat";
             sw = fn+"/data/tmflat.gr";
             tm = fn+"/data/tmobj.gr";
+            exe = fn+"/../uw2/uw2.exe";
             if(!sm.load(level)) {
                 level = fn+"/DATA/LEV.ARK";
                 wall = fn+"/DATA/W64.TR";
@@ -820,6 +863,7 @@ bool load_data(string& fn) {
                 apals = fn+"/DATA/ALLPALS.DAT";
                 sw = fn+"/DATA/TMFLAT.GR";
                 tm = fn+"/DATA/TMOBJ.GR";
+                exe = fn+"/UW.EXE";
                 if(!sm.load(level)) {
                     cout<<"Couldn't load any of the level files."<<endl;
                     return false;
@@ -854,6 +898,14 @@ bool load_data(string& fn) {
             floors.populate_animtex(i, 16, 23);
         }
     }
+
+    model.resize(64);
+    mod_vertex.resize(64);
+    for(int i=0; i < 64; i++) {
+        model[i].load(exe, pal, i);
+        mod_vertex[i] = model[i].get_verts(uw_model::geometry);
+    }
+
     return retval;
 }
 
