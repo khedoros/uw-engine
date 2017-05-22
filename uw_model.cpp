@@ -643,16 +643,15 @@ std::vector<float> uw_model::get_verts(output_type type) {
     switch(type) {
         case geometry:
             for(int f = 0; f < faces.size(); f++) {
-                if(!faces[f].fugly) {
-                    for(int p = 0; p < faces[f].points.size() - 2; p++) { //Emulate GL_TRIANGLE_FAN traversal
-                        //ret.push_back(faces[f].points[0].x + cent_x);   ret.push_back(faces[f].points[0].z + cent_z);   ret.push_back(faces[f].points[0].y + cent_y);
-                        //ret.push_back(faces[f].points[p+1].x + cent_x); ret.push_back(faces[f].points[p+1].z + cent_z); ret.push_back(faces[f].points[p+1].y + cent_y);
-                        //ret.push_back(faces[f].points[p+2].x + cent_x); ret.push_back(faces[f].points[p+2].z + cent_z); ret.push_back(faces[f].points[p+2].y + cent_y);
-                    
+                if(!faces[f].fugly || faces[f].points.size() < 4) {
+                    for(int p = 0; p < faces[f].points.size() - 2; p++) { //Emulate GL_TRIANGLE_FAN traversal, since it's an easy way to triangulate convex faces
                         ret.push_back(faces[f].points[0].x );   ret.push_back(faces[f].points[0].z );   ret.push_back(faces[f].points[0].y );
                         ret.push_back(faces[f].points[p+1].x ); ret.push_back(faces[f].points[p+1].z ); ret.push_back(faces[f].points[p+1].y );
                         ret.push_back(faces[f].points[p+2].x ); ret.push_back(faces[f].points[p+2].z ); ret.push_back(faces[f].points[p+2].y );
                     }
+                }
+                else {
+                    //These faces seem to often be concave, so I need an appropriate triangulation algorithm here
                 }
             }
             break;
