@@ -76,13 +76,13 @@ class sprite_info {
         float xloc = 0.0, yloc = 0.0, zloc = 0.0;
         bool is_npc = (index < 256);
         if(is_npc) { //"Mobile objects", aka NPCs
-            xloc = float(x) * 2.0 + (2.0 - float(sm.levels[cur_lev].npcs[index].info.xpos) / 3.5);
-            yloc = float(y) * 2.0 + (float(sm.levels[cur_lev].npcs[index].info.ypos) / 3.5);
+            xloc = float(x) * 2.0 + (2.0 - float(sm.levels[cur_lev].npcs[index].info.xpos) / 4.0);
+            yloc = float(y) * 2.0 + (float(sm.levels[cur_lev].npcs[index].info.ypos) / 4.0);
             zloc = float(sm.levels[cur_lev].npcs[index].info.zpos) / 16.0;
         }
         else { //"Static objects", aka items
-            xloc = float(x) * 2.0 + (2.0 - float(sm.levels[cur_lev].items[index - 256].xpos) / 3.5);
-            yloc = float(y) * 2.0 + (float(sm.levels[cur_lev].items[index - 256].ypos) / 3.5);
+            xloc = float(x) * 2.0 + (2.0 - float(sm.levels[cur_lev].items[index - 256].xpos) / 4.0);
+            yloc = float(y) * 2.0 + (float(sm.levels[cur_lev].items[index - 256].ypos) / 4.0);
             zloc = float(sm.levels[cur_lev].items[index - 256].zpos) / 16.0;
        }
        distance = sqrt(((xloc - camXPos) * (xloc - camXPos)) + ((yloc - camZPos) * (yloc - camZPos)) + ((zloc - camYPos) * (zloc - camYPos)));
@@ -108,11 +108,7 @@ bool info_out = true;
 game_mode gmode = TITLE;
 
 void draw_model(float xloc, float yloc, float zloc, float heading, int model_num, simple_map::static_obj& obj) {
-    //Draw the car!
-    glPushMatrix();
-    glTranslatef(xloc, zloc, yloc);
-    glRotatef(heading, 0.0, 1.0, 0.0); //Rotate around y to face appropriate heading
-    glScalef(2.0,2.0,2.0);             //My coordinates are 2x the ones of the original game
+    bool adjust_tmap = false;
 
     if(mod_vertex[model_num].size() < 3) {
 	std::cerr<<"Model #"<<model_num<<" doesn't have enough vertices."<<std::endl;
@@ -129,16 +125,51 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     else if(obj.obj_id == 0x160) { //Pillars
         sf::Texture::bind(&(tmobj.tex[obj.flags]));
     }
+    else if(obj.obj_id == 0x161) { //A lever
+        adjust_tmap = true;
+        sf::Texture::bind(&(tmobj.tex[(obj.flags & 7) + 4]));
+    }
+    else if(obj.obj_id == 0x162) { //A switch
+        adjust_tmap = true;
+        sf::Texture::bind(&(tmobj.tex[(obj.flags & 7) + 12]));
+    }
     else if(obj.obj_id == 0x164) { //Bridges
         sf::Texture::bind(&(tmobj.tex[obj.flags + 30]));
     }
     else if(obj.obj_id == 0x165) { //Gravestone
         sf::Texture::bind(&(tmobj.tex[obj.flags + 28]));
     }
+    else if(obj.obj_id == 0x166) { //Some writing
+        adjust_tmap = true;
+        sf::Texture::bind(&(tmobj.tex[(obj.flags & 7) + 20]));
+    }
+    else if(obj.obj_id == 0x16e) { //special tmap
+        adjust_tmap = true;
+        sf::Texture::bind(&(walls.tex[sm.levels[cur_lev].wall_tex_index[obj.owner]]));
+    }
     else {
         //sf::Texture::bind(NULL);
         sf::Texture::bind(NULL);
     }
+
+    heading += 180.0f;
+    if(heading >= 360.0f)
+        heading -= 360.0f;
+
+    glPushMatrix();
+
+    if(adjust_tmap) {
+        float trig_heading = (heading * M_PI) / 180.0;
+        float x_inc = -0.01*sin(heading);
+        float z_inc = -0.01*cos(heading);
+        //glRotatef(180,0,1,0);
+        glTranslatef(x_inc, 0.0, z_inc);
+    }
+
+    //Draw the car!
+    glTranslatef(xloc, zloc, yloc);
+    glRotatef(heading, 0.0, 1.0, 0.0); //Rotate around y to face appropriate heading
+    glScalef(2.0,2.0,2.0);             //My coordinates are 2x the ones of the original game
     assert(mod_vertex[model_num].size() % 9 == 0);
 
     //if(model_num == 0x0a) {
@@ -240,6 +271,13 @@ void draw_objs(const std::vector<sprite_info>& info) {
             xloc = float(x) * 2.0 + (2.0 - float(obj.xpos) / 4.0) - 1.0/8.0;
             yloc = float(y) * 2.0 + (float(obj.ypos) / 4.0) + 1.0/8.0;
             zloc = float(obj.zpos) / 16.0;
+            if(obj_id >= 0x140 && obj_id < 0x150) {
+                xloc-=2.0/8.0;
+                yloc+=2.0/8.0;
+            }
+            else if(obj_id == 0x164) {
+                xloc-=2.0/8.0;
+            }
             if(obj_id >= 232 && obj_id < 256) { //replace runestones with the generic image
                 tex = &(objs.tex[224]);
             }
@@ -248,25 +286,10 @@ void draw_objs(const std::vector<sprite_info>& info) {
                                     0x03, 0x08, 0x08, 0x07, 0x07, 0x06, 0x05, 0x0b, 0x18, 0x09, 0x17, 0x1b, 0x1c, 0x19, 0x1a, 0x04,
                                     0x0a, 0x10, 0x11, 0x0d, 0x02, 0x13, 0x12, 0x1d, 0x1e, 0x1f, 
                                     
-                                    0x07, 0x07, 0x07, 0x07, 0x07, 0x07 };
+                                    0x07, 0x07, 0x07, 0x07, 0x16, 0x07 };
                 draw_model(xloc, yloc, zloc, heading, model_num[obj_id - 320], obj);
-                //a lever       a switch          some writing
-                if(obj_id == 353 || obj_id == 354 || obj_id == 358) {
-                    //FIXME: dunno how the state of the levers/switches are stored.
-                    //       also dunno how to figure out which strings go to which writing
-                    if(obj_id == 353) tex = &(tmobj.tex[4]);
-                    else if(obj_id == 354) tex = &(tmobj.tex[12]);
-                    else if(obj_id == 358) tex = &(tmobj.tex[20]);
-                    obj_phi = 0;
-                    obj_theta = heading;
-                    heading = (heading * M_PI) / 180.0;
-                    xloc += 0.01*sin(heading);
-                    yloc += 0.01*cos(heading);
-                    //cout<<"index: "<<first_obj - 256<<" id: "<<obj_id<<"("<<strings.get_string(3,obj_id)<<") is_quant: "<<obj.quantitied<<" quant: "<<obj.quantity<<" quality: "<<obj.quality<<" owner: "<<obj.owner<<endl;
-                }
-                else {
-                    continue;
-                }
+
+                continue;
             }
             else if(obj_id >= 368 && obj_id < 384) { //replace switches with the right pics from the other texture file
                 tex = &(switches.tex[obj_id - 368]);
