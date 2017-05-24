@@ -97,8 +97,16 @@ public:
         unsigned  first_obj;
     };
 
+    struct anim_info {
+        unsigned link1:16;
+        unsigned unk2:16;
+        unsigned tile_x:8;
+        unsigned tile_y:8;
+    };
+
     struct level {
         map_data d[64][64];
+        anim_info anim[64];
         bool is_explored[64][64];
         mobile_obj npcs[256];
         static_obj items[768];

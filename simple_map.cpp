@@ -148,6 +148,15 @@ bool simple_map::load_tex(std::ifstream& in, size_t offset /*= 0*/, size_t index
 bool simple_map::load_anim(std::ifstream& in, size_t offset /*= 0*/, size_t index /*= 0*/) {
     if(levels.size() == 0) levels.resize(index+1);
     //cout<<"Pretending to load animation overlay data for level "<<index+1<<" located at offset "<<offset<<endl;
+    size_t bookmark = in.tellg();
+    in.seekg(offset, ios::beg);
+    for(int i=0;i<64;++i) {
+        levels[index].anim[i].link1 = read16(in);
+        levels[index].anim[i].unk2  = read16(in);
+        levels[index].anim[i].tile_x  = read8(in);
+        levels[index].anim[i].tile_y  = read8(in);
+    }
+    in.seekg(bookmark, ios::beg);
     return true;
 }
 
@@ -373,9 +382,9 @@ void simple_map::print_map(const size_t index, const int option /*= 0*/, const U
 
 void simple_map::static_obj::print() {
     cout<<hex
-        <<"obj_id: "<< obj_id << "\nflags (high bit might mean \"enchantable?\": "<<flags<<"\ndoordir: "<<doordir
-        <<"\ninvisible: "<<invisible<<"\nquantitied: "<<quantitied<<"\nquality: "<<quality<<"\nowner: "<<owner
-        <<"\nquantity: "<<quantity<<"\n position: ("<<xpos<<", "<<ypos<<", "<<zpos<<"), heading: "<<heading<<endl;
+        <<"obj_id: "<< obj_id << "\nflags: "<<flags<<"\ndoordir: "<<doordir
+        <<"\ninvisible: "<<invisible<<"\nhas quantity: "<<quantitied<<"\nquality: "<<quality<<"\nowner: "<<owner
+        <<"\nquantity: "<<quantity<<"\nposition: ("<<xpos<<", "<<ypos<<", "<<zpos<<"), heading: "<<heading<<endl;
 }
 
 uint16_t simple_map::static_obj::get_next() {
@@ -384,6 +393,10 @@ uint16_t simple_map::static_obj::get_next() {
 
 void simple_map::mobile_obj::print() {
     info.print();
+    cout<<hex
+        <<"HP: "<<hp<<"\ngoal: "<<goal<<"\ngtarg: "<<gtarg<<"\nlevel: "<<level<<"\ntalked_to: "<<talked_to
+        <<"\nattitude: "<<attitude<<"\nheight: "<<height<<"\nhome: ("<<xhome<<", "<<yhome<<")\nheading: "<<heading
+        <<"\nhunger: "<<hunger<<"\nwhoami: "<<whoami<<endl;
 }
 
 uint16_t simple_map::mobile_obj::get_next() {
