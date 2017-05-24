@@ -41,6 +41,7 @@ critfile cf;
 texfile objs;
 texfile switches;
 texfile tmobj;
+texfile doors;
 
 int cur_lev = 0;
 
@@ -816,7 +817,7 @@ void render() {
 
 //Handle loading files that the engine already pays attention to
 bool load_data(string& fn) {
-    string level, wall, floor, pal, strs, crf, obj, apals, sw, tm, exe;
+    string level, wall, floor, pal, strs, crf, obj, apals, sw, tm, exe, drs;
     level = fn+"/data/level13.st";
     wall = fn+"/data/dw64.tr";
     floor = fn+"/data/df32.tr";
@@ -828,6 +829,7 @@ bool load_data(string& fn) {
     sw = fn+"/data/tmflat.gr";
     tm = fn+"/data/tmobj.gr";
     exe = fn+"/uw_demo.exe";
+    drs = fn+"/data/doors.gr";
     if(!sm.load(level)) {
         level = fn+"/DATA/LEVEL13.ST";
         wall = fn+"/DATA/DW64.TR";
@@ -840,6 +842,7 @@ bool load_data(string& fn) {
         sw = fn+"/DATA/TMFLAT.GR";
         tm = fn+"/DATA/TMOBJ.GR";
         exe = fn+"/UW_DEMO.EXE";
+        drs = fn+"/DATA/DOORS.GR";
         if(!sm.load(level)) {
             level = fn+"/data/lev.ark";
             wall = fn+"/data/w64.tr";
@@ -852,6 +855,7 @@ bool load_data(string& fn) {
             sw = fn+"/data/tmflat.gr";
             tm = fn+"/data/tmobj.gr";
             exe = fn+"/../uw2/uw2.exe";
+            drs = fn+"/data/doors.gr";
             if(!sm.load(level)) {
                 level = fn+"/DATA/LEV.ARK";
                 wall = fn+"/DATA/W64.TR";
@@ -864,6 +868,7 @@ bool load_data(string& fn) {
                 sw = fn+"/DATA/TMFLAT.GR";
                 tm = fn+"/DATA/TMOBJ.GR";
                 exe = fn+"/UW.EXE";
+                drs = fn+"/DATA/DOORS.GR";
                 if(!sm.load(level)) {
                     cout<<"Couldn't load any of the level files."<<endl;
                     return false;
@@ -871,7 +876,7 @@ bool load_data(string& fn) {
             }
         }
     }
-    bool retval = walls.load(pal,wall) && floors.load(pal,floor) && strings.load(strs) && cf.load(crf,pal) && objs.load(pal,obj,apals) && switches.load(pal, sw, apals) && tmobj.load(pal,tm,apals);
+    bool retval = walls.load(pal,wall) && floors.load(pal,floor) && strings.load(strs) && cf.load(crf,pal) && objs.load(pal,obj,apals) && switches.load(pal, sw, apals) && tmobj.load(pal,tm,apals) && doors.load(pal,drs,apals);
 
     //Use the already-loaded textures to generate color-cycled texture animations
     for(size_t i=0;i<walls.tex.size();i++) {

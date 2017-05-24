@@ -330,7 +330,8 @@ void simple_map::print_map(const size_t index, const int option /*= 0*/, const U
                     cout<<"Level "<<index+1<<" Block ("<<y<<", "<<x<<") item start: ";
                     next = levels[index].items[cur_item - 256].next_index;
                 }
-                cout<<cur_item<<"("<<obj_id<<": "<<uwt.get_string(3,obj_id)<<")";
+                cout<<cur_item<<"("<<obj_id<<": "<<uwt.get_string(3,obj_id)<<"): ";
+                levels[index].items[cur_item - 256].print(); cout<<endl;
                 
                 while(next != 0) {
                     cur_item = next;
@@ -356,7 +357,10 @@ void simple_map::print_map(const size_t index, const int option /*= 0*/, const U
 }
 
 void simple_map::static_obj::print() {
-
+    cout<<hex
+        <<"obj_id: "<< obj_id << "\nflags (high bit might mean \"enchantable?\": "<<flags<<"\ndoordir: "<<doordir
+        <<"\ninvisible: "<<invisible<<"\nquantitied: "<<quantitied<<"\nquality: "<<quality<<"\nowner: "<<owner
+        <<"\nquantity: "<<quantity<<"\n position: ("<<xpos<<", "<<ypos<<", "<<zpos<<"), heading: "<<heading<<endl;
 }
 
 uint16_t simple_map::static_obj::get_next() {
