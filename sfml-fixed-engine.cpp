@@ -52,6 +52,7 @@ std::vector<std::vector<float>> tex(512);
 
 std::vector<uw_model> model;
 std::vector<std::vector<float>> mod_vertex;
+std::vector<std::vector<float>> mod_texmap;
 
 /*  Useful for some debug things, but I don't want them generally active
 int modnum = 1;
@@ -123,7 +124,8 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
         //sf::Texture::bind(&(walls.animtex[206][anim_framecount % walls.animtex[206].size()]));
     }
 
-    sf::Texture::bind(NULL);
+    //sf::Texture::bind(NULL);
+    sf::Texture::bind(&(walls.tex[1]));
 
     assert(mod_vertex[model_num].size() % 9 == 0);
 
@@ -134,7 +136,7 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
 
     glVertexPointer(3, GL_FLOAT, 0, &mod_vertex[model_num][0]);
     glEnableClientState(GL_VERTEX_ARRAY);
-    glTexCoordPointer(2, GL_FLOAT, 0, &mod_vertex[model_num][0]);
+    glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
     //int verts_to_draw = (mod_vertex[model_num].size() / 3 > ptcnt) ? ptcnt : mod_vertex[model_num].size() / 3;
@@ -232,7 +234,7 @@ void draw_objs(const std::vector<sprite_info>& info) {
             else if(obj_id >= 320 && obj_id < 368) { //3d objects
                 int model_num[] = { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
                                     0x03, 0x08, 0x08, 0x07, 0x07, 0x06, 0x05, 0x0b, 0x18, 0x09, 0x17, 0x1b, 0x1c, 0x19, 0x1a, 0x04,
-                                    /*0x0a*/0x04, 0x10, 0x11, 0x0d, 0x02, 0x13, 0x12, 0x1d, 0x1e, 0x1f, 
+                                    0x0a, 0x10, 0x11, 0x0d, 0x02, 0x13, 0x12, 0x1d, 0x1e, 0x1f, 
                                     
                                     0x07, 0x07, 0x07, 0x07, 0x07, 0x07 };
                 draw_model(xloc, yloc, zloc, heading, model_num[obj_id - 320], obj);
@@ -894,7 +896,7 @@ bool load_data(string& fn) {
             apals = fn+"/data/allpals.dat";
             sw = fn+"/data/tmflat.gr";
             tm = fn+"/data/tmobj.gr";
-            exe = fn+"/../uw2/uw2.exe";
+            exe = fn+"/../uw/uw.exe";
             if(!sm.load(level)) {
                 level = fn+"/DATA/LEV.ARK";
                 wall = fn+"/DATA/W64.TR";
@@ -944,9 +946,11 @@ bool load_data(string& fn) {
 
     model.resize(64);
     mod_vertex.resize(64);
+    mod_texmap.resize(64);
     for(int i=0; i < 64; i++) {
         model[i].load(exe, pal, i);
         mod_vertex[i] = model[i].get_verts(uw_model::geometry);
+        mod_texmap[i] = model[i].get_verts(uw_model::texcoords);
     }
 
     return retval;

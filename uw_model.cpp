@@ -651,7 +651,21 @@ std::vector<float> uw_model::get_verts(output_type type) {
                     }
                 }
                 else {
-                    //These faces seem to often be concave, so I need an appropriate triangulation algorithm here
+                    //TODO: These faces seem to often be concave, so I need an appropriate triangulation algorithm here
+                }
+            }
+            break;
+        case texcoords:
+            for(int f = 0; f < faces.size(); f++) {
+                if(!faces[f].fugly || faces[f].points.size() < 4) {
+                    for(int p = 0; p < faces[f].points.size() - 2; p++) {
+                        ret.push_back(faces[f].points[0].u); ret.push_back(faces[f].points[0].v);
+                        ret.push_back(faces[f].points[p+1].u); ret.push_back(faces[f].points[p+1].v);
+                        ret.push_back(faces[f].points[p+2].u); ret.push_back(faces[f].points[p+2].v);
+                    }
+                }
+                else {
+                    //TODO: re-activate when I figure out the geometry traversal for these faces
                 }
             }
             break;
