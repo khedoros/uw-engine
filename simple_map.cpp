@@ -322,17 +322,23 @@ void simple_map::print_map(const size_t index, const int option /*= 0*/, const U
                 uint16_t obj_id = 0;
                 if(cur_item < 256) { //"Item" is an NPC
                     obj_id = levels[index].npcs[cur_item].info.obj_id;
-                    cout<<"Level "<<index+1<<" Block ("<<y<<", "<<x<<") NPC item start: ";
+                    cout<<"Level "<<index+1<<" Block ("<<y<<", "<<x<<") NPC item start: "<<endl;
                     next = levels[index].npcs[cur_item].info.next_index;
                 }
                 else { //Item is an actual item
                     obj_id = levels[index].items[cur_item - 256].obj_id;
-                    cout<<"Level "<<index+1<<" Block ("<<y<<", "<<x<<") item start: ";
+                    cout<<"Level "<<index+1<<" Block ("<<y<<", "<<x<<") item start: "<<endl;
                     next = levels[index].items[cur_item - 256].next_index;
                 }
-                cout<<cur_item<<"("<<obj_id<<": "<<uwt.get_string(3,obj_id)<<"): ";
-                levels[index].items[cur_item - 256].print(); cout<<endl;
-                
+                cout<<"---------------------------------------------------------"<<endl;
+                cout<<cur_item<<"(id: "<<obj_id<<": "<<uwt.get_string(3,obj_id)<<"): "<<endl;
+                if(cur_item < 256) {
+                    levels[index].npcs[cur_item].print(); cout<<endl;
+                }
+                else {
+                    levels[index].items[cur_item - 256].print(); cout<<endl;
+                }
+
                 while(next != 0) {
                     cur_item = next;
                     obj_id = 0;
@@ -347,8 +353,17 @@ void simple_map::print_map(const size_t index, const int option /*= 0*/, const U
                         obj_id = levels[index].items[cur_item - 256].obj_id;
                         next = levels[index].items[cur_item - 256].next_index;
                     }
-                    cout<<"->"<<cur_item<<"("<<obj_id<<": "<<uwt.get_string(3,obj_id)<<")";
+                    cout<<cur_item<<"(id: "<<obj_id<<": "<<uwt.get_string(3,obj_id)<<")"<<endl;
+                    if(cur_item < 256) {
+                        levels[index].npcs[cur_item].print(); cout<<endl;
+                    }
+                    else {
+                        levels[index].items[cur_item - 256].print(); cout<<endl;
+                    }
+                    //cout<<"->"<<cur_item<<"("<<obj_id<<": "<<uwt.get_string(3,obj_id)<<")";
                 }
+                cout<<"---------------------------------------------------------"<<endl;
+                cout<<"---------------------------------------------------------"<<endl;
                 cout<<endl;
             }
         }

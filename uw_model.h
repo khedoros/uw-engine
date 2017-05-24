@@ -41,6 +41,7 @@ class uw_model {
             goraud(gor), texture(tex), nx(nxv), ny(nyv), nz(nzv), dist_x(dx), dist_y(dy), dist_z(dz), texture_num(texnum) {}
         bool goraud;
         bool texture;
+        bool fugly;
         std::vector<point> points;
         float nx, ny, nz; //normal vector
         float dist_x, dist_y, dist_z; //vector for distance from center

@@ -53,8 +53,13 @@ std::vector<std::vector<float>> tex(512);
 
 std::vector<uw_model> model;
 std::vector<std::vector<float>> mod_vertex;
+std::vector<std::vector<float>> mod_texmap;
+
+/*  Useful for some debug things, but I don't want them generally active
 int modnum = 1;
 int moddir = 0;
+int ptcnt = 1000;
+*/
 
 bool map_needs_update = true;
 
@@ -99,31 +104,67 @@ typedef enum {
     MENU //In the option menu
 } game_mode;
 
+bool info_out = true;
 game_mode gmode = TITLE;
 
 void draw_model(float xloc, float yloc, float zloc, float heading, int model_num, simple_map::static_obj& obj) {
     //Draw the car!
     glPushMatrix();
-    glColor3f(1.0,1.0,1.0); //ceiling Y Axis (bright green)
     glTranslatef(xloc, zloc, yloc);
-    glRotatef(heading, 0.0, 1.0, 0.0); //Rotate around y to face camera
-    glScalef(2.0,2.0,2.0);
+    glRotatef(heading, 0.0, 1.0, 0.0); //Rotate around y to face appropriate heading
+    glScalef(2.0,2.0,2.0);             //My coordinates are 2x the ones of the original game
 
-    if(mod_vertex[modnum].size() < 3) {
+    if(mod_vertex[model_num].size() < 3) {
+	std::cerr<<"Model #"<<model_num<<" doesn't have enough vertices."<<std::endl;
         return;
     }
-    if(walls.animtex[206].size() == 0) {
-        sf::Texture::bind(&(walls.tex[206]));
+
+    if(obj.obj_id >= 0x140 && obj.obj_id < 0x150) { //Door frames
+        int x = 63 - (xloc / 2);
+        int y = yloc / 2;
+        int wti = sm.levels[cur_lev].d[x][y].wall_tex;
+
+        sf::Texture::bind(&(walls.tex[sm.levels[cur_lev].wall_tex_index[wti]]));
+    }
+    else if(obj.obj_id == 0x160) { //Pillars
+        sf::Texture::bind(&(tmobj.tex[obj.flags]));
+    }
+    else if(obj.obj_id == 0x164) { //Bridges
+        sf::Texture::bind(&(tmobj.tex[obj.flags + 30]));
+    }
+    else if(obj.obj_id == 0x165) { //Gravestone
+        sf::Texture::bind(&(tmobj.tex[obj.flags + 28]));
     }
     else {
-        sf::Texture::bind(&(walls.animtex[206][anim_framecount % walls.animtex[206].size()]));
+        //sf::Texture::bind(NULL);
+        sf::Texture::bind(NULL);
     }
+    assert(mod_vertex[model_num].size() % 9 == 0);
+
+    //if(model_num == 0x0a) {
+        //assert(obj.obj_id == 320 + 0x20);
+        //std::cout<<"Draw "<<mod_vertex[model_num].size()/3<<"vertices at ("<<xloc<<", "<<yloc<<", "<<zloc<<")"<<std::endl;
+    //}
+
     glVertexPointer(3, GL_FLOAT, 0, &mod_vertex[model_num][0]);
     glEnableClientState(GL_VERTEX_ARRAY);
-    glTexCoordPointer(2, GL_FLOAT, 0, &mod_vertex[model_num][0]);
+    glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    glDrawArrays(GL_TRIANGLES, 0, (mod_vertex[model_num].size() / 3)); //3 = number of coordinates per vertex
+    //int verts_to_draw = (mod_vertex[model_num].size() / 3 > ptcnt) ? ptcnt : mod_vertex[model_num].size() / 3;
+    int verts_to_draw = mod_vertex[model_num].size() / 3;
+    glDrawArrays(GL_TRIANGLES, 0, verts_to_draw); //3 = number of coordinates per vertex
+    //for(int vert = 1; vert <= verts_to_draw; ++vert) {
+    //    float color = 1.0 - float(vert % 32) / 32.0f;
+    //    glColor3f(color,color,color);
+    //    glDrawArrays(GL_POINTS, (vert-1)*3, verts_to_draw); //3 = number of coordinates per vertex
+    //}
+
+    //for(int faces = 1; faces <= verts_to_draw / 3; ++faces) {
+    //    float color = float(faces-1) / float(mod_vertex[model_num].size() / 9);
+    //    glColor3f(color,color,color);
+    //    glDrawArrays(GL_TRIANGLES, 0, faces * 3); //3 = number of coordinates per vertex
+    //}
 
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
@@ -142,7 +183,7 @@ void draw_objs(const std::vector<sprite_info>& info) {
         first_obj = i.index;
 
         if(first_obj == 0) return;
-        float xloc = 0.0, yloc = 0.0, zloc = 0.0, w = 0.0, h = 0.0, hsx = 0.0, hsy = 0.0, scale = 24.0;
+        float xloc = 0.0, yloc = 0.0, zloc = 0.0, w = 0.0, h = 0.0, hsx = 0.0, hsy = 0.0, scale = 32.0;
         float obj_theta = -1 * theta;
         float obj_phi = -1 * phi;
         float heading = 0;
@@ -196,8 +237,8 @@ void draw_objs(const std::vector<sprite_info>& info) {
             heading = obj.heading;
             heading *= 45.0;
             heading = 180 - heading;
-            xloc = float(x) * 2.0 + (2.0 - float(obj.xpos) / 4.0);
-            yloc = float(y) * 2.0 + (float(obj.ypos) / 4.0);
+            xloc = float(x) * 2.0 + (2.0 - float(obj.xpos) / 4.0) - 1.0/8.0;
+            yloc = float(y) * 2.0 + (float(obj.ypos) / 4.0) + 1.0/8.0;
             zloc = float(obj.zpos) / 16.0;
             if(obj_id >= 232 && obj_id < 256) { //replace runestones with the generic image
                 tex = &(objs.tex[224]);
@@ -310,13 +351,17 @@ void update_state(sf::RenderWindow &window) {
         theta += float(mouseDelt.x) * 0.05;
         phi   += float(mouseDelt.y) * 0.05;
     }
+
+    /*   Debug-related code (useful for playing with model rendering)
     if(keys[sf::Keyboard::LBracket]) {
         keys[sf::Keyboard::LBracket] = false;
         moddir = -1;
+        ptcnt--;
     }
     else if(keys[sf::Keyboard::RBracket]) {
         keys[sf::Keyboard::RBracket] = false;
         moddir = 1;
+        ptcnt++;
     }
     modnum += moddir;
 
@@ -330,6 +375,11 @@ void update_state(sf::RenderWindow &window) {
             modnum += moddir;
         }
     }
+
+    if(ptcnt == 0) ptcnt = 1;
+    if(ptcnt == 501) ptcnt = 500;
+    */    //End of debug-related code
+
 
     if(phi > 90.0) phi = 90.0;
     if(phi < -90.0) phi = -90.0;
@@ -721,6 +771,7 @@ void render_3d() {
             if(index >= floors.tex.size()) {
                 //Condition only applies to tiles that don't have anything in them
                 sf::Texture::bind(NULL);
+                glColor3f(0.0,0.0,0.0);
             }
             else if(floors.animtex[index].size() == 0) {
                 sf::Texture::bind(&(floors.tex[index]));
@@ -731,6 +782,9 @@ void render_3d() {
             }
         }
         else { //Walls
+            if(index == 256) {
+                glColor3f(1.0,1.0,1.0);
+            }
             //If no animated texture wall exists, bind the static one. Otherwise, bind the appropriate frame of the animated texture.
             if(index - 256 >= walls.tex.size()) {
                 //Shouldn't ever be true
@@ -772,10 +826,12 @@ void render_3d() {
 #ifdef DEVBUILD
     //Draw the triangular top caps of the level
     sf::Texture::bind(NULL);
+    glColor3f(0.0,0.0,0.0);
     glVertexPointer(3, GL_FLOAT, 0, &tris[0]);
     glEnableClientState(GL_VERTEX_ARRAY);
     glDrawArrays(GL_TRIANGLES, 0, tris.size() / 3); //3 = number of coordinates per vertex
     glDisableClientState(GL_VERTEX_ARRAY);
+    glColor3f(1.0,1.0,1.0);
 #endif
 
     if(sprite_sorter.size() != 0) {
@@ -854,7 +910,7 @@ bool load_data(string& fn) {
             apals = fn+"/data/allpals.dat";
             sw = fn+"/data/tmflat.gr";
             tm = fn+"/data/tmobj.gr";
-            exe = fn+"/../uw2/uw2.exe";
+            exe = fn+"/../uw/uw.exe";
             drs = fn+"/data/doors.gr";
             if(!sm.load(level)) {
                 level = fn+"/DATA/LEV.ARK";
@@ -906,9 +962,11 @@ bool load_data(string& fn) {
 
     model.resize(64);
     mod_vertex.resize(64);
+    mod_texmap.resize(64);
     for(int i=0; i < 64; i++) {
         model[i].load(exe, pal, i);
         mod_vertex[i] = model[i].get_verts(uw_model::geometry);
+        mod_texmap[i] = model[i].get_verts(uw_model::texcoords);
     }
 
     return retval;
@@ -953,7 +1011,9 @@ void gameloop() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
+    //glDisable(GL_CULL_FACE);
     glEnable(GL_TEXTURE_2D);
+    glPointSize(4);
 
     bool redraw = true;
     while(window.isOpen()) {

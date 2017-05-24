@@ -74,7 +74,7 @@ int uw_model::process_nodes(ifstream& in) {
                         offsets.push_back(in.tellg() + offset2);
                     }
 #ifdef STAND_ALONE_MODEL
-                    cout<<"Define sort node, arbitrary heading";
+                    cout<<"Define sort node, arbitrary heading"<<endl;
 #endif
                     break;
                 case 0x000C: 
@@ -88,7 +88,7 @@ int uw_model::process_nodes(ifstream& in) {
                         offsets.push_back(in.tellg() + offset2);
                     }
 #ifdef STAND_ALONE_MODEL
-                    cout<<"define sort node, ZY plane";
+                    cout<<"define sort node, ZY plane"<<endl;
 #endif
                     break;
                 case 0x000E: 
@@ -102,7 +102,7 @@ int uw_model::process_nodes(ifstream& in) {
                         offsets.push_back(in.tellg() + offset2);
                     }
 #ifdef STAND_ALONE_MODEL
-                    cout<<"define sort node, XY plane";
+                    cout<<"define sort node, XY plane"<<endl;
 #endif
                     break;
                 case 0x0010: 
@@ -116,7 +116,7 @@ int uw_model::process_nodes(ifstream& in) {
                         offsets.push_back(in.tellg() + offset2);
                     }
 #ifdef STAND_ALONE_MODEL
-                    cout<<"define sort node, XZ plane";
+                    cout<<"define sort node, XZ plane"<<endl;
 #endif
                     break;
                 case 0x0014: 
@@ -133,17 +133,20 @@ int uw_model::process_nodes(ifstream& in) {
 #endif
                     break;
                 case 0x0040: 
+                    base_face.fugly = true;
 #ifdef STAND_ALONE_MODEL
                     cout<<"??? seems to do nothing but introduce a face definition"<<endl;
 #endif
                     break;
                 case 0x0044: 
+                    base_face.fugly = true;
 #ifdef STAND_ALONE_MODEL
                     cout<<"??? this one too (seems to intro a face def)"<<endl;
 #endif
                     break;
                 case 0x0058:
                     unk16 = read16(in); //Bytes to skip when not visible
+                    base_face = face();
                     base_face.nx = fix2float(read16(in));
                     base_face.dist_x = fix2float(read16(in));
                     base_face.ny = fix2float(read16(in));
@@ -156,6 +159,7 @@ int uw_model::process_nodes(ifstream& in) {
                     break;
                 case 0x005E:
                     unk16 = read16(in); //Bytes to skip when not visible
+                    base_face = face();
                     base_face.nx = 0;
                     base_face.dist_x = 0;
                     base_face.nz = fix2float(read16(in));
@@ -168,6 +172,7 @@ int uw_model::process_nodes(ifstream& in) {
                     break;
                 case 0x0060:
                     unk16 = read16(in); //Bytes to skip when not visible
+                    base_face = face();
                     base_face.nx = fix2float(read16(in));
                     base_face.dist_x = fix2float(read16(in));
                     base_face.nz = 0;
@@ -180,6 +185,7 @@ int uw_model::process_nodes(ifstream& in) {
                     break;
                 case 0x0062:
                     unk16 = read16(in); //Bytes to skip when not visible
+                    base_face = face();
                     base_face.nx = fix2float(read16(in));
                     base_face.dist_x = fix2float(read16(in));
                     base_face.nz = fix2float(read16(in));
@@ -192,6 +198,7 @@ int uw_model::process_nodes(ifstream& in) {
                     break;
                 case 0x0064:
                     unk16 = read16(in); //Bytes to skip when not visible
+                    base_face = face();
                     base_face.nx = fix2float(read16(in));
                     base_face.dist_x = fix2float(read16(in));
                     base_face.nz = 0;
@@ -204,6 +211,7 @@ int uw_model::process_nodes(ifstream& in) {
                     break;
                 case 0x0066:
                     unk16 = read16(in); //Bytes to skip when not visible
+                    base_face = face();
                     base_face.nx = 0;
                     base_face.dist_x = 0;
                     base_face.nz = fix2float(read16(in));
@@ -216,6 +224,7 @@ int uw_model::process_nodes(ifstream& in) {
                     break;
                 case 0x0068:
                     unk16 = read16(in); //Bytes to skip when not visible
+                    base_face = face();
                     base_face.nx = 0;
                     base_face.dist_x = 0;
                     base_face.nz = 0;
@@ -344,14 +353,15 @@ int uw_model::process_nodes(ifstream& in) {
                         point temp = points[base_vert];
                         unk16 = read16(in);
                         temp.vertno = read16(in)>>(3);
+
+                        //My map height is 16, and I'm going to scale these by 2 later
+                        temp.z = 2.0;
                         temp.var_height = true;
                         if(points.size() <= temp.vertno ) {
                             points.resize(temp.vertno + 1);
                         }
                         points[temp.vertno] = temp;
 
-                        //My map height is 16, and I'm going to scale these by 2 later
-                        points[temp.vertno].z = 2.0;
                         assert(points.size() > temp.vertno);
 #ifdef STAND_ALONE_MODEL
                         cout<<"Set vertex num "<<base_vert<<" to variable height, as num "<<temp.vertno<<endl;
@@ -417,10 +427,10 @@ int uw_model::process_nodes(ifstream& in) {
                     base_face.points.resize(4);
                     {
                         uint8_t vertno[4];
-                        vertno[3] = read8(in);
-                        vertno[2] = read8(in);
-                        vertno[1] = read8(in);
                         vertno[0] = read8(in);
+                        vertno[1] = read8(in);
+                        vertno[2] = read8(in);
+                        vertno[3] = read8(in);
 
                         base_face.points[0] = points[vertno[0]];
                         base_face.points[0].u = frac2float(0);
@@ -633,14 +643,29 @@ std::vector<float> uw_model::get_verts(output_type type) {
     switch(type) {
         case geometry:
             for(int f = 0; f < faces.size(); f++) {
-                for(int p = 0; p < faces[f].points.size() - 2; p++) { //Emulate GL_TRIANGLE_FAN traversal
-                    //ret.push_back(faces[f].points[0].x - cent_x);   ret.push_back(faces[f].points[0].z - cent_z);   ret.push_back(faces[f].points[0].y - cent_y);
-                    //ret.push_back(faces[f].points[p+1].x - cent_x); ret.push_back(faces[f].points[p+1].z - cent_z); ret.push_back(faces[f].points[p+1].y - cent_y);
-                    //ret.push_back(faces[f].points[p+2].x - cent_x); ret.push_back(faces[f].points[p+2].z - cent_z); ret.push_back(faces[f].points[p+2].y - cent_y);
-
-                    ret.push_back(faces[f].points[0].x );   ret.push_back(faces[f].points[0].z );   ret.push_back(faces[f].points[0].y );
-                    ret.push_back(faces[f].points[p+1].x ); ret.push_back(faces[f].points[p+1].z ); ret.push_back(faces[f].points[p+1].y );
-                    ret.push_back(faces[f].points[p+2].x ); ret.push_back(faces[f].points[p+2].z ); ret.push_back(faces[f].points[p+2].y );
+                if(!faces[f].fugly || faces[f].points.size() < 4) {
+                    for(int p = 0; p < faces[f].points.size() - 2; p++) { //Emulate GL_TRIANGLE_FAN traversal, since it's an easy way to triangulate convex faces
+                        ret.push_back(faces[f].points[0].x );   ret.push_back(faces[f].points[0].z );   ret.push_back(faces[f].points[0].y );
+                        ret.push_back(faces[f].points[p+1].x ); ret.push_back(faces[f].points[p+1].z ); ret.push_back(faces[f].points[p+1].y );
+                        ret.push_back(faces[f].points[p+2].x ); ret.push_back(faces[f].points[p+2].z ); ret.push_back(faces[f].points[p+2].y );
+                    }
+                }
+                else {
+                    //TODO: These faces seem to often be concave, so I need an appropriate triangulation algorithm here
+                }
+            }
+            break;
+        case texcoords:
+            for(int f = 0; f < faces.size(); f++) {
+                if(!faces[f].fugly || faces[f].points.size() < 4) {
+                    for(int p = 0; p < faces[f].points.size() - 2; p++) {
+                        ret.push_back(faces[f].points[0].u); ret.push_back(faces[f].points[0].v);
+                        ret.push_back(faces[f].points[p+1].u); ret.push_back(faces[f].points[p+1].v);
+                        ret.push_back(faces[f].points[p+2].u); ret.push_back(faces[f].points[p+2].v);
+                    }
+                }
+                else {
+                    //TODO: re-activate when I figure out the geometry traversal for these faces
                 }
             }
             break;
