@@ -1,0 +1,18 @@
+There's also a model information table stored in the .exe file.
+
+[uw1] It starts at 0x0005f7e5 (in my uw.exe, md5sum: c64cc46fd8162c626135a6a19315d21e) and contains 4 bytes for each model (a total of 32*2 bytes). The layout is as follows:
+      It starts at 0x0005e2cb (in my uw.exe, md5sum: 8afc3c29ef5667a3ab6667e8cbc8d63a)
+
+0000   Int8*3 Color table. These values are indexed by the "color" values
+                           in the model, and are itself indexes into game palette 0.
+                           Note that this table is NULL-terminated, so the table can
+                           actually have the size 0-3 (this plays a role when indexing
+                           into this table from the model)
+0003   Int8   Flags (unknown)
+
+[uw2] The model information table for underworld 2 starts at 0x0006908A in a UW2.EXE with base 0x00054cf0. Each table entry has 5 bytes
+0000   int8   high nybble unknown, low nybble contains number of valid color entries 
+0001   int8*3 color table as before
+0004   int8   Flags (unknown)
+
+Color 2920 in model 3: base_addr + (model * 4) + ((2920 - 2920) % 3) = base color index for the model.

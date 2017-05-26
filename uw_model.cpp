@@ -543,6 +543,9 @@ int uw_model::process_nodes(ifstream& in) {
                 case 0x00D4: {
                         uint16_t nverts = read16(in);
                         uint16_t color = read16(in);
+#ifdef STAND_ALONE_MODEL
+                        cout<<"Define vertex colors (?) for "<<nverts<<" vertices"<<endl; 
+#endif
                         for (int i=0;i<nverts;++i) {
                             uint16_t vertnum = read16(in)>>(8);
                             uint8_t shade = read8(in);
@@ -552,13 +555,13 @@ int uw_model::process_nodes(ifstream& in) {
                                 cout<<"Expanded point list size to "<<points.size()<<" because the color list referenced a vertex that high."<<endl;
 #endif
                             }
+#ifdef STAND_ALONE_MODEL
+                            cout<<hex<<"\tvertex: "<<int(vertnum)<<" color: "<<color<<" shade: "<<int(shade)<<endl;
+#endif
                             points[vertnum].c = color;
                             points[vertnum].shade = shade;
                         }
                         if(nverts % 2 == 1) unk16 = read8(in); //Maintains alignment, I guess?
-#ifdef STAND_ALONE_MODEL
-                        cout<<"Define vertex colors (?) for "<<nverts<<" vertices"<<endl; 
-#endif
                     }
                     break;
                 case 0x00D6:
