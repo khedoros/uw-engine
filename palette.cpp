@@ -15,9 +15,10 @@ bool palette::load(std::string filename, size_t pal_num) {
     }
     infile.seekg(0,std::ios::end);
     int filesize = infile.tellg();
-    if(filesize != 6144)
+    if(filesize % (3 * 256) != 0 || filesize > 10000)
         return false;
-    if(pal_num < 8) {
+    int expected_pals = filesize / (3 * 256);
+    if(pal_num < expected_pals) {
         infile.seekg(768 * pal_num, std::ios::beg);
         for(int i = 0; i < 256; ++i) {
             uint8_t r, g, b;

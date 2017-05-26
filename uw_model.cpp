@@ -547,7 +547,7 @@ int uw_model::process_nodes(ifstream& in) {
                         cout<<"Define vertex colors (?) for "<<nverts<<" vertices"<<endl; 
 #endif
                         for (int i=0;i<nverts;++i) {
-                            uint16_t vertnum = read16(in)>>(8);
+                            uint16_t vertnum = read16(in)>>(3);
                             uint8_t shade = read8(in);
                             if(vertnum >= points.size()) {
                                 points.resize(vertnum+1);
