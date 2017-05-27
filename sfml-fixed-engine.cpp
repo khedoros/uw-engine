@@ -172,6 +172,7 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     glRotatef(heading, 0.0, 1.0, 0.0); //Rotate around y to face appropriate heading
     glScalef(2.0,2.0,2.0);             //My coordinates are 2x the ones of the original game
     assert(mod_vertex[model_num].size() % 9 == 0);
+    assert(mod_vertex[model_num].size() == mod_color[model_num].size());
 
     //if(model_num == 0x0a) {
         //assert(obj.obj_id == 320 + 0x20);
@@ -182,8 +183,8 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     glEnableClientState(GL_VERTEX_ARRAY);
     glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    //glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
-    //glEnableClientState(GL_COLOR_ARRAY);
+    glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
+    glEnableClientState(GL_COLOR_ARRAY);
 
     assert(mod_color.size() == mod_vertex.size());
     //int verts_to_draw = (mod_vertex[model_num].size() / 3 > ptcnt) ? ptcnt : mod_vertex[model_num].size() / 3;
@@ -201,9 +202,9 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     //    glDrawArrays(GL_TRIANGLES, 0, faces * 3); //3 = number of coordinates per vertex
     //}
 
+    glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
     glPopMatrix();
 }
 
@@ -289,9 +290,7 @@ void draw_objs(const std::vector<sprite_info>& info) {
             else if(obj_id >= 320 && obj_id < 368) { //3d objects
                 int model_num[] = { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
                                     0x03, 0x08, 0x08, 0x07, 0x07, 0x06, 0x05, 0x0b, 0x18, 0x09, 0x17, 0x1b, 0x1c, 0x19, 0x1a, 0x04,
-                                    0x0a, 0x10, 0x11, 0x0d, 0x02, 0x13, 0x12, 0x1d, 0x1e, 0x1f, 
-                                    
-                                    0x07, 0x07, 0x07, 0x07, 0x16, 0x07 };
+                                    0x0a, 0x10, 0x11, 0x0d, 0x02, 0x13, 0x12, 0x1d, 0x1e, 0x1f, 0x07, 0x07, 0x07, 0x07, 0x16, 0x07 };
                 draw_model(xloc, yloc, zloc, heading, model_num[obj_id - 320], obj);
 
                 continue;
@@ -315,12 +314,13 @@ void draw_objs(const std::vector<sprite_info>& info) {
         }
 
         //Draw the object
-        if(obj_id == hi_obj_id) {
-            glColor3f(1.0,1.0,0.0);
-        } else {
-            glColor3f(1.0,1.0,1.0);
-        }
         glPushMatrix();
+          if(obj_id == hi_obj_id) {
+              glColor3f(1.0,1.0,0.0);
+          } else {
+              glColor3f(1.0,1.0,1.0);
+          }
+
           glTranslatef(xloc,zloc,yloc); //Move object where you want it to show up
           glRotatef(obj_theta, 0.0, 1.0, 0.0); //Rotate around y to face camera
           glRotatef(obj_phi,   1.0, 0.0, 0.0); //Rotate around model's X axis to face camera
@@ -802,15 +802,17 @@ void render_3d() {
                 glColor3f(0.0,0.0,0.0);
             }
             else if(floors.animtex[index].size() == 0) {
+                glColor3f(1.0,1.0,1.0);
                 sf::Texture::bind(&(floors.tex[index]));
             }
             else {
+                glColor3f(1.0,1.0,1.0);
                 sf::Texture::bind(&(floors.animtex[index][anim_framecount % floors.animtex[index].size()]));
                 //cout<<"Tex "<<fti<<" using frame "<<(anim_framecount%floors.animtex[fti].size())<<endl;
             }
         }
         else { //Walls
-            if(index == 256) {
+            if(index >= 256) {
                 glColor3f(1.0,1.0,1.0);
             }
             //If no animated texture wall exists, bind the static one. Otherwise, bind the appropriate frame of the animated texture.
@@ -938,7 +940,7 @@ bool load_data(string& fn) {
             apals = fn+"/data/allpals.dat";
             sw = fn+"/data/tmflat.gr";
             tm = fn+"/data/tmobj.gr";
-            exe = fn+"/../uw/uw.exe";
+            exe = fn+"/uw.exe";
             drs = fn+"/data/doors.gr";
             if(!sm.load(level)) {
                 level = fn+"/DATA/LEV.ARK";
@@ -988,11 +990,11 @@ bool load_data(string& fn) {
         }
     }
 
-    model.resize(64);
-    mod_vertex.resize(64);
-    mod_texmap.resize(64);
-    mod_color.resize(64);
-    for(int i=0; i < 64; i++) {
+    model.resize(32);
+    mod_vertex.resize(32);
+    mod_texmap.resize(32);
+    mod_color.resize(32);
+    for(int i=0; i < 32; i++) {
         model[i].load(exe, pal, i);
         mod_vertex[i] = model[i].get_verts(uw_model::geometry);
         mod_texmap[i] = model[i].get_verts(uw_model::texcoords);
@@ -1025,7 +1027,7 @@ int main(int argc, char *argv[]) {
 }
 
 void gameloop() {
-    sf::RenderWindow window(sf::VideoMode(winW,winH,32), "Ultima Underworld Engine Remake Attempt", sf::Style::Default, sf::ContextSettings(32,0,0,1,5));
+    sf::RenderWindow window(sf::VideoMode(winW,winH,32), "Ultima Underworld Engine Remake Attempt", sf::Style::Default, sf::ContextSettings(24,0,0,1,5));
     window.setKeyRepeatEnabled(false);
     window.setFramerateLimit(20);
 

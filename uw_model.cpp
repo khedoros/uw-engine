@@ -36,41 +36,25 @@ bool uw_model::check_offset(uint32_t offset, ifstream& in) {
 }
 
 uint32_t uw_model::get_color_table_offset(ifstream& in) {
-    const uint8_t uw1_expected[] = {0xec, 0x00, 0x00, 0x21, 0xeb, 0x00, 0x00, 0x11};
-    const uint8_t uw2_expected[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    //const uint8_t uw1_expected[] = {0xec, 0x00, 0x00, 0x21, 0xeb, 0x00, 0x00, 0x11};
+    //const uint8_t uw2_expected[] = {0x01, 0x8f, 0x00, 0x00, 0x00, 0x21, 0x93, 0x00};
+    const uint64_t uw1_expected = 0x110000eb210000ec;
+    const uint64_t uw2_expected = 0x0093210000008f01;
     uint32_t bookmark = in.tellg();
     in.seekg(0, ios::beg);
     uint32_t offset = 0;
-    while(1) {
-        uint8_t temp = read8(in);
+    while(!in.eof()) {
+        uint64_t temp = read64(in);
         //cout<<"Read value "<<int(temp)<<" from offset "<<in.tellg()<<endl;
-        if(temp != uw1_expected[0] && temp != uw2_expected[0]) {
+        if(temp != uw1_expected && temp != uw2_expected) {
             //cout<<uw1_expected[0]<<" and "<<uw2_expected[0]<<" don't match"<<endl;
             offset++;
+            in.seekg(offset);
         }
         else {
-            //cout<<"First value matches, checking the rest. ";
-            uint8_t temp_arr[7];
-            in.read(reinterpret_cast<char *>(&(temp_arr[0])), 7);
-            bool failed = false;
-            int uw1_matched = 0;
-            int uw2_matched = 0;
-            for(int i=0; i<7 && !failed ;i++) {
-                if(uw1_expected[i+1] == temp_arr[i]) uw1_matched++;
-                else if(uw2_expected[i+1] == temp_arr[i]) uw2_matched++;
-                else {
-                    //cout<<"Failed on index "<<i+1<<" of 7"<<endl;
-                    failed = true;
-                }
-            }
-            if(!failed && (uw1_matched == 7 || uw2_matched == 7)) {
-                //cout<<"Matched, returning "<<offset<<endl;
-                in.seekg(bookmark);
-                return offset;
-            }
-            //cout<<"Seeking to "<<offset+1<<endl;
-            in.seekg(offset+1);
-            offset++;
+            //cout<<"Matched, returning "<<offset<<endl;
+            in.seekg(bookmark);
+            return offset;
         }
     }
     return 0;
@@ -480,19 +464,19 @@ int uw_model::process_nodes(ifstream& in) {
                         vertno[3] = read8(in);
 
                         base_face.points[0] = points[vertno[0]];
-                        base_face.points[0].u = frac2float(0);
+                        base_face.points[0].u = frac2float(65535);
                         base_face.points[0].v = frac2float(0);
 
                         base_face.points[1] = points[vertno[1]];
-                        base_face.points[1].u = frac2float(65535);
+                        base_face.points[1].u = frac2float(0);
                         base_face.points[1].v = frac2float(0);
 
                         base_face.points[2] = points[vertno[2]];
-                        base_face.points[2].u = frac2float(65535);
+                        base_face.points[2].u = frac2float(0);
                         base_face.points[2].v = frac2float(65535);
 
                         base_face.points[3] = points[vertno[3]];
-                        base_face.points[3].u = frac2float(0);
+                        base_face.points[3].u = frac2float(65535);
                         base_face.points[3].v = frac2float(65535);
 
                         if(base_face.has_col) {
@@ -501,6 +485,7 @@ int uw_model::process_nodes(ifstream& in) {
                             base_face.points[2].c = base_face.c;
                             base_face.points[3].c = base_face.c;
                         }
+                        base_face.texture = true;
                         faces.push_back(base_face);
 #ifdef STAND_ALONE_MODEL
                         cout<<"??? shorthand face definition (guessing at UV order), vertices "<<int(vertno[0])<<", "<<int(vertno[1])<<", "<<int(vertno[2])<<", and "<<int(vertno[3])<<endl;
@@ -524,6 +509,7 @@ int uw_model::process_nodes(ifstream& in) {
                         base_face.points[i].v = frac2float(read16(in));
                     }
                     //cout<<endl;
+                    base_face.texture = true;
                     faces.push_back(base_face);
 #ifdef STAND_ALONE_MODEL
                     cout<<"Define texture-mapped face ("<<base_face.points.size()<<" vertices with U,V pairs), tex num: "<<base_face.texture_num<<endl;
@@ -551,13 +537,14 @@ int uw_model::process_nodes(ifstream& in) {
 #endif
                     }
                     //cout<<endl;
+                    base_face.texture = true;
                     faces.push_back(base_face);
                     break;
                 case 0x00BC:
                     {
                         uint16_t col = read16(in); uint16_t shade = read16(in);
                         int pal_index = (((col - shade_offset) / 2) % 3);
-                        cout<<pal_index<<"\t"<<pal_dat[model_index].size()<<endl;
+                        //cout<<pal_index<<"\t"<<pal_dat[model_index].size()<<endl;
                         assert(pal_dat.size() > model_index);
                         assert(pal_dat[model_index].size() > pal_index);
                         assert((pal_dat[model_index][pal_index] + shade) >= 0);
@@ -595,6 +582,7 @@ int uw_model::process_nodes(ifstream& in) {
                         base_face.points[i].v = frac2float(read16(in));
                     }
                     //cout<<endl;
+                    base_face.texture = true;
                     faces.push_back(base_face);
 #ifdef STAND_ALONE_MODEL
                     cout<<"Define texture-mapped face (B4 clone) ("<<base_face.points.size()<<" vertices with U,V pairs)"<<endl;
@@ -648,7 +636,7 @@ int uw_model::process_nodes(ifstream& in) {
 }
 
 bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, int model_number) {
-    if(model_number < 0 || model_number >= 64) {
+    if(model_number < 0 || model_number >= 32) {
         std::cerr<<"Tried to load invalid model #"<<model_number<<std::endl;
         return false;
     }
@@ -686,6 +674,7 @@ bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, 
     //Load the palette
     if(!pal_loaded) {
         uint32_t col_tab_addr = get_color_table_offset(in);
+        cout<<"I think the color table is at: 0x"<<hex<<col_tab_addr<<endl;
         pal_dat.resize(32);
         if(col_tab_addr) {
             int struct_size = 0;
@@ -704,7 +693,7 @@ bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, 
                 if(struct_size == 5) int junk = read8(in);
             
                 for(int index = 0; index < 3; index++) {
-                    pal_dat[model_number][index] = read8(in);
+                    pal_dat[mod][index] = read8(in);
                 //cout<<"Pal entry #"<<index<<": "<<hex<<int(pal_dat[index])<<endl;
                 }
             }
@@ -753,6 +742,7 @@ std::vector<float> uw_model::get_verts(output_type type) {
                     //TODO: These faces seem to often be concave, so I need an appropriate triangulation algorithm here
                 }
             }
+            assert(ret.size() >= faces.size() * 3);
             break;
         case texcoords:
             for(int f = 0; f < faces.size(); f++) {
@@ -767,24 +757,30 @@ std::vector<float> uw_model::get_verts(output_type type) {
                     //TODO: re-activate when I figure out the geometry traversal for these faces
                 }
             }
+            assert(ret.size() >= faces.size() * 3);
             break;
         case colors:
-            break;
+            //cout<<"Working on "<<faces.size()<<" faces"<<endl;
             for(int f = 0; f < faces.size(); f++) {
                 if(!faces[f].fugly || faces[f].points.size() < 4) {
+                    assert(faces[f].points.size() > 2);
+                    //cout<<"\tWorking on "<<faces[f].points.size()<<" points in face "<<f<<endl;
                     for(int p = 0; p < faces[f].points.size() - 2; p++) {
-                        if(faces[f].has_col) { //Use face color if present
-                            ret.push_back(float(faces[f].c.r) / 255.0f); ret.push_back(float(faces[f].c.g) / 255.0f); ret.push_back(float(faces[f].c.b) / 255.0f); 
-                            ret.push_back(float(faces[f].c.r) / 255.0f); ret.push_back(float(faces[f].c.g) / 255.0f); ret.push_back(float(faces[f].c.b) / 255.0f); 
-                            ret.push_back(float(faces[f].c.r) / 255.0f); ret.push_back(float(faces[f].c.g) / 255.0f); ret.push_back(float(faces[f].c.b) / 255.0f); 
+                        if(faces[f].has_col && !faces[f].texture) { //Use face color if present
+                            //cout<<"\t\tPushing back 3 colors based on face color"<<endl;
+                            for(int i=0;i<3;i++) {
+                                ret.push_back(float(faces[f].c.r) / 255.0f); ret.push_back(float(faces[f].c.g) / 255.0f); ret.push_back(float(faces[f].c.b) / 255.0f); 
+                            }
                         }
                         else {
-                            if(faces[f].points[0].has_col) { //Use point color if face color isn't defined
+                            if(faces[f].points[0].has_col && !faces[f].texture) { //Use point color if face color isn't defined
+                                //cout<<"\t\tPushing back 3 colors based on point colors"<<endl;
                                 ret.push_back(float(faces[f].points[0].c.r) / 255.0f);     ret.push_back(float(faces[f].points[0].c.g) / 255.0f);     ret.push_back(float(faces[f].points[0].c.b) / 255.0f);
                                 ret.push_back(float(faces[f].points[p+1].c.r) / 255.0f);   ret.push_back(float(faces[f].points[p+1].c.g) / 255.0f);   ret.push_back(float(faces[f].points[p+1].c.b) / 255.0f);
                                 ret.push_back(float(faces[f].points[p+2].c.r) / 255.0f);   ret.push_back(float(faces[f].points[p+2].c.g) / 255.0f);   ret.push_back(float(faces[f].points[p+2].c.b) / 255.0f);
                             }
                             else { //Otherwise, set it white
+                                //cout<<"\t\tPushing back white, because faces and points aren't colored"<<endl;
                                 for(int i=0;i<9;++i) {
                                     ret.push_back(1.0);
                                 }
@@ -794,9 +790,11 @@ std::vector<float> uw_model::get_verts(output_type type) {
                     }
                 }
                 else {
+                    //cout<<"Skipping face "<<f<<" because it's marked ugly"<<endl;
                     //TODO: re-activate when I figure out the geometry traversal for these faces
                 }
             }
+            assert(ret.size() >= faces.size() * 3);
             break;
         default: //Not implemented, return empty
             return ret;
@@ -824,6 +822,8 @@ int main(int argc, char *argv[]) {
     }
 
     auto v = m.get_verts(uw_model::geometry);
+    auto t = m.get_verts(uw_model::texcoords);
+    auto c = m.get_verts(uw_model::colors);
     std::cout<<std::dec<<"Found "<<v.size()/3<<" points ("<<v.size()/9<<" triangular faces)"<<std::endl;
     for(int i = 0; i < v.size(); i+=3) {
         std::cout<<"("<<v[i]<<", "<<v[i+1]<<", "<<v[i+2];
