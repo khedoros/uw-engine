@@ -11,6 +11,11 @@ using namespace std;
 
 const uint32_t uw_model::start_offsets[] =       {0x4e910, 0x4ccd0, 0x4e370, 0x4ec70, 0x54cf0, 0x550e0};
 const uint32_t uw_model::model_table_offsets[] = {0x4e99e, 0x4cd5e, 0x4e3fe, 0x4ecfe, 0x54d8a, 0x5517a};
+bool uw_model::pal_loaded = false;
+std::vector<std::vector<uint8_t>> uw_model::pal_dat; //stores palette indexes
+palette uw_model::pal;
+uint32_t uw_model::shade_offset;
+
 uw_model::uw_model() {
 }
 
@@ -29,6 +34,48 @@ bool uw_model::check_offset(uint32_t offset, ifstream& in) {
     in.seekg(bookmark, ios::beg);
     return true;
 }
+
+uint32_t uw_model::get_color_table_offset(ifstream& in) {
+    const uint8_t uw1_expected[] = {0xec, 0x00, 0x00, 0x21, 0xeb, 0x00, 0x00, 0x11};
+    const uint8_t uw2_expected[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint32_t bookmark = in.tellg();
+    in.seekg(0, ios::beg);
+    uint32_t offset = 0;
+    while(1) {
+        uint8_t temp = read8(in);
+        //cout<<"Read value "<<int(temp)<<" from offset "<<in.tellg()<<endl;
+        if(temp != uw1_expected[0] && temp != uw2_expected[0]) {
+            //cout<<uw1_expected[0]<<" and "<<uw2_expected[0]<<" don't match"<<endl;
+            offset++;
+        }
+        else {
+            //cout<<"First value matches, checking the rest. ";
+            uint8_t temp_arr[7];
+            in.read(reinterpret_cast<char *>(&(temp_arr[0])), 7);
+            bool failed = false;
+            int uw1_matched = 0;
+            int uw2_matched = 0;
+            for(int i=0; i<7 && !failed ;i++) {
+                if(uw1_expected[i+1] == temp_arr[i]) uw1_matched++;
+                else if(uw2_expected[i+1] == temp_arr[i]) uw2_matched++;
+                else {
+                    //cout<<"Failed on index "<<i+1<<" of 7"<<endl;
+                    failed = true;
+                }
+            }
+            if(!failed && (uw1_matched == 7 || uw2_matched == 7)) {
+                //cout<<"Matched, returning "<<offset<<endl;
+                in.seekg(bookmark);
+                return offset;
+            }
+            //cout<<"Seeking to "<<offset+1<<endl;
+            in.seekg(offset+1);
+            offset++;
+        }
+    }
+    return 0;
+}
+
 
 int uw_model::process_nodes(ifstream& in) {
     int retval = 0;
@@ -447,6 +494,13 @@ int uw_model::process_nodes(ifstream& in) {
                         base_face.points[3] = points[vertno[3]];
                         base_face.points[3].u = frac2float(0);
                         base_face.points[3].v = frac2float(65535);
+
+                        if(base_face.has_col) {
+                            base_face.points[0].c = base_face.c;
+                            base_face.points[1].c = base_face.c;
+                            base_face.points[2].c = base_face.c;
+                            base_face.points[3].c = base_face.c;
+                        }
                         faces.push_back(base_face);
 #ifdef STAND_ALONE_MODEL
                         cout<<"??? shorthand face definition (guessing at UV order), vertices "<<int(vertno[0])<<", "<<int(vertno[1])<<", "<<int(vertno[2])<<", and "<<int(vertno[3])<<endl;
@@ -500,11 +554,20 @@ int uw_model::process_nodes(ifstream& in) {
                     faces.push_back(base_face);
                     break;
                 case 0x00BC:
-                    base_face.c = read16(in);
-                    base_face.shade = read16(in);
+                    {
+                        uint16_t col = read16(in); uint16_t shade = read16(in);
+                        int pal_index = (((col - shade_offset) / 2) % 3);
+                        cout<<pal_index<<"\t"<<pal_dat[model_index].size()<<endl;
+                        assert(pal_dat.size() > model_index);
+                        assert(pal_dat[model_index].size() > pal_index);
+                        assert((pal_dat[model_index][pal_index] + shade) >= 0);
+                        assert((pal_dat[model_index][pal_index] + shade) < 255);
+                        base_face.c = pal.get(pal_dat[model_index][pal_index] + shade);
+                        base_face.has_col = true;
 #ifdef STAND_ALONE_MODEL
-                    cout<<"Define face shade color: "<<base_face.c<<", shade: "<<base_face.shade<<endl; 
+                        cout<<"Define face shade color: "<<col<<", shade: "<<shade<<endl; 
 #endif
+                    }
                     break;
                 case 0x00BE:
                     unk16 = read16(in);
@@ -542,7 +605,7 @@ int uw_model::process_nodes(ifstream& in) {
                 */
                 case 0x00D4: {
                         uint16_t nverts = read16(in);
-                        uint16_t color = read16(in);
+                        uint16_t col = read16(in);
 #ifdef STAND_ALONE_MODEL
                         cout<<"Define vertex colors (?) for "<<nverts<<" vertices"<<endl; 
 #endif
@@ -556,10 +619,10 @@ int uw_model::process_nodes(ifstream& in) {
 #endif
                             }
 #ifdef STAND_ALONE_MODEL
-                            cout<<hex<<"\tvertex: "<<int(vertnum)<<" color: "<<color<<" shade: "<<int(shade)<<endl;
+                            cout<<hex<<"\tvertex: "<<int(vertnum)<<" color: "<<col<<" shade: "<<int(shade)<<endl;
 #endif
-                            points[vertnum].c = color;
-                            points[vertnum].shade = shade;
+                            points[vertnum].c = pal.get(pal_dat[model_index][((col - shade_offset) / 2) % 3] + shade);
+                            points[vertnum].has_col = true;
                         }
                         if(nverts % 2 == 1) unk16 = read8(in); //Maintains alignment, I guess?
                     }
@@ -590,8 +653,12 @@ bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, 
         return false;
     }
 
-    if(!pal.load(pal_filename, 0)) {
-        std::cerr<<"Couldn't open palette file at "<<pal_filename<<std::endl;
+    model_index = model_number;
+
+    if(!pal_loaded) {
+        if(!pal.load(pal_filename, 0)) {
+            std::cerr<<"Couldn't open palette file at "<<pal_filename<<std::endl;
+        }
     }
 
     ifstream in;
@@ -616,6 +683,35 @@ bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, 
         return false;
     }
 
+    //Load the palette
+    if(!pal_loaded) {
+        uint32_t col_tab_addr = get_color_table_offset(in);
+        pal_dat.resize(32);
+        if(col_tab_addr) {
+            int struct_size = 0;
+            if(start_offset > 0x50000) {
+                struct_size = 5;
+                shade_offset = 0x2680;
+            }
+            else {
+                struct_size = 4;
+                shade_offset = 0x2920;
+            }
+
+            for(int mod=0;mod<32;mod++) {
+                pal_dat[mod].resize(3);
+                in.seekg(col_tab_addr + struct_size * mod);
+                if(struct_size == 5) int junk = read8(in);
+            
+                for(int index = 0; index < 3; index++) {
+                    pal_dat[model_number][index] = read8(in);
+                //cout<<"Pal entry #"<<index<<": "<<hex<<int(pal_dat[index])<<endl;
+                }
+            }
+        }
+        pal_loaded = true;
+    }
+
     in.seekg(start_offset + model_number * 2);
     size_t model_offset = read16(in) + model_table_offset;
     in.seekg(model_offset);
@@ -632,9 +728,9 @@ bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, 
         //return false;
     }
 
-    int ret = process_nodes(in);
 
     //TODO: Traverse model data nodes and load data into my vertex+face lists
+    int ret = process_nodes(in);
 
     in.close();
     if(!ret) return true;
@@ -665,6 +761,36 @@ std::vector<float> uw_model::get_verts(output_type type) {
                         ret.push_back(faces[f].points[0].u); ret.push_back(faces[f].points[0].v);
                         ret.push_back(faces[f].points[p+1].u); ret.push_back(faces[f].points[p+1].v);
                         ret.push_back(faces[f].points[p+2].u); ret.push_back(faces[f].points[p+2].v);
+                    }
+                }
+                else {
+                    //TODO: re-activate when I figure out the geometry traversal for these faces
+                }
+            }
+            break;
+        case colors:
+            break;
+            for(int f = 0; f < faces.size(); f++) {
+                if(!faces[f].fugly || faces[f].points.size() < 4) {
+                    for(int p = 0; p < faces[f].points.size() - 2; p++) {
+                        if(faces[f].has_col) { //Use face color if present
+                            ret.push_back(float(faces[f].c.r) / 255.0f); ret.push_back(float(faces[f].c.g) / 255.0f); ret.push_back(float(faces[f].c.b) / 255.0f); 
+                            ret.push_back(float(faces[f].c.r) / 255.0f); ret.push_back(float(faces[f].c.g) / 255.0f); ret.push_back(float(faces[f].c.b) / 255.0f); 
+                            ret.push_back(float(faces[f].c.r) / 255.0f); ret.push_back(float(faces[f].c.g) / 255.0f); ret.push_back(float(faces[f].c.b) / 255.0f); 
+                        }
+                        else {
+                            if(faces[f].points[0].has_col) { //Use point color if face color isn't defined
+                                ret.push_back(float(faces[f].points[0].c.r) / 255.0f);     ret.push_back(float(faces[f].points[0].c.g) / 255.0f);     ret.push_back(float(faces[f].points[0].c.b) / 255.0f);
+                                ret.push_back(float(faces[f].points[p+1].c.r) / 255.0f);   ret.push_back(float(faces[f].points[p+1].c.g) / 255.0f);   ret.push_back(float(faces[f].points[p+1].c.b) / 255.0f);
+                                ret.push_back(float(faces[f].points[p+2].c.r) / 255.0f);   ret.push_back(float(faces[f].points[p+2].c.g) / 255.0f);   ret.push_back(float(faces[f].points[p+2].c.b) / 255.0f);
+                            }
+                            else { //Otherwise, set it white
+                                for(int i=0;i<9;++i) {
+                                    ret.push_back(1.0);
+                                }
+                            }
+                        }
+
                     }
                 }
                 else {

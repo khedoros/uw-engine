@@ -54,6 +54,7 @@ std::vector<std::vector<float>> tex(512);
 std::vector<uw_model> model;
 std::vector<std::vector<float>> mod_vertex;
 std::vector<std::vector<float>> mod_texmap;
+std::vector<std::vector<float>> mod_color;
 
 /*  Useful for some debug things, but I don't want them generally active
 int modnum = 1;
@@ -181,7 +182,10 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     glEnableClientState(GL_VERTEX_ARRAY);
     glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    //glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
+    //glEnableClientState(GL_COLOR_ARRAY);
 
+    assert(mod_color.size() == mod_vertex.size());
     //int verts_to_draw = (mod_vertex[model_num].size() / 3 > ptcnt) ? ptcnt : mod_vertex[model_num].size() / 3;
     int verts_to_draw = mod_vertex[model_num].size() / 3;
     glDrawArrays(GL_TRIANGLES, 0, verts_to_draw); //3 = number of coordinates per vertex
@@ -199,6 +203,7 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
 
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
     glPopMatrix();
 }
 
@@ -986,10 +991,12 @@ bool load_data(string& fn) {
     model.resize(64);
     mod_vertex.resize(64);
     mod_texmap.resize(64);
+    mod_color.resize(64);
     for(int i=0; i < 64; i++) {
         model[i].load(exe, pal, i);
         mod_vertex[i] = model[i].get_verts(uw_model::geometry);
         mod_texmap[i] = model[i].get_verts(uw_model::texcoords);
+        mod_color[i]  = model[i].get_verts(uw_model::colors);
     }
 
     return retval;

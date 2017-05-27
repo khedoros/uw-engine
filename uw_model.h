@@ -29,8 +29,8 @@ class uw_model {
         int vertno; //vertex number, as separate from its index in an array of vertices for a model or face
         bool var_height; //Some points are "variable height", reaching all the way to the ceiling, etc.
         //color c; //rgba from util
-        uint16_t c;//variable address, which can be used to look up a palette entry
-        int shade;
+        color c; //point color, which may be different from the face color
+        bool has_col;
         float u,v;
     };
 
@@ -42,22 +42,27 @@ class uw_model {
         bool goraud;
         bool texture;
         bool fugly;
+        bool has_col;
         std::vector<point> points;
         float nx, ny, nz; //normal vector
         float dist_x, dist_y, dist_z; //vector for distance from center
         int texture_num;  //texture==true && texture_num==-1 if no specific texture was assigned?
-        int c;        //Base color
-        int shade;    //Shade color
+        color c;        //Face color
     };
     std::vector<point> points;
     std::vector<face>  faces;
-    palette pal;
+    static std::vector<std::vector<uint8_t>> pal_dat; //stores palette indexes
+    static palette pal;
+    static uint32_t shade_offset;
+    static bool pal_loaded;
     float cent_x, cent_y, cent_z;
     int cent_vert;
     float extent_x, extent_y, extent_z;
+    int model_index;
 
     private:
     bool check_offset(uint32_t, std::ifstream&);
+    uint32_t get_color_table_offset(std::ifstream&);
     int process_nodes(std::ifstream&);
     static const uint32_t start_offsets[];
     static const uint32_t model_table_offsets[];
