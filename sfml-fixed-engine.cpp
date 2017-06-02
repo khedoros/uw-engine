@@ -288,9 +288,9 @@ void draw_objs(const std::vector<sprite_info>& info) {
                 tex = &(objs.tex[224]);
             }
             else if(obj_id >= 320 && obj_id < 368) { //3d objects
-                int model_num[] = { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-                                    0x03, 0x08, 0x08, 0x07, 0x07, 0x06, 0x05, 0x0b, 0x18, 0x09, 0x17, 0x1b, 0x1c, 0x19, 0x1a, 0x04,
-                                    0x0a, 0x10, 0x11, 0x0d, 0x02, 0x13, 0x12, 0x1d, 0x1e, 0x1f, 0x07, 0x07, 0x07, 0x07, 0x16, 0x07 };
+                std::array<int, 48> model_num = { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+                                                  0x03, 0x08, 0x08, 0x07, 0x07, 0x06, 0x05, 0x0b, 0x18, 0x09, 0x17, 0x1b, 0x1c, 0x19, 0x1a, 0x04,
+                                                  0x0a, 0x10, 0x11, 0x0d, 0x02, 0x13, 0x12, 0x1d, 0x1e, 0x1f, 0x07, 0x07, 0x07, 0x07, 0x16, 0x07 };
                 draw_model(xloc, yloc, zloc, heading, model_num[obj_id - 320], obj);
 
                 continue;
@@ -643,33 +643,34 @@ void update_level_map() {
             //Draw the walls
               if(t == simple_map::OPEN_TILE || t == simple_map::SLOPE_N || t == simple_map::SLOPE_S || t == simple_map::SLOPE_E || t == simple_map::SLOPE_W ||
                  t == simple_map::DIAG_SE || t == simple_map::DIAG_SW || t == simple_map::DIAG_NE || t == simple_map::DIAG_NW) {
+
                 //North wall
                 if(nnet > neb || nnwt > nwb) {
-                    push_vert(tex[index], quads[index], 1.0, 0.0,            2*x,   nnet, 2*z+2); 
-                    push_vert(tex[index], quads[index], 0.0, 0.0,            2*x+2, nnwt, 2*z+2);
-                    push_vert(tex[index], quads[index], 0.0,(nnwt-nwb)/2.0,  2*x+2, nwb,  2*z+2);
-                    push_vert(tex[index], quads[index], 1.0,(nnet-neb)/2.0,  2*x,   neb,  2*z+2);
+                    push_vert(tex[index], quads[index], 1.0,  (8.0 - nnet)/2.0,      2*x,   nnet, 2*z+2); 
+                    push_vert(tex[index], quads[index], 0.0,  (8.0 - nnwt)/2.0,      2*x+2, nnwt, 2*z+2);
+                    push_vert(tex[index], quads[index], 0.0,  (8.0 - nwb )/2.0,  2*x+2, nwb,  2*z+2);
+                    push_vert(tex[index], quads[index], 1.0,  (8.0 - neb )/2.0,  2*x,   neb,  2*z+2);
                 }
                 //South wall
                 if(sset > seb || sswt > swb) {
-                    push_vert(tex[index], quads[index], 1.0, 0.0,            2*x+2,sswt,2*z);
-                    push_vert(tex[index], quads[index], 0.0, 0.0,            2*x,  sset,2*z);
-                    push_vert(tex[index], quads[index], 0.0, (sswt-swb)/2.0, 2*x,  seb, 2*z);
-                    push_vert(tex[index], quads[index], 1.0, (sset-seb)/2.0, 2*x+2,swb, 2*z);
+                    push_vert(tex[index], quads[index], 1.0,  (8.0-sswt)/2.0,       2*x+2,sswt,2*z);
+                    push_vert(tex[index], quads[index], 0.0,  (8.0-sset)/2.0,       2*x,  sset,2*z);
+                    push_vert(tex[index], quads[index], 0.0,  (8.0-seb)/2.0, 2*x,  seb, 2*z);
+                    push_vert(tex[index], quads[index], 1.0,  (8.0-swb)/2.0, 2*x+2,swb, 2*z);
                 }
                 //East wall
                 if(enet > neb || eset > seb) {
-                    push_vert(tex[index], quads[index], 1.0, 0.0,            2*x,eset,2*z);
-                    push_vert(tex[index], quads[index], 0.0, 0.0,            2*x,enet,2*z+2);
-                    push_vert(tex[index], quads[index], 0.0, (enet-neb)/2.0, 2*x,neb, 2*z+2);
-                    push_vert(tex[index], quads[index], 1.0, (eset-seb)/2.0, 2*x,seb, 2*z);
+                    push_vert(tex[index], quads[index], 1.0,  (8.0 - eset)/2.0,     2*x,eset,2*z);
+                    push_vert(tex[index], quads[index], 0.0,  (8.0 - enet)/2.0,     2*x,enet,2*z+2);
+                    push_vert(tex[index], quads[index], 0.0,  (8.0-neb)/2.0, 2*x,neb, 2*z+2);
+                    push_vert(tex[index], quads[index], 1.0,  (8.0-seb)/2.0, 2*x,seb, 2*z);
                 }
                 //West wall
                 if(wnwt > nwb || wswt > swb) {
-                    push_vert(tex[index], quads[index], 1.0, 0.0,            2*x+2,wnwt,2*z+2);
-                    push_vert(tex[index], quads[index], 0.0, 0.0,            2*x+2,wswt,2*z);
-                    push_vert(tex[index], quads[index], 0.0, (wswt-swb)/2.0, 2*x+2,swb,2*z);
-                    push_vert(tex[index], quads[index], 1.0, (wnwt-nwb)/2.0, 2*x+2,nwb,2*z+2);
+                    push_vert(tex[index], quads[index], 1.0,  (8.0-wnwt)/2.0,    2*x+2,wnwt,2*z+2);
+                    push_vert(tex[index], quads[index], 0.0,  (8.0-wswt)/2.0,    2*x+2,wswt,2*z);
+                    push_vert(tex[index], quads[index], 0.0,  (8.0-swb)/2.0, 2*x+2,swb,2*z);
+                    push_vert(tex[index], quads[index], 1.0,  (8.0-nwb)/2.0, 2*x+2,nwb,2*z+2);
                 }
             }
             if(t == simple_map::DIAG_SE) {

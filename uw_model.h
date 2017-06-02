@@ -2,6 +2,7 @@
 
 #include<string>
 #include<vector>
+#include<array>
 #include<cstdint>
 #include<fstream>
 #include "util.h"
@@ -64,8 +65,8 @@ class uw_model {
     bool check_offset(uint32_t, std::ifstream&);
     uint32_t get_color_table_offset(std::ifstream&);
     int process_nodes(std::ifstream&);
-    static const uint32_t start_offsets[];
-    static const uint32_t model_table_offsets[];
+    static const std::array<uint32_t, 6> start_offsets;
+    static const std::array<uint32_t, 6> model_table_offsets;
     point base_pt;
     face base_face;
 };

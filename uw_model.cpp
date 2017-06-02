@@ -9,8 +9,8 @@
 
 using namespace std;
 
-const uint32_t uw_model::start_offsets[] =       {0x4e910, 0x4ccd0, 0x4e370, 0x4ec70, 0x54cf0, 0x550e0};
-const uint32_t uw_model::model_table_offsets[] = {0x4e99e, 0x4cd5e, 0x4e3fe, 0x4ecfe, 0x54d8a, 0x5517a};
+const std::array<uint32_t, 6> uw_model::start_offsets =       {0x4e910, 0x4ccd0, 0x4e370, 0x4ec70, 0x54cf0, 0x550e0};
+const std::array<uint32_t, 6> uw_model::model_table_offsets = {0x4e99e, 0x4cd5e, 0x4e3fe, 0x4ecfe, 0x54d8a, 0x5517a};
 bool uw_model::pal_loaded = false;
 std::vector<std::vector<uint8_t>> uw_model::pal_dat; //stores palette indexes
 palette uw_model::pal;
@@ -20,11 +20,12 @@ uw_model::uw_model() {
 }
 
 bool uw_model::check_offset(uint32_t offset, ifstream& in) {
-    const uint8_t uw1_first_bytes[] = {0xb6, 0x4a, 0x06, 0x40};
-    const uint8_t uw2_first_bytes[] = {0xd4, 0x64, 0xaa, 0x59};
+    const std::array<uint8_t, 4> uw1_first_bytes = {0xb6, 0x4a, 0x06, 0x40};
+    const std::array<uint8_t, 4> uw2_first_bytes = {0xd4, 0x64, 0xaa, 0x59};
+    assert(uw1_first_bytes.size() == uw2_first_bytes.size());
     uint32_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
-    for(int i=0;i<4;++i) {
+    for(int i=0;i<uw1_first_bytes.size();++i) {
         uint8_t temp = read8(in);
         if(temp != uw1_first_bytes[i] && temp != uw2_first_bytes[i]) {
             in.seekg(bookmark, ios::beg);
@@ -659,7 +660,8 @@ bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, 
     size_t start_offset = 0;
     size_t model_table_offset = 0;
 
-    for(size_t i=0;i<6;++i) {
+    assert(start_offsets.size() == model_table_offsets.size());
+    for(size_t i=0;i<start_offsets.size();++i) {
         if(check_offset(start_offsets[i], in)) {
             start_offset = start_offsets[i];
             model_table_offset = model_table_offsets[i];
