@@ -3,6 +3,17 @@
 ## Purpose
 Ultimately, I'd like to create a modern game engine that uses unmodified game files from Origin+Looking Glass's Ultima Underworld to replicate the original gameplay. This is comparable to projects like ScummVm and various Doom engines. It's also a great deal of work, and there are some things that I haven't figured out yet. I intend this to be a long-term project, probably taking a few years of my spare time to complete. The end result will be an open source game engine for playing Ultima Underworld 1 + 2 natively on modern computers, optionally with improved graphics.
 
+## OK, but how do I use it?
+
+### Requirements
+I'm currently developing under Linux. There isn't anything technically stopping it from working on Windows, but I haven't gotten around to getting it compiled there. If you've got make, a modern C++ compiler, OpenGL/GLU, SFML 2.x (I think 2.2 or 2.3 would be the minimum, but I'm not positive), GLM, and one called libtimidity that can be found on SourceForge (but you only need if you're interested in MIDI playback of the Ultima music files).
+
+### Building
+When the requirements are satisfied, you can build the main engine with `make sfml-fixed-engine`. There are a ton of other file viewers (for textures, audio, music, creature images, cutscenes, and so on). Generally, any file with a `main()` wrapped by `#ifdef STAND_ALONE_SOMETHING` can also be built and used to view files. Those have been more debug+testing utilities, but it can be cool to fire up the AdLib-emulating music player (`cd audio; make opl_music; ./opl_music <path_to_uw.ad> <path_to_xmi>`) or something.
+
+### Running
+Everything else having gone smoothly (*snerk*), `sfml-fixed-engine <path_to_uw_dir>` will launch the basic level viewer. Most of the other file viewers will tell you what their arguments are. A few were written in a hurry, and might not have usage info (example: opl_music exits silently).
+
 ## Method
 Separate the game into a Model-View-Controller paradigm. Import files to provide the model of the game state and the assets for graphics and audio, to be used in the view. 
 
@@ -18,12 +29,14 @@ Separate the game into a Model-View-Controller paradigm. Import files to provide
 
 ## Status
 ### Music
-I can convert the XMI files to MIDI, read the ad-lib instrument definition files, and sequence music into register writes for an emulated YMF262 synthesizer. This also opens the door for sending the music to an emulated Roland CM-32L (MT-32) or to a modern MIDI server, like Timidity.
+I can convert the XMI files to MIDI, read the ad-lib instrument definition files, and sequence music into register writes for an emulated YMF262 synthesizer. This also opens the door for sending the music to an emulated Roland CM-32L (MT-32) or to a modern MIDI server, like Timidity. And actually, I *can* decode the music into MIDI and send that to Timidity (that's the use of the libtimidity library). It sometimes sounds great, and sometimes not. It depends heavily on your patchsets. I think I'll need to do more tweaking and find a way to compare (for example) MT-32 patches with the ones from some specific soundfont, so that I can find the ones with the least-grating differences, to build my instrument mappings (MT-32 didn't use the General MIDI instrument numbers, so I have to remap).
 
 - The XMI format and format of the \*.ad file were gleaned from the AIL 2.0 (aka Miles Sound System 2.0) documentation and source code.
 - I'm using a C++ port of Robson Cozenday's Java OPL3 emulator, which was distributed under an LGPL 2.1+ license
 - I also include some code from MAME, which I acquired through one of the Doom engine implementations (don't remember which one). I don't actually use their OPL3 code itself, but I'm using their interface to Cozenday's emulator, and I think that same Doom engine project is where it got ported to C++.
 - I'm actually not completely happy with my current sequencing code; the output doesn't sound perfectly like the music in the original game. There are some sour notes, and some MIDI control commands that I ignore (FOR loops, velocity on start and stop, probably some others like pitch bends). For that reason, I'm currently working on porting the original AIL2 C+ASM code into modern-ish C++. The whole audio subsystem will be put into its own shared library. Eventually, it'll be configurable to output to an included OPL3 emulator (operating in OPL2 mode, since that's what the game supports), or to talk to the MUNT emulator for Roland music and sound effects.
+
+Note: Ouch, I'll make a note that the uw\* songs sound pretty bad through the OPL/Ad-lib emulator. Use the aw\* files for that.
 
 ### Sound Effects
 These are defined in the instrument definition files, but don't follow any format that I've been able to find documentation for. I contacted John Miles, who wrote the Audio Interface Library (AIL) that the game uses, and was informed that sound effects are defined in terms of twiddling OPL2 registers, but he didn't have any further details. The format is refered to as OSI ALE or OSI TVFX (OSI = Origin Systems, Inc), and it is a proprietary format made by Origin themselves.
