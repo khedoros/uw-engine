@@ -168,7 +168,8 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     }
 
     {
-        int h_index = heading / (360/8);
+        int h_index = (int(heading / 45) + anim_framecount) % 8;
+        heading = h_index * 45;
         GLfloat colors[] = { 1.0, 0.0, 0.0, //red
                              1.0, 0.25,0.0, //red-orange
                              1.0, 0.5, 0.0, //orange
@@ -1149,11 +1150,12 @@ void gameloop() {
         update_state(window);
         window.clear();
         render();
-        if(anim_div == 3) {
+        if(anim_div == 7) {
             ++anim_framecount;
             anim_div = 0;
         }
         ++anim_div;
+
         if(anim_framecount >= 8) anim_framecount = 0;
         window.display();
 

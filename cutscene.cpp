@@ -203,6 +203,7 @@ void cutscene::play(sf::RenderWindow& screen) {
                     assert(cmd[i].args[1] < strings.size());
                     std::string temp_string = format_string(strings[cmd[i].args[1]]);
                     txt = sf::Text(temp_string, cs_font, 10);
+                    //txt.setColor(cur_lpf_pal[cmd[i].args[0]]);
                     txt.setFillColor(cur_lpf_pal[cmd[i].args[0]]);
                     int txtw = (320 - txt.getLocalBounds().width)/2;
                     int txth = 240 - txt.getLocalBounds().height - 10;
@@ -301,6 +302,7 @@ void cutscene::play(sf::RenderWindow& screen) {
                     std::string temp_string = format_string(strings[cmd[i].args[1]]);
                     txt = sf::Text(temp_string, cs_font, 10);
                     txt.setFillColor(cur_lpf_pal[cmd[i].args[0]]);
+                    //txt.setColor(cur_lpf_pal[cmd[i].args[0]]);
                     int txtw = (320 - txt.getLocalBounds().width)/2;
                     int txth = 240 - txt.getLocalBounds().height - 10;
                     txt.setPosition(txtw,txth);

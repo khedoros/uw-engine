@@ -1,63 +1,71 @@
-SFML_VERSION:=$(shell pkg-config sfml-all --modversion)
+SFML_VERSION:=$(shell pkg-config sfml-all --modversion|grep -Eo "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+")
 SFML_LIB:=$(shell pkg-config sfml-all --libs)
-CXX_VERSION:=$(shell g++ --version|grep -Eo "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+")
+CXX_VERSION:=$(word 1, $(shell $(CXX) --version|grep -Eo "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+"))
 OGL_LIB := -lGL -lGLU -lGLEW
-CXX_VER:=$(shell g++ -c -std=c++11 util.cpp -o flagtest.o 2> /dev/null; echo $$?)
+CXX_VER:=$(shell $(CXX) -c -std=c++11 util.cpp -o flagtest.o 2> /dev/null; echo $$?)
 ifeq "$(CXX_VER)" "0"
     CXX_VER:=-std=c++11
 else
     CXX_VER:=-std=c++0x
 endif
 
+default:
+	@echo SFML Version: $(SFML_VERSION)
+	@echo CXX Version: $(CXX_VERSION)
+
+CPPFLAGS:=-I/usr/local/include
+CXXFLAGS:=$(CXX_VER)
+LDFLAGS:=-L/usr/local/lib $(SFML_LIB) -lpthread $(OGL_LIB)
+
 all: texfile play_xmi sfml-fixed-engine sfml-shader-engine simple_map UwText critfile convfile engine uw_model uwfont convvm
 
-texfile: texfile.cpp texfile.h util.cpp util.h weapon_offset.cpp weapon_offset.h
-	g++ $(CXX_VER) texfile.cpp util.cpp weapon_offset.cpp -DSTAND_ALONE_TEX -o texfile $(SFML_LIB)
+texfile: texfile.cpp texfile.h util.o util.h weapon_offset.o weapon_offset.h
+	$(CXX) $(CXXFLAGS) texfile.cpp util.o weapon_offset.o -DSTAND_ALONE_TEX -o texfile $(LDFLAGS)
 
-play_xmi: play_xmi.cpp
-	g++ play_xmi.cpp -ltimidity $(SFML_LIB) -o play_xmi
+play_xmi: play_xmi.o
+	$(CXX) $(CXXFLAGS) play_xmi.o -ltimidity -o play_xmi $(LDFLAGS)
 
-sfml-fixed-engine: sfml-fixed-engine.cpp simple_map.cpp simple_map.h util.cpp util.h texfile.cpp texfile.h UwText.cpp UwText.h critfile.cpp critfile.h uw_model.cpp uw_model.h palette.cpp palette.h
-	g++ $(CXX_VER) -DDEVBUILD sfml-fixed-engine.cpp simple_map.cpp util.cpp texfile.cpp UwText.cpp critfile.cpp uw_model.cpp palette.cpp $(SFML_LIB) -lGL -lGLU -o sfml-fixed-engine
+sfml-fixed-engine: sfml-fixed-engine.o simple_map.o simple_map.h util.o util.h texfile.o texfile.h UwText.o UwText.h critfile.o critfile.h uw_model.o uw_model.h palette.o palette.h
+	$(CXX) $(CXXFLAGS) -DDEVBUILD sfml-fixed-engine.o simple_map.o util.o texfile.o UwText.o critfile.o uw_model.o palette.o -o sfml-fixed-engine $(LDFLAGS)
 
-sfml-shader-engine: sfml-shader-engine.cpp simple_map.cpp simple_map.h util.cpp util.h texfile.cpp texfile.h UwText.cpp UwText.h critfile.cpp critfile.h glutil.cpp glutil.h uw_model.cpp uw_model.h
-	g++ $(CXX_VER) sfml-shader-engine.cpp glutil.cpp uw_model.cpp util.cpp $(SFML_LIB) $(OGL_LIB) -o sfml-shader-engine
+sfml-shader-engine: sfml-shader-engine.o simple_map.o simple_map.h util.o util.h texfile.o texfile.h UwText.o UwText.h critfile.o critfile.h glutil.o glutil.h uw_model.o uw_model.h
+	$(CXX) $(CXXFLAGS) sfml-shader-engine.o glutil.o uw_model.o util.o -o sfml-shader-engine $(LDFLAGS)
 
-simple_map: simple_map.cpp simple_map.h util.cpp util.h UwText.cpp UwText.h
-	 g++ simple_map.cpp util.cpp UwText.cpp -DSTAND_ALONE_MAP $(SFML_LIB) -o simple_map
+simple_map: simple_map.cpp simple_map.h util.o util.h UwText.o UwText.h
+	$(CXX) $(CXXFLAGS) simple_map.cpp util.o UwText.o -DSTAND_ALONE_MAP -o simple_map $(LDFLAGS)
 
-lpfcut: lpfcut.cpp lpfcut.h util.cpp util.h
-	g++ $(CXX_VER) lpfcut.cpp util.cpp  -DSTAND_ALONE_LPF $(SFML_LIB) -o lpfcut
+lpfcut: lpfcut.cpp lpfcut.h util.o util.h
+	$(CXX) $(CXXFLAGS) lpfcut.cpp util.o  -DSTAND_ALONE_LPF -o lpfcut $(LDFLAGS)
 
-mainplay: main.cpp lpfcut.cpp lpfcut.h util.cpp util.h audio/vocfile.cpp audio/vocfile.h
-	g++ $(CXX_VER) main.cpp lpfcut.cpp util.cpp audio/vocfile.cpp -Iaudio $(SFML_LIB) -o mainplay
+mainplay: main.o lpfcut.o lpfcut.h util.o util.h audio/vocfile.o audio/vocfile.h
+	$(CXX) $(CXXFLAGS) main.o lpfcut.o util.o audio/vocfile.o -Iaudio -o mainplay $(LDFLAGS)
 
 UwText: UwText.cpp UwText.h util.h
-	g++ UwText.cpp -DSTAND_ALONE_TEXT -o UwText
+	$(CXX) $(CXXFLAGS) UwText.cpp -DSTAND_ALONE_TEXT -o UwText $(LDFLAGS)
 
-critfile: critfile.cpp critfile.h util.cpp util.h
-	g++ -std=c++0x -DSTAND_ALONE_CRIT critfile.cpp util.cpp $(SFML_LIB) -o critfile
+critfile: critfile.cpp critfile.h util.o util.h
+	$(CXX) $(CXXFLAGS) -std=c++0x -DSTAND_ALONE_CRIT critfile.cpp util.o -o critfile $(LDFLAGS)
 
-convfile: convfile.cpp convfile.h util.cpp util.h UwText.cpp UwText.h
-	g++ convfile.cpp util.cpp UwText.cpp $(CXX_VER) -DSTAND_ALONE_CONV -o convfile
+convfile: convfile.cpp convfile.h util.o util.h UwText.o UwText.h
+	$(CXX) $(CXXFLAGS) convfile.cpp util.o UwText.o -DSTAND_ALONE_CONV -o convfile $(LDFLAGS)
 
-convvm: convvm.cpp convvm.h convfile.cpp convfile.h util.cpp util.h UwText.cpp UwText.h globfile.cpp globfile.h savefile.cpp savefile.h
-	g++ convvm.cpp convfile.cpp util.cpp UwText.cpp globfile.cpp savefile.cpp $(CXX_VER) -DSTAND_ALONE_VM -o convvm
+convvm: convvm.cpp convvm.h convfile.o convfile.h util.o util.h UwText.o UwText.h globfile.o globfile.h savefile.o savefile.h
+	$(CXX) $(CXXFLAGS) convvm.cpp convfile.o util.o UwText.o globfile.o savefile.o -DSTAND_ALONE_VM -o convvm $(LDFLAGS)
 
-engine: engine.cpp
-	g++ engine.cpp -lGL -lGLU -lglut -o engine
+engine: engine.o
+	$(CXX) $(CXXFLAGS) engine.o -lGL -lGLU -lglut -o engine $(LDFLAGS)
 
-uw_model: uw_model.cpp uw_model.h util.cpp util.h palette.cpp palette.h
-	g++ $(CXX_VER) uw_model.cpp util.cpp palette.cpp -DSTAND_ALONE_MODEL -o uw_model
+uw_model: uw_model.cpp uw_model.h util.o util.h palette.o palette.h
+	$(CXX) $(CXXFLAGS) uw_model.cpp util.o palette.o -DSTAND_ALONE_MODEL -o uw_model $(LDFLAGS)
 
-uwfont: uwfont.cpp util.cpp util.h uwfont.h
-	g++ $(CXX_VER) -DSTAND_ALONE_FONT uwfont.cpp util.cpp `pkg-config --libs sfml-all` -o uwfont
+uwfont: uwfont.cpp util.o util.h uwfont.h
+	$(CXX) $(CXXFLAGS) -DSTAND_ALONE_FONT uwfont.cpp util.o -o uwfont $(LDFLAGS)
 
-main: main.cpp lpfcut.cpp lpfcut.h audio/vocfile.cpp audio/vocfile.h
-	g++ -o main $(CXX_VER) main.cpp lpfcut.cpp audio/vocfile.cpp -lsfml-audio -lsfml-system -lsfml-window -lsfml-graphics
+main: main.o lpfcut.o lpfcut.h audio/vocfile.o audio/vocfile.h
+	$(CXX) $(CXXFLAGS) -o main main.o lpfcut.o audio/vocfile.o $(LDFLAGS)
 
 cutscene: cutscene.cpp uwfont.cpp util.cpp lpfcut.cpp UwText.cpp cutscene.h uwfont.h util.h lpfcut.h UwText.h audio/vocfile.cpp audio/vocfile.h
-	g++ $(CXX_VER) -DSTAND_ALONE_CS -L/usr/local/lib cutscene.cpp uwfont.cpp util.cpp lpfcut.cpp UwText.cpp audio/vocfile.cpp -o cutscene -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
+	$(CXX) $(CXXFLAGS) -DSTAND_ALONE_CS -L/usr/local/lib cutscene.cpp uwfont.cpp util.cpp lpfcut.cpp UwText.cpp audio/vocfile.cpp -o cutscene $(LDFLAGS)
 
-start:
-	g++ -o start $(CXX_VER) start.cpp lpfcut.cpp palette.cpp texfile.cpp util.cpp uwfont.cpp UwText.cpp cutscene.cpp audio/midi_event.cpp audio/opl_music.cpp audio/uw_patch.cpp audio/vocfile.cpp audio/xmi.cpp audio/opl/OPL3.cpp -L/usr/local/lib -lsfml-graphics -lsfml-audio -lsfml-window -lsfml-system -lpthread
+start: start.o lpfcut.o lpfcut.h palette.o palette.h texfile.o texfile.h util.o util.h uwfont.o uwfont.h UwText.o UwText.h cutscene.o cutscene.h audio/midi_event.o audio/midi_event.h audio/opl_music.o audio/opl_music.h audio/uw_patch.o audio/uw_patch.h audio/vocfile.o audio/vocfile.h audio/xmi.o audio/xmi.h audio/opl/OPL3.o audio/opl/opl.h
+	$(CXX) $(CXXFLAGS) -o start start.o lpfcut.o palette.o texfile.o util.o uwfont.o UwText.o cutscene.o audio/midi_event.o audio/opl_music.o audio/uw_patch.o audio/vocfile.o audio/xmi.o audio/opl/OPL3.o $(LDFLAGS)
