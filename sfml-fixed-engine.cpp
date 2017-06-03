@@ -167,7 +167,22 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
         glTranslatef(x_inc, 0.0, z_inc);
     }
 
-    //Draw the car!
+    {
+        int h_index = heading / (360/8);
+        GLfloat colors[] = { 1.0, 0.0, 0.0, //red
+                             1.0, 0.25,0.0, //red-orange
+                             1.0, 0.5, 0.0, //orange
+                             1.0, 1.0, 0.0, //yellow
+                             0.5,1.0, 0.0, //yellow-green
+                             0.0,1.0,0.0,  //green
+                             0.0,0.0,1.0,  //blue
+                             0.75,0.0,0.75}; //purple
+        glColor3fv(&colors[h_index*3]);
+        sf::Texture::bind(NULL);
+    }
+
+
+    //Draw the model!
     glTranslatef(xloc, zloc, yloc);
     glRotatef(heading, 0.0, 1.0, 0.0); //Rotate around y to face appropriate heading
     glScalef(2.0,2.0,2.0);             //My coordinates are 2x the ones of the original game
@@ -181,10 +196,10 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
 
     glVertexPointer(3, GL_FLOAT, 0, &mod_vertex[model_num][0]);
     glEnableClientState(GL_VERTEX_ARRAY);
-    glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
-    glEnableClientState(GL_COLOR_ARRAY);
+    //glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
+    //glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    //glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
+    //glEnableClientState(GL_COLOR_ARRAY);
 
     assert(mod_color.size() == mod_vertex.size());
     //int verts_to_draw = (mod_vertex[model_num].size() / 3 > ptcnt) ? ptcnt : mod_vertex[model_num].size() / 3;
