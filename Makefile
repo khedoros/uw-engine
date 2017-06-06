@@ -25,8 +25,8 @@ texfile: texfile.cpp texfile.h util.o util.h weapon_offset.o weapon_offset.h
 play_xmi: play_xmi.o
 	$(CXX) $(CXXFLAGS) play_xmi.o -ltimidity -o play_xmi $(LDFLAGS)
 
-sfml-fixed-engine: sfml-fixed-engine.o simple_map.o simple_map.h util.o util.h texfile.o texfile.h UwText.o UwText.h critfile.o critfile.h uw_model.o uw_model.h palette.o palette.h
-	$(CXX) $(CXXFLAGS) -DDEVBUILD sfml-fixed-engine.o simple_map.o util.o texfile.o UwText.o critfile.o uw_model.o palette.o -o sfml-fixed-engine $(LDFLAGS)
+sfml-fixed-engine: sfml-fixed-engine.cpp simple_map.o simple_map.h util.o util.h texfile.o texfile.h UwText.o UwText.h critfile.o critfile.h uw_model.o uw_model.h palette.o palette.h
+	$(CXX) $(CXXFLAGS) -DDEVBUILD sfml-fixed-engine.cpp simple_map.o util.o texfile.o UwText.o critfile.o uw_model.o palette.o -o sfml-fixed-engine $(LDFLAGS)
 
 sfml-shader-engine: sfml-shader-engine.o simple_map.o simple_map.h util.o util.h texfile.o texfile.h UwText.o UwText.h critfile.o critfile.h glutil.o glutil.h uw_model.o uw_model.h
 	$(CXX) $(CXXFLAGS) sfml-shader-engine.o glutil.o uw_model.o util.o -o sfml-shader-engine $(LDFLAGS)

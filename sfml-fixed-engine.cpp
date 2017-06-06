@@ -645,8 +645,6 @@ void update_level_map() {
             push_vert(tex[index], quads[index], 0.0, 0.0, 2.0f*x+2.0f, swb, 2.0f*z     );
             push_vert(tex[index], quads[index], 1.0, 0.0, 2.0f*x,      seb, 2.0f*z     );
 
-            if(t == simple_map::SOLID_TILE) continue;
-
             //If no animated texture wall exists, bind the static one. Otherwise, bind the appropriate frame of the animated texture.
             //if(walls.animtex[wti].size() == 0)
             //    sf::Texture::bind(&(walls.tex[wti]));
