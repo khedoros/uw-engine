@@ -16,8 +16,8 @@ using namespace std;
 
 bool keys[sf::Keyboard::KeyCount];
 bool mouse_buttons[sf::Mouse::ButtonCount];
-int winW = 512;
-int winH = 512;
+int winW = 800;
+int winH = 600;
 sf::Vector2i mousePos, mouseDelt, mouseCent(winW/2, winH/2), realCent(winW/2, winH/2);
 float theta = 180.0;
 float phi   = 0.0;
@@ -1043,6 +1043,17 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+void set_viewport() {
+    if(winW >= (4.0f/3.0f) * winH) {
+        int spare = winW - ((4.0f/3.0f)*winH);
+        glViewport(spare/2,0, GLsizei((4.0f/3.0f)*winH), GLsizei(winH));
+    }
+    else {
+        int spare = winH - ((3.0f/4.0f)*winW);
+        glViewport(0,spare/2, GLsizei(winW), GLsizei((3.0f/4.0f) * winW));
+    }
+}
+
 void gameloop() {
     sf::RenderWindow window(sf::VideoMode(winW,winH,32), "Ultima Underworld Engine Remake Attempt", sf::Style::Default, sf::ContextSettings(24,0,0,1,5));
     window.setKeyRepeatEnabled(false);
@@ -1051,7 +1062,7 @@ void gameloop() {
     glClearColor (0.0, 0.0, 0.0, 0.0);
     glClearDepth (1.0);
     glShadeModel (GL_FLAT);
-    glViewport (0, 0, (GLsizei) winW, (GLsizei) winH);
+    set_viewport();
     glMatrixMode (GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(60.0, float(winW)/float(winH), 0.1, 200.0);
@@ -1077,8 +1088,7 @@ void gameloop() {
                 winW = event.size.width;
                 winH = event.size.height;
                 mouseCent = sf::Vector2i(winW/2, winH/2);
-
-                glViewport (0, 0, (GLsizei) winW, (GLsizei) winH);
+                set_viewport();
                 glMatrixMode (GL_PROJECTION);
                 glLoadIdentity ();
                 gluPerspective(95.0, float(winW)/float(winH), 0.1, 200.0);
