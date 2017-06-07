@@ -623,7 +623,10 @@ int uw_model::process_nodes(ifstream& in) {
 #endif
                     break;
                 default: 
+#ifdef STAND_ALONE_MODEL
                     cout<<"UNKNOWN 3D ELEMENT ("<<node_type<<")"; dat_size = 20; retval = 2;
+#endif
+                    break;
             }
             if(retval) {
                 cout<<": ";
