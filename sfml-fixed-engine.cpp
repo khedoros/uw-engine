@@ -167,6 +167,7 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
         glTranslatef(x_inc, 0.0, z_inc);
     }
 
+    /*
     {
         int h_index = (int(heading / 45) + anim_framecount) % 8;
         heading = h_index * 45;
@@ -181,7 +182,7 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
         glColor3fv(&colors[h_index*3]);
         sf::Texture::bind(NULL);
     }
-
+    */
 
     //Draw the model!
     glTranslatef(xloc, zloc, yloc);
@@ -197,10 +198,10 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
 
     glVertexPointer(3, GL_FLOAT, 0, &mod_vertex[model_num][0]);
     glEnableClientState(GL_VERTEX_ARRAY);
-    //glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
-    //glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    //glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
-    //glEnableClientState(GL_COLOR_ARRAY);
+    glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
+    glEnableClientState(GL_COLOR_ARRAY);
 
     assert(mod_color.size() == mod_vertex.size());
     //int verts_to_draw = (mod_vertex[model_num].size() / 3 > ptcnt) ? ptcnt : mod_vertex[model_num].size() / 3;
@@ -1063,7 +1064,7 @@ void gameloop() {
     set_viewport();
     glMatrixMode (GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(60.0, float(winW)/float(winH), 0.1, 200.0);
+    gluPerspective(45.0, float(winW)/float(winH), 0.1, 200.0);
     glMatrixMode (GL_MODELVIEW);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

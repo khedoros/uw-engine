@@ -269,9 +269,9 @@ int uw_model::process_nodes(ifstream& in) {
                     break;
                 case 0x0078:
                     cent_vert = read16(in)>>(3);
-                    cent_x = fix2float(read16(in));
-                    cent_y = fix2float(read16(in));
-                    cent_z = fix2float(read16(in));
+                    cent_x = base_pt.x; fix2float(read16(in));
+                    cent_y = base_pt.y; fix2float(read16(in));
+                    cent_z = base_pt.z; fix2float(read16(in));
                     unk16 = read16(in);
                     if(points.size() <= cent_vert ) {
                         points.resize(cent_vert + 1);
@@ -531,7 +531,7 @@ int uw_model::process_nodes(ifstream& in) {
                         //cout<<vnum<<" ";
                         assert(vnum < points.size());
                         base_face.points[i] = points[vnum];
-                        base_face.points[i].u = frac2float(read16(in));
+                        base_face.points[i].u = 1.0 - frac2float(read16(in));
                         base_face.points[i].v = frac2float(read16(in));
 #ifdef STAND_ALONE_MODEL
                         cout<<"\tvert ("<<points[vnum].x<<", "<<points[vnum].y<<", "<<points[vnum].z<<"), UV: ("<<base_face.points[i].u<<", "<<base_face.points[i].v<<")"<<endl;
@@ -579,7 +579,7 @@ int uw_model::process_nodes(ifstream& in) {
                         //cout<<vnum<<" ";
                         assert(vnum < points.size());
                         base_face.points[i] = points[vnum];
-                        base_face.points[i].u = frac2float(read16(in));
+                        base_face.points[i].u = 1.0 - frac2float(read16(in));
                         base_face.points[i].v = frac2float(read16(in));
                     }
                     //cout<<endl;
