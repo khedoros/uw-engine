@@ -221,7 +221,11 @@ bool simple_map::load_automap_notes(std::ifstream& in, size_t offset /*= 0*/, si
 }
 
 bool simple_map::load_uw1map(std::ifstream& in) {
+    in.seekg(0,ios::end);
     in.seekg(0,ios::beg);
+
+    size_t lowest_automap = 0xffffffff;
+
     uint16_t block_count = read16(in);
     cout<<"Reading "<<block_count<<" blocks."<<endl;
     levels.resize(9);
@@ -238,11 +242,31 @@ bool simple_map::load_uw1map(std::ifstream& in) {
             }
             //Indexes 36-134 are autmap notes for levels 1-99
             if(index >= 36) {
+                if(offset < lowest_automap) lowest_automap = offset;
+                cout<<"Automap notes level "<<dec<<index-35<<" at offset 0x"<<hex<<offset<<endl;
                 if(!load_automap_notes(in, offset, index - 36)) return false;
             }
         }
     }
 
+    in.seekg(lowest_automap);
+    uint8_t buffer[54];
+    while(!in.eof()) {
+        in.read(reinterpret_cast<char *>(&buffer[0]), 54);
+        for(int c=0;c<54;c++) {
+            printf("%02x ", buffer[c]);
+        }
+        printf(" |");
+        for(int c=0;c<54;c++) {
+            if(buffer[c] > ' ' && buffer[c] < 127) {
+                printf("%c", buffer[c]);
+            }
+            else {
+                printf(".");
+            }
+        }
+        printf("| \n");
+    }
     return true;
 }
 
