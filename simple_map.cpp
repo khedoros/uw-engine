@@ -164,9 +164,37 @@ bool simple_map::load_automap_info(std::ifstream& in, size_t offset /*= 0*/, siz
     cout<<"Pretending to load automap exploration data for level "<<index+1<<" located at offset "<<offset<<endl;
     size_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
-    for(int i=1; i<=4096; ++i) {
-        printf("%02x ", read8(in));
-        if(i%64 == 0) printf("\n");
+    uint8_t minimap[64][64];
+    for(int y=63;y>=0;--y) {
+        for(int x=63;x>=0;--x) {
+            minimap[x][y] = read8(in);
+        }
+    }
+    for(int y=63;y>=0;--y) {
+        for(int x=0;x<64;++x) {
+            uint8_t val = minimap[x][y];
+            switch(val) {
+                case simple_map::SOLID_TILE: cout<<"??";break;  //Completely unexplored
+                case simple_map::OPEN_TILE:  cout<<"  ";break;  //Explored+flat
+                case simple_map::DIAG_SE:    cout<<"/#";break; 
+                case simple_map::DIAG_SW:    cout<<"#\\";break; //All the terrain descriptors
+                case simple_map::DIAG_NE:    cout<<"\\#";break;
+                case simple_map::DIAG_NW:    cout<<"#/";break;
+                case simple_map::SLOPE_N:    cout<<"^^";break;
+                case simple_map::SLOPE_S:    cout<<"vv";break;
+                case simple_map::SLOPE_E:    cout<<">>";break;
+                case simple_map::SLOPE_W:    cout<<"<<";break;
+                case 0x0A:                   cout<<"##";break; //Walls, sometimes not adjacent to explored areas
+                case 0x0B:                   cout<<"..";break; //Nearby unexplored rooms
+                //case 0x0C:                                   //C,D,E, and F are nearby unexplored diagonal tiles
+                //case 0x0D:
+                //case 0x0E:
+                //case 0x0F:
+                case 0x41:                   cout<<"DD";break; //Doors
+                default: printf("%02X", val);//cout<<"!!";break; //Maybe there are 10,11,12,13 for nearby unexplored sloped tiles?
+            }
+        }
+        cout<<endl;
     }
     in.seekg(bookmark, ios::beg);
     return true;
@@ -176,10 +204,17 @@ bool simple_map::load_automap_notes(std::ifstream& in, size_t offset /*= 0*/, si
     cout<<"Pretending to load automap note data for level "<<index+1<<" located at offset "<<offset<<endl;
     size_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
-    for(int note=0;note<10;note++) {
+    for(int note=0;note<2;note++) {
         char buffer[54] = {0};
         in.read(&buffer[0],54);
-        cout<<buffer<<endl;
+        string message(buffer);
+        cout<<message<<": ";
+                         // +1 skips the ending null
+        for(int bytes=message.size() + 1; bytes < 54; bytes++) {
+            //cout<<hex<<(unsigned int)((unsigned char)buffer[bytes])<<" ";
+            printf("%02x ", (unsigned char)buffer[bytes]);
+        }
+        cout<<endl;
     }
     in.seekg(bookmark, ios::beg);
     return true;
@@ -199,7 +234,6 @@ bool simple_map::load_uw1map(std::ifstream& in) {
                 case 1: if(!load_anim(in,offset,index%9)) return false; break;
                 case 2: if(!load_tex(in,offset,index%9)) return false; break;
                 case 3: if(!load_automap_info(in, offset, index%9)) return false; break;
-                //case 4: if(!load_automap_notes(in, offset, index%9)) return false; break;
                 default: break; //cout<<"Skipping data at index "<<index<<"."<<endl;
             }
             //Indexes 36-134 are autmap notes for levels 1-99
@@ -289,6 +323,7 @@ void simple_map::graphic_display() {
         c.restart();
     }
 }
+
 
 void simple_map::print_map(const size_t index, const int option /*= 0*/, const UwText& uwt) {
     if(index >= levels.size()) return;
