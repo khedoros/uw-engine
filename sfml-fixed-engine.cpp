@@ -135,7 +135,13 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
         sf::Texture::bind(&(tmobj.tex[(obj.flags & 7) + 12]));
     }
     else if(obj.obj_id == 0x164) { //Bridges
-        sf::Texture::bind(&(tmobj.tex[obj.flags + 30]));
+        if(obj.flags < 2) {
+            sf::Texture::bind(&(tmobj.tex[(obj.flags) + 30]));
+        }
+        else if(obj.flags >= 2) {
+            uint16_t fti = sm.levels[cur_lev].floor_tex_index[obj.flags - 2];
+            sf::Texture::bind(&(floors.tex[fti]));
+        }
     }
     else if(obj.obj_id == 0x165) { //Gravestone
         sf::Texture::bind(&(tmobj.tex[obj.flags + 28]));
