@@ -161,7 +161,7 @@ bool simple_map::load_anim(std::ifstream& in, size_t offset /*= 0*/, size_t inde
 }
 
 bool simple_map::load_automap_info(std::ifstream& in, size_t offset /*= 0*/, size_t index /*= 0*/) {
-    //cout<<"Pretending to load automap exploration data for level "<<index+1<<" located at offset "<<offset<<endl;
+    cout<<"Pretending to load automap exploration data for level "<<index+1<<" located at offset "<<offset<<endl;
     size_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
     for(int i=1; i<=4096; ++i) {
@@ -173,12 +173,13 @@ bool simple_map::load_automap_info(std::ifstream& in, size_t offset /*= 0*/, siz
 }
 
 bool simple_map::load_automap_notes(std::ifstream& in, size_t offset /*= 0*/, size_t index /*= 0*/) {
-    //cout<<"Pretending to load automap note data for level "<<index+1<<" located at offset "<<offset<<endl;
+    cout<<"Pretending to load automap note data for level "<<index+1<<" located at offset "<<offset<<endl;
     size_t bookmark = in.tellg();
     in.seekg(offset, ios::beg);
-    for(int i=1; i<=4096; ++i) {
-        printf("%02x ", read8(in));
-        if(i%64 == 0) printf("\n");
+    for(int note=0;note<10;note++) {
+        char buffer[54] = {0};
+        in.read(&buffer[0],54);
+        cout<<buffer<<endl;
     }
     in.seekg(bookmark, ios::beg);
     return true;
@@ -187,6 +188,7 @@ bool simple_map::load_automap_notes(std::ifstream& in, size_t offset /*= 0*/, si
 bool simple_map::load_uw1map(std::ifstream& in) {
     in.seekg(0,ios::beg);
     uint16_t block_count = read16(in);
+    cout<<"Reading "<<block_count<<" blocks."<<endl;
     levels.resize(9);
     for(size_t index = 0;index < block_count; ++index) {
         size_t offset = read32(in);
@@ -197,8 +199,12 @@ bool simple_map::load_uw1map(std::ifstream& in) {
                 case 1: if(!load_anim(in,offset,index%9)) return false; break;
                 case 2: if(!load_tex(in,offset,index%9)) return false; break;
                 case 3: if(!load_automap_info(in, offset, index%9)) return false; break;
-                case 4: if(!load_automap_notes(in, offset, index%9)) return false; break;
+                //case 4: if(!load_automap_notes(in, offset, index%9)) return false; break;
                 default: break; //cout<<"Skipping data at index "<<index<<"."<<endl;
+            }
+            //Indexes 36-134 are autmap notes for levels 1-99
+            if(index >= 36) {
+                if(!load_automap_notes(in, offset, index - 36)) return false;
             }
         }
     }
