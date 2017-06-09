@@ -117,7 +117,7 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     }
 
     if(obj.obj_id >= 0x140 && obj.obj_id < 0x150) { //Door frames
-        int x = 63 - (xloc / 2);
+        int x = 63 - (xloc / 2 - 1);
         int y = yloc / 2;
         int wti = sm.levels[cur_lev].d[x][y].wall_tex;
 

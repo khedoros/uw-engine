@@ -1,7 +1,7 @@
 SFML_VERSION:=$(shell pkg-config sfml-all --modversion|grep -Eo "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+")
 SFML_LIB:=$(shell pkg-config sfml-all --libs)
 CXX_VERSION:=$(word 1, $(shell $(CXX) --version|grep -Eo "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+"))
-OGL_LIB := -lGL -lGLU -lGLEW
+OGL_LIB := -lGL -lGLU
 CXX_VER:=$(shell $(CXX) -c -std=c++11 util.cpp -o flagtest.o 2> /dev/null; echo $$?)
 ifeq "$(CXX_VER)" "0"
     CXX_VER:=-std=c++11

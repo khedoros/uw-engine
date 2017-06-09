@@ -1,4 +1,4 @@
-SFML_LIB :=-L/usr/local/lib64 -lsfml-window -lsfml-graphics -lsfml-system -lsfml-audio
+SFML_LIB :=-L/usr/local/lib -lsfml-window -lsfml-graphics -lsfml-system -lsfml-audio
 CPPFLAGS = -std=c++11
 OBJDIR = objs
 BINDIR = bin
@@ -24,7 +24,7 @@ $(BINDIR)/uw_patch_file: uw_patch-standalone.o uw_patch.h
 	g++ $(OBJDIR)/uw_patch-standalone.o -o $@
 
 $(BINDIR)/play_opl_xmi: play_opl_xmi.o midi_event.o midi_event.h xmi.o xmi.h uw_patch.o uw_patch.h OPL3.o opl.h xs_Float.h util.h
-	g++ $(OBJDIR)/play_opl_xmi.o $(OBJDIR)/midi_event.o $(OBJDIR)/xmi.o $(OBJDIR)/uw_patch.o $(OBJDIR)/OPL3.o -lsfml-system -lsfml-audio -o $@
+	g++ $(OBJDIR)/play_opl_xmi.o $(OBJDIR)/midi_event.o $(OBJDIR)/xmi.o $(OBJDIR)/uw_patch.o $(OBJDIR)/OPL3.o $(SFML_LIB) -o $@
 
 $(BINDIR)/play_timidity_xmi: play_timidity_xmi.cpp
 	g++ play_timidity_xmi.cpp -ltimidity $(SFML_LIB) -I.. -o $@

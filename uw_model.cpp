@@ -624,14 +624,17 @@ int uw_model::process_nodes(ifstream& in) {
                     break;
                 default: 
 #ifdef STAND_ALONE_MODEL
-                    cout<<"UNKNOWN 3D ELEMENT ("<<node_type<<")"; dat_size = 20; retval = 2;
-#endif
+                    cout<<"UNKNOWN 3D ELEMENT ("<<node_type<<")";
+#endif 
+                    dat_size = 20; retval = 2;
                     break;
             }
             if(retval) {
+#ifdef STAND_ALONE_MODEL    
                 cout<<": ";
                 for(int i=0;i<dat_size;++i) cout<<hex<<int(read8(in))<<" ";
                 cout<<endl<<dec;
+#endif
                 exit = true;
             }
         }
@@ -724,6 +727,7 @@ bool uw_model::load(const std::string& uw_exe, const std::string& pal_filename, 
 
 
     //TODO: Traverse model data nodes and load data into my vertex+face lists
+    cout<<"Working on model #"<<hex<<model_number<<endl;
     int ret = process_nodes(in);
 
     in.close();
