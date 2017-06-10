@@ -58,7 +58,7 @@ bool cutscene::load_n00(std::string& filename) {
 
 bool cutscene::load_lpf(std::string& filename) {
     frame.resize(0);
-    cur_frame = 0;
+    cur_frame = 1;
     Lpfcut lpf;
     if(!lpf.load(filename)) {
         std::cerr<<filename<<" didn't open. Fix it." <<std::endl;
@@ -187,11 +187,15 @@ void cutscene::play(sf::RenderWindow& screen) {
         if(prev_frame < cur_frame) {
             std::cout<<"Playing from frame "<<prev_frame<<" to frame "<<cur_frame<<std::endl;
             for(int f = prev_frame;f<cur_frame;++f) {
+                //assert(f > 0);
+                //assert(frame[f-1].getSize() == sf::Vector2u(320,200));
+                if(f > 0) {
                     screen.clear();
                     spr.setTexture(frame[f - 1]);
                     screen.draw(spr);
                     screen.draw(txt);
                     screen.display();
+                }
             }
         }
         if(cmd[i].cmd_num != 1) {
@@ -211,16 +215,18 @@ void cutscene::play(sf::RenderWindow& screen) {
                 }
                 break;
             case 0x03: //Pause for arg[0]/2 seconds
-                screen.clear();
-                spr.setTexture(frame[cur_frame - 1]);
-                screen.draw(spr);
-                screen.draw(txt);
-                screen.display();
+                if(cur_frame > 0) {
+                    screen.clear();
+                    spr.setTexture(frame[cur_frame - 1]);
+                    screen.draw(spr);
+                    screen.draw(txt);
+                    screen.display();
+                }
                 sf::sleep(sf::milliseconds(cmd[i].args[0]*500));
                 break;
             case 0x04: //Play up to frame arg[0] (at rate arg[1]? Doesn't seem necessary)
                 for(;cur_frame<cmd[i].args[0]-1;++cur_frame) {
-                    if(cur_frame - 1 >= 0 && cur_frame - 1 < frame.size()) {
+                    if(cur_frame  > 0 && cur_frame<= frame.size()) {
                         spr.setTexture(frame[cur_frame-1]);
                     }
                     screen.clear();

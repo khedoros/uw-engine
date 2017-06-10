@@ -64,8 +64,8 @@ uwfont: uwfont.cpp util.o util.h uwfont.h
 main: main.o lpfcut.o lpfcut.h audio/vocfile.o audio/vocfile.h
 	$(CXX) $(CXXFLAGS) -o main main.o lpfcut.o audio/vocfile.o $(LDFLAGS)
 
-cutscene: cutscene.cpp uwfont.cpp util.cpp lpfcut.cpp UwText.cpp cutscene.h uwfont.h util.h lpfcut.h UwText.h audio/vocfile.cpp audio/vocfile.h
-	$(CXX) $(CXXFLAGS) -DSTAND_ALONE_CS -L/usr/local/lib cutscene.cpp uwfont.cpp util.cpp lpfcut.cpp UwText.cpp audio/vocfile.cpp -o cutscene $(LDFLAGS)
+cutscene: cutscene.cpp uwfont.o util.o lpfcut.o UwText.o cutscene.h uwfont.h util.h lpfcut.h UwText.h audio/vocfile.o audio/vocfile.h
+	$(CXX) $(CXXFLAGS) -DSTAND_ALONE_CS -L/usr/local/lib cutscene.cpp uwfont.o util.o lpfcut.o UwText.o audio/vocfile.o -o cutscene $(LDFLAGS)
 
 start: start.o lpfcut.o lpfcut.h palette.o palette.h texfile.o texfile.h util.o util.h uwfont.o uwfont.h UwText.o UwText.h cutscene.o cutscene.h audio/midi_event.o audio/midi_event.h audio/opl_music.o audio/opl_music.h audio/uw_patch.o audio/uw_patch.h audio/vocfile.o audio/vocfile.h audio/xmi.o audio/xmi.h audio/opl/OPL3.o audio/opl/opl.h
 	$(CXX) $(CXXFLAGS) -o start start.o lpfcut.o palette.o texfile.o util.o uwfont.o UwText.o cutscene.o audio/midi_event.o audio/opl_music.o audio/uw_patch.o audio/vocfile.o audio/xmi.o audio/opl/OPL3.o $(LDFLAGS)
