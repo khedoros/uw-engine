@@ -1,4 +1,7 @@
 #include "lpfcut.h"
+#ifdef STAND_ALONE_LPF
+#include<SFML/Graphics.hpp>
+#endif
 
 Lpfcut::Lpfcut(bool rep/*= true*/) : repeat(rep) {
     file_id[4]=0;
@@ -310,4 +313,33 @@ bool Lpfcut::iterate_frame() {
     //std::cout<<"New page: "<<frame_page_index<<" record: "<<frame_record_index<<std::endl;
 }
 
+#ifdef STAND_ALONE_LPF
+int main(int argc, char *argv[]) {
+    //2 args: directory containing game data (cuts+sound), and a cutscene number.
+    sf::RenderWindow window(sf::VideoMode(320, 240), "SFML window");
+    window.setFramerateLimit(5);
+    Lpfcut c(true);
+    if(!c.load(argv[1])) {
+        std::cerr<<"Failed to load file using path "<<argv[1]<<std::endl;
+    }
+    Lpfcut lpf;
+    if(!lpf.load(argv[1])) {
+        std::cerr<<argv[1]<<" didn't open. Fix it." <<std::endl;
+        return false;
+    }
+    sf::Texture f;
+    f.create(lpf.width, lpf.height);
+    sf::Sprite spr;
+    spr.scale(1,1.2);
+    sf::Uint8 * frame_data = (sf::Uint8 *)lpf.getNextFrame();
+    while(frame_data) {
+        f.update(frame_data);
+        window.clear();
+        spr.setTexture(f);
+        window.draw(spr);
+        window.display();
 
+        frame_data = (sf::Uint8 *)lpf.getNextFrame();
+    }
+}
+#endif
