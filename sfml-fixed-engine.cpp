@@ -26,6 +26,13 @@ float phiR = 0.0;
 float camXPos = 64.0;
 float camYPos = 7.5;
 float camZPos = 4.0;
+
+#ifndef DEVBUILD
+float old_camXPos = 64.0;
+float old_camYPos = 7.5;
+float old_camZPos = 4.0;
+#endif
+
 wchar_t textChar;
 bool mouseCap = false;
 bool inFocus = true;
@@ -242,6 +249,10 @@ void draw_objs(const std::vector<sprite_info>& info) {
         y = i.y;
         first_obj = i.index;
 
+#ifndef DEVBUILD
+        if(i.distance >= 10) continue;
+#endif
+
         if(first_obj == 0) return;
         float xloc = 0.0, yloc = 0.0, zloc = 0.0, w = 0.0, h = 0.0, hsx = 0.0, hsy = 0.0, scale = 32.0;
         float obj_theta = -1 * theta;
@@ -300,6 +311,7 @@ void draw_objs(const std::vector<sprite_info>& info) {
             xloc = float(x) * 2.0 + (2.0 - float(obj.xpos) / 4.0) - 1.0/8.0;
             yloc = float(y) * 2.0 + (float(obj.ypos) / 4.0) + 1.0/8.0;
             zloc = float(obj.zpos) / 16.0;
+
             if(obj_id >= 0x140 && obj_id < 0x150) {
                 xloc-=2.0/8.0;
                 yloc+=2.0/8.0;
@@ -489,6 +501,18 @@ void update_state(sf::RenderWindow &window) {
         cur_lev--;
         map_needs_update = true;
     }
+
+    #ifndef DEVBUILD
+    float diffx = camXPos - old_camXPos;
+    float diffy = camYPos - old_camYPos;
+    float diffz = camZPos - old_camZPos;
+    if(diffx*diffx + diffy*diffy + diffz*diffz > 9) {
+        map_needs_update = true;
+        old_camXPos = camXPos;
+        old_camYPos = camYPos;
+        old_camZPos = camZPos;
+    }
+    #endif
 }
 
 void draw_level_bounds() {
@@ -570,8 +594,15 @@ void update_level_map() {
     //Build geometry for the actual map tiles
     for(int x = 0;x<64;++x) {
         for(int z = 0;z<64;++z) {
-
             int x_index = 63 - x; //I want x to go in the other direction
+
+#ifndef DEVBUILD
+            float xdiff = x * 2 - camXPos;
+            float zdiff = z * 2 - camZPos;
+
+            if(xdiff*xdiff + zdiff*zdiff >= 100) continue;
+#endif
+
             simple_map::level level = sm.levels[cur_lev];
             simple_map::map_data tiledat = level.d[x_index][z];
             uint16_t fti = level.floor_tex_index[tiledat.floor_tex];
