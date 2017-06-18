@@ -412,29 +412,34 @@ void draw_objs(const std::vector<sprite_info>& info) {
 
 }
 
-float slope_mod(float sub_x, float sub_z) {
-    int tile_x = 63 - (sub_x / 2 - 1);
-    int tile_z = sub_z / 2;
+float slope_mod(float x, float z) {
+    //int tile_x = 63 - (x / 2 - 1);
+    //int tile_z = z / 2;
+    int tile_x = int((128.0f - x)/2.0f);
+    int tile_z = int(z/2.0f);
     auto type = sm.levels[cur_lev].d[tile_x][tile_z].type;
     float slopemod = 0.0;
-    sub_x = sub_x - 2.0 * float(63 - tile_x);
-    sub_z = sub_z - 2.0 * float(tile_z);
+    float sub_x = fmod(x,2.0f);
+    float sub_z = fmod(z,2.0f);
     //cout<<"subx: "<<sub_x<<", subz: "<<sub_z<<endl;
+    assert(sub_x >=0 && sub_x < 2);
+    assert(sub_z >=0 && sub_z < 2);
     if(type == simple_map::SLOPE_N) {
         slopemod = sub_z / 4.0;
     }
     else if(type == simple_map::SLOPE_S) {
         slopemod = 0.5 - (sub_z / 4.0);
     }
-    //else if(type == simple_map::SLOPE_E) {
-    //    slopemod = 0.5 - (sub_x / 2.0);
-    //}
-    //else if(type == simple_map::SLOPE_W) {
-    //    slopemod = sub_x / 2.0;
-    //}
-    if(slopemod != 0.0) {
-        cout<<tile_z<<"\t"<<sub_z<<endl;
+    else if(type == simple_map::SLOPE_E) {
+        slopemod = 0.5 - (sub_x / 4.0);
     }
+    else if(type == simple_map::SLOPE_W) {
+        slopemod = sub_x / 4.0;
+    }
+    if(slopemod != 0.0) {
+        //cout<<"("<<tile_x<<", "<<tile_z<<")\t("<<sub_x<<", "<<sub_z<<")"<<endl;
+    }
+    assert(slopemod >= 0.0 && slopemod <= 0.5);
     return slopemod;
 }
 
@@ -443,21 +448,21 @@ void constrain_movement(float new_xpos, float new_ypos, float new_zpos) {
     camXPos = new_xpos;
     camYPos = new_ypos;
     camZPos = new_zpos;
-    cout<<"("<<camXPos<<", "<<camYPos<<", "<<camZPos<<")"<<endl;
+    //cout<<"("<<camXPos<<", "<<camYPos<<", "<<camZPos<<")"<<endl;
 #else
 
+    bool movethere = true;
     //TODO: 
-    // - Adjust heights for slope
     // - Work out bridges
     // - Work out open vs closed doors
     // - For bridges+doors, maybe add something to simple_map to query if they exist for a block, find their state, etc
 
 
     //Calculate which tiles I'm in, for comparison
-    int cur_tile_x = 63 - (camXPos / 2 - 1);
-    int cur_tile_z = camZPos / 2;
-    int new_tile_x = 63 - (new_xpos / 2 - 1);
-    int new_tile_z = new_zpos / 2;
+    int cur_tile_x = int((128.0f - camXPos) / 2.0f);
+    int cur_tile_z = int(camZPos / 2.0f);
+    int new_tile_x = int((128.0f-new_xpos)/2.0f);
+    int new_tile_z = int(new_zpos / 2.0f);
 
     simple_map::map_data tiledat = sm.levels[cur_lev].d[cur_tile_x][cur_tile_z];
     simple_map::map_data new_tiledat = sm.levels[cur_lev].d[new_tile_x][new_tile_z];
@@ -470,36 +475,40 @@ void constrain_movement(float new_xpos, float new_ypos, float new_zpos) {
         if((new_tiledat.type == simple_map::SOLID_TILE || new_tiledat.type == simple_map::INVALID) 
                 && tiledat.type != simple_map::SOLID_TILE 
                 && tiledat.type != simple_map::INVALID) {
-            return;
+            movethere = false;
         }
 
         //Can't go up things that are too high
         if(new_tiledat.height > tiledat.height + 1) {
-            return;
+            movethere = false;
         }
     }
 
+    float sub_x = fmod(new_xpos,2.0f);
+    float sub_z = fmod(new_zpos,2.0f);
     if(new_tiledat.type == simple_map::DIAG_SE) {
-
+        if(sub_z > -sub_x + 2) movethere = false;
     }
     else if(new_tiledat.type == simple_map::DIAG_SW) {
-
+        if(sub_z > sub_x) movethere = false;
     }
     else if(new_tiledat.type == simple_map::DIAG_NE) {
-
+        if(sub_z < sub_x) movethere = false;
     }
     else if(new_tiledat.type == simple_map::DIAG_NW) {
-
+        if(sub_z < -sub_x + 2) movethere = false;
     }
 
     //cout<<"New tile: ("<<new_tile_x<<", "<<new_tile_z<<") height "<<new_tiledat.height<<", old tile: ("<<cur_tile_x<<", "<<cur_tile_z<<") height "<<tiledat.height<<endl;
     //Apply the decisions that were made, regarding the camera
-    camXPos = (new_xpos + 4.0 * camXPos) / 5.0;
-    camZPos = (new_zpos + 4.0 * camZPos) / 5.0;
-    camYPos = new_tiledat.height / 2.0 + slope_mod(camXPos, camZPos) + 1.5;
-    float base_y = new_tiledat.height / 2.0 + 1.5;
-    if(camYPos != base_y) {
-        cout<<"("<<camXPos<<", "<<camYPos<<" ("<<base_y<<"), "<<camZPos<<")"<<endl;
+    if(movethere) {
+        camXPos = new_xpos;
+        camZPos = new_zpos;
+        camYPos = new_tiledat.height / 2.0 + slope_mod(camXPos, camZPos) + 1.5;
+        float base_y = new_tiledat.height / 2.0 + 1.5;
+        if(camYPos != base_y) {
+            //cout<<"("<<camXPos<<", "<<camYPos<<" ("<<base_y<<"), "<<camZPos<<")"<<endl;
+        }
     }
 #endif
 }
@@ -510,8 +519,8 @@ void constrain_angles(float new_theta, float new_phi) {
     else if(new_phi < -90.0) phi = -90.0;
     else phi = new_phi;
 #else
-    if(new_phi > 30.0) phi = 30.0;
-    else if(new_phi < -30.0) phi = -30.0;
+    if(new_phi > 45.0) phi = 45.0;
+    else if(new_phi < -45.0) phi = -45.0;
     else phi = new_phi;
 #endif
 
@@ -581,32 +590,33 @@ void update_state(sf::RenderWindow &window) {
 
     thetaR = theta * M_PI / 180.0;
     phiR = phi * M_PI / 180.0;
+    float speed = 0.25f;
     //Keyboard movement control
     if(keys[sf::Keyboard::A]) {
-        prop_camXPos += -1.0 * cos(thetaR) * cos(phiR);
-        prop_camYPos += 0;
-        prop_camZPos += -1.0 * sin(thetaR) * cos(phiR);
+        prop_camXPos += -speed * cos(thetaR) * cos(phiR);
+        prop_camYPos +=  0;
+        prop_camZPos += -speed * sin(thetaR) * cos(phiR);
     }
     if(keys[sf::Keyboard::D]) {
-        prop_camXPos += cos(thetaR) * cos(phiR);
-        prop_camYPos += 0;
-        prop_camZPos += sin(thetaR) * cos(phiR);
+        prop_camXPos +=  speed * cos(thetaR) * cos(phiR);
+        prop_camYPos +=  0;
+        prop_camZPos +=  speed * sin(thetaR) * cos(phiR);
     }
     if(keys[sf::Keyboard::S]) {
-        prop_camXPos += -1.0 * sin(thetaR) * cos(phiR);
-        prop_camYPos += sin(phiR);
-        prop_camZPos += cos(thetaR) * cos(phiR);
+        prop_camXPos += -speed * sin(thetaR) * cos(phiR);
+        prop_camYPos +=  speed * sin(phiR);
+        prop_camZPos +=  speed * cos(thetaR) * cos(phiR);
     }
     if(keys[sf::Keyboard::W]) {
-        prop_camXPos += sin(thetaR) * cos(phiR);
-        prop_camYPos += -1.0 * sin(phiR);
-        prop_camZPos += -1.0 * cos(thetaR) * cos(phiR);
+        prop_camXPos +=  speed * sin(thetaR) * cos(phiR);
+        prop_camYPos += -speed * sin(phiR);
+        prop_camZPos += -speed * cos(thetaR) * cos(phiR);
     }
     if(keys[sf::Keyboard::Space]) {
-        prop_camYPos += 0.5;
+        prop_camYPos +=  speed;
     }
     if(keys[sf::Keyboard::LShift]) {
-        prop_camYPos -= 0.5;
+        prop_camYPos -=  speed;
     }
     if(keys[sf::Keyboard::Num1]) {
         hi_obj_id--;
