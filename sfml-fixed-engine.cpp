@@ -155,9 +155,12 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
         sf::Texture::bind(&(walls.tex[sm.levels[cur_lev].wall_tex_index[obj.owner]]));
     }
     else {
-        //sf::Texture::bind(NULL);
         sf::Texture::bind(NULL);
     }
+
+    //TODO: Remove DEV
+    sf::Texture::bind(NULL);
+    glColor3f(1.0,0.5,0.0); //walls +Z Axis (bright blue)
 
     heading += 180.0f;
     if(heading >= 360.0f)
@@ -204,10 +207,10 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
 
     glVertexPointer(3, GL_FLOAT, 0, &mod_vertex[model_num][0]);
     glEnableClientState(GL_VERTEX_ARRAY);
-    glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
-    glEnableClientState(GL_COLOR_ARRAY);
+    //glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
+    //glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    //glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
+    //glEnableClientState(GL_COLOR_ARRAY);
 
     assert(mod_color.size() == mod_vertex.size());
     //int verts_to_draw = (mod_vertex[model_num].size() / 3 > ptcnt) ? ptcnt : mod_vertex[model_num].size() / 3;
@@ -225,9 +228,28 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     //    glDrawArrays(GL_TRIANGLES, 0, faces * 3); //3 = number of coordinates per vertex
     //}
 
-    glDisableClientState(GL_COLOR_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    //glDisableClientState(GL_COLOR_ARRAY);
+    //glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
+
+    glColor3f(0.0,0.0,1.0); //walls +Z Axis (bright blue)
+    glBegin(GL_LINES);
+      glVertex3f(model[model_num].cent_x, 0.0,model[model_num].cent_y);
+      glVertex3f(model[model_num].cent_x,40.0,model[model_num].cent_y);
+    glEnd();
+
+    glColor3f(1.0,0.0,0.0); //walls +Z Axis (bright blue)
+    glBegin(GL_LINES);
+      glVertex3f(model[model_num].cent_x1, 0.0,model[model_num].cent_y1);
+      glVertex3f(model[model_num].cent_x1,40.0,model[model_num].cent_y1);
+    glEnd();
+
+    glColor3f(1.0,1.0,1.0); //walls +Z Axis (bright blue)
+    glBegin(GL_LINES);
+      glVertex3f(0.0, 0.0,0.0);
+      glVertex3f(0.0,40.0,0.0);
+    glEnd();
+
     glPopMatrix();
 }
 
@@ -375,6 +397,7 @@ void draw_objs(const std::vector<sprite_info>& info) {
           glDisableClientState(GL_VERTEX_ARRAY);
         glPopMatrix();
     }
+
 }
 
 void update_state(sf::RenderWindow &window) {
@@ -546,6 +569,20 @@ void draw_level_bounds() {
             glVertex3fv(plane[1]);
           glEnd();
         glPopMatrix();
+    }
+
+    glColor3f(0.4,0.4,0.4); //walls +Z Axis (bright blue)
+    for(float x = 0; x < 128.0; x+=0.25) {
+        if(int(x*4)%8 == 0)
+            glLineWidth(4);
+        else 
+            glLineWidth(1);
+        glBegin(GL_LINES);
+          glVertex3f(x,8.01,0.0);
+          glVertex3f(x,8.01,128.0);
+          glVertex3f(0.0,8.01,x);
+          glVertex3f(128.0,8.01,x);
+        glEnd();
     }
 }
 
