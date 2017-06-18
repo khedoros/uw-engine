@@ -412,16 +412,127 @@ void draw_objs(const std::vector<sprite_info>& info) {
 
 }
 
+float slope_mod(float sub_x, float sub_z) {
+    int tile_x = 63 - (sub_x / 2 - 1);
+    int tile_z = sub_z / 2;
+    auto type = sm.levels[cur_lev].d[tile_x][tile_z].type;
+    float slopemod = 0.0;
+    sub_x = sub_x - 2.0 * float(63 - tile_x);
+    sub_z = sub_z - 2.0 * float(tile_z);
+    //cout<<"subx: "<<sub_x<<", subz: "<<sub_z<<endl;
+    if(type == simple_map::SLOPE_N) {
+        slopemod = sub_z / 4.0;
+    }
+    else if(type == simple_map::SLOPE_S) {
+        slopemod = 0.5 - (sub_z / 4.0);
+    }
+    //else if(type == simple_map::SLOPE_E) {
+    //    slopemod = 0.5 - (sub_x / 2.0);
+    //}
+    //else if(type == simple_map::SLOPE_W) {
+    //    slopemod = sub_x / 2.0;
+    //}
+    if(slopemod != 0.0) {
+        cout<<tile_z<<"\t"<<sub_z<<endl;
+    }
+    return slopemod;
+}
+
+void constrain_movement(float new_xpos, float new_ypos, float new_zpos) {
+#ifdef DEVBUILD
+    camXPos = new_xpos;
+    camYPos = new_ypos;
+    camZPos = new_zpos;
+    cout<<"("<<camXPos<<", "<<camYPos<<", "<<camZPos<<")"<<endl;
+#else
+
+    //TODO: 
+    // - Adjust heights for slope
+    // - Work out bridges
+    // - Work out open vs closed doors
+    // - For bridges+doors, maybe add something to simple_map to query if they exist for a block, find their state, etc
+
+
+    //Calculate which tiles I'm in, for comparison
+    int cur_tile_x = 63 - (camXPos / 2 - 1);
+    int cur_tile_z = camZPos / 2;
+    int new_tile_x = 63 - (new_xpos / 2 - 1);
+    int new_tile_z = new_zpos / 2;
+
+    simple_map::map_data tiledat = sm.levels[cur_lev].d[cur_tile_x][cur_tile_z];
+    simple_map::map_data new_tiledat = sm.levels[cur_lev].d[new_tile_x][new_tile_z];
+
+    //If not staying in the current tile...
+    if(cur_tile_x != new_tile_x || cur_tile_z != new_tile_z) {
+        //Make the data more easily-visible
+
+        //Don't move onto solid/invalid tiles, unless you're already on one (somehow)
+        if((new_tiledat.type == simple_map::SOLID_TILE || new_tiledat.type == simple_map::INVALID) 
+                && tiledat.type != simple_map::SOLID_TILE 
+                && tiledat.type != simple_map::INVALID) {
+            return;
+        }
+
+        //Can't go up things that are too high
+        if(new_tiledat.height > tiledat.height + 1) {
+            return;
+        }
+    }
+
+    if(new_tiledat.type == simple_map::DIAG_SE) {
+
+    }
+    else if(new_tiledat.type == simple_map::DIAG_SW) {
+
+    }
+    else if(new_tiledat.type == simple_map::DIAG_NE) {
+
+    }
+    else if(new_tiledat.type == simple_map::DIAG_NW) {
+
+    }
+
+    //cout<<"New tile: ("<<new_tile_x<<", "<<new_tile_z<<") height "<<new_tiledat.height<<", old tile: ("<<cur_tile_x<<", "<<cur_tile_z<<") height "<<tiledat.height<<endl;
+    //Apply the decisions that were made, regarding the camera
+    camXPos = (new_xpos + 4.0 * camXPos) / 5.0;
+    camZPos = (new_zpos + 4.0 * camZPos) / 5.0;
+    camYPos = new_tiledat.height / 2.0 + slope_mod(camXPos, camZPos) + 1.5;
+    float base_y = new_tiledat.height / 2.0 + 1.5;
+    if(camYPos != base_y) {
+        cout<<"("<<camXPos<<", "<<camYPos<<" ("<<base_y<<"), "<<camZPos<<")"<<endl;
+    }
+#endif
+}
+
+void constrain_angles(float new_theta, float new_phi) {
+#ifdef DEVBUILD    
+    if(new_phi > 90.0) phi = 90.0;
+    else if(new_phi < -90.0) phi = -90.0;
+    else phi = new_phi;
+#else
+    if(new_phi > 30.0) phi = 30.0;
+    else if(new_phi < -30.0) phi = -30.0;
+    else phi = new_phi;
+#endif
+
+    if(new_theta > 360.0) theta -= 360.0;
+    else if(new_theta < -360.0) theta += 360.0;
+    else theta = new_theta;
+}
+
 void update_state(sf::RenderWindow &window) {
+
+    float prop_theta = theta, prop_phi = phi, prop_camXPos = camXPos, prop_camYPos = camYPos, prop_camZPos = camZPos;
+
     //Keyboard control of view
     if(keys[sf::Keyboard::J])
-        theta -= 5.0;
+        prop_theta = theta - 5.0;
     if(keys[sf::Keyboard::L])
-        theta += 5.0;
+        prop_theta = theta + 5.0;
     if(keys[sf::Keyboard::I])
-        phi -= 5.0;
+        prop_phi = phi - 5.0;
     if(keys[sf::Keyboard::K])
-        phi += 5.0;
+        prop_phi = phi + 5.0;
     //Mouse control of view
     if(mouseCap && inFocus && mousePos != mouseCent) { //detect mouse movement
         mouseDelt = mousePos - mouseCent;
@@ -434,8 +545,8 @@ void update_state(sf::RenderWindow &window) {
         sf::Mouse::setPosition(mouseCent,window);
         //while(window.isOpen() && sf::Mouse::getPosition(window) != mouseCent) {}
         
-        theta += float(mouseDelt.x) * 0.05;
-        phi   += float(mouseDelt.y) * 0.05;
+        prop_theta += float(mouseDelt.x) * 0.05;
+        prop_phi   += float(mouseDelt.y) * 0.05;
     }
 
     /*   Debug-related code (useful for playing with model rendering)
@@ -466,39 +577,36 @@ void update_state(sf::RenderWindow &window) {
     if(ptcnt == 501) ptcnt = 500;
     */    //End of debug-related code
 
+    constrain_angles(prop_theta, prop_phi);
 
-    if(phi > 90.0) phi = 90.0;
-    if(phi < -90.0) phi = -90.0;
-    if(theta > 360.0) theta -= 360.0;
-    if(theta < -360.0) theta += 360.0;
     thetaR = theta * M_PI / 180.0;
     phiR = phi * M_PI / 180.0;
     //Keyboard movement control
     if(keys[sf::Keyboard::A]) {
-        camXPos += -1.0 * cos(thetaR) * cos(phiR);
-        camYPos += 0;
-        camZPos += -1.0 * sin(thetaR) * cos(phiR);
+        prop_camXPos += -1.0 * cos(thetaR) * cos(phiR);
+        prop_camYPos += 0;
+        prop_camZPos += -1.0 * sin(thetaR) * cos(phiR);
     }
     if(keys[sf::Keyboard::D]) {
-        camXPos += cos(thetaR) * cos(phiR);
-        camYPos += 0;
-        camZPos += sin(thetaR) * cos(phiR);
+        prop_camXPos += cos(thetaR) * cos(phiR);
+        prop_camYPos += 0;
+        prop_camZPos += sin(thetaR) * cos(phiR);
     }
     if(keys[sf::Keyboard::S]) {
-        camXPos += -1.0 * sin(thetaR) * cos(phiR);
-        camYPos += sin(phiR);
-        camZPos += cos(thetaR) * cos(phiR);
+        prop_camXPos += -1.0 * sin(thetaR) * cos(phiR);
+        prop_camYPos += sin(phiR);
+        prop_camZPos += cos(thetaR) * cos(phiR);
     }
     if(keys[sf::Keyboard::W]) {
-        camXPos += sin(thetaR) * cos(phiR);
-        camYPos += -1.0 * sin(phiR);
-        camZPos += -1.0 * cos(thetaR) * cos(phiR);
+        prop_camXPos += sin(thetaR) * cos(phiR);
+        prop_camYPos += -1.0 * sin(phiR);
+        prop_camZPos += -1.0 * cos(thetaR) * cos(phiR);
     }
     if(keys[sf::Keyboard::Space]) {
-        camYPos += 0.5;
+        prop_camYPos += 0.5;
     }
     if(keys[sf::Keyboard::LShift]) {
-        camYPos -= 0.5;
+        prop_camYPos -= 0.5;
     }
     if(keys[sf::Keyboard::Num1]) {
         hi_obj_id--;
@@ -524,6 +632,8 @@ void update_state(sf::RenderWindow &window) {
         cur_lev--;
         map_needs_update = true;
     }
+
+    constrain_movement(prop_camXPos, prop_camYPos, prop_camZPos);
 
     #ifndef DEVBUILD
     float diffx = camXPos - old_camXPos;
@@ -595,7 +705,7 @@ void draw_level_bounds() {
         glPopMatrix();
     }
 
-    glColor3f(0.4,0.4,0.4); //walls +Z Axis (bright blue)
+    glColor3f(0.4,0.4,0.4); // object alignment grids
     for(float x = 0; x < 128.0; x+=0.25) {
         if(int(x*4)%8 == 0)
             glLineWidth(4);
