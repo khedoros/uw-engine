@@ -57,6 +57,7 @@ class uw_model {
     static uint32_t shade_offset;
     static bool pal_loaded;
     float cent_x, cent_y, cent_z;
+    float cent_x1, cent_y1, cent_z1;
     int cent_vert;
     float extent_x, extent_y, extent_z;
     int model_index;

@@ -269,16 +269,16 @@ int uw_model::process_nodes(ifstream& in) {
                     break;
                 case 0x0078:
                     cent_vert = read16(in)>>(3);
-                    cent_x = base_pt.x; fix2float(read16(in));
-                    cent_y = base_pt.y; fix2float(read16(in));
-                    cent_z = base_pt.z; fix2float(read16(in));
+                    cent_x = base_pt.x; cent_x1 = fix2float(read16(in));
+                    cent_y = base_pt.y; cent_z1 = fix2float(read16(in));
+                    cent_z = base_pt.z; cent_y1 = fix2float(read16(in));
                     unk16 = read16(in);
                     if(points.size() <= cent_vert ) {
                         points.resize(cent_vert + 1);
                     }
                     points[cent_vert] = point(cent_x,cent_y,cent_z, cent_vert, false);
 #ifdef STAND_ALONE_MODEL
-                    std::cout<<"Define model center ("<<cent_x<<", "<<cent_y<<", "<<cent_z<<") as num "<<cent_vert<<std::endl;
+                    std::cout<<"Define model center ("<<cent_x<<", "<<cent_y<<", "<<cent_z<<"), cent2 ("<<cent_x1<<", "<<cent_y1<<", "<<cent_z1<<") as num "<<cent_vert<<std::endl;
 #endif
                     break;
                 case 0x007A: 
