@@ -166,8 +166,10 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     }
 
     //TODO: Remove DEV
+#ifdef DEVBUILD
     sf::Texture::bind(NULL);
     glColor3f(1.0,0.5,0.0); //walls +Z Axis (bright blue)
+#endif
 
     heading += 180.0f;
     if(heading >= 360.0f)
@@ -214,10 +216,12 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
 
     glVertexPointer(3, GL_FLOAT, 0, &mod_vertex[model_num][0]);
     glEnableClientState(GL_VERTEX_ARRAY);
-    //glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
-    //glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    //glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
-    //glEnableClientState(GL_COLOR_ARRAY);
+#ifndef DEVBUILD
+    glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
+    glEnableClientState(GL_COLOR_ARRAY);
+#endif
 
     assert(mod_color.size() == mod_vertex.size());
     //int verts_to_draw = (mod_vertex[model_num].size() / 3 > ptcnt) ? ptcnt : mod_vertex[model_num].size() / 3;
@@ -235,10 +239,13 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     //    glDrawArrays(GL_TRIANGLES, 0, faces * 3); //3 = number of coordinates per vertex
     //}
 
-    //glDisableClientState(GL_COLOR_ARRAY);
-    //glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+#ifndef DEVBUILD
+    glDisableClientState(GL_COLOR_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+#endif
     glDisableClientState(GL_VERTEX_ARRAY);
 
+#ifdef DEVBUILD
     glColor3f(0.0,0.0,1.0); //walls +Z Axis (bright blue)
     glBegin(GL_LINES);
       glVertex3f(model[model_num].cent_x, 0.0,model[model_num].cent_y);
@@ -256,7 +263,7 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
       glVertex3f(0.0, 0.0,0.0);
       glVertex3f(0.0,40.0,0.0);
     glEnd();
-
+#endif
     glPopMatrix();
 }
 
@@ -1267,6 +1274,9 @@ void gameloop() {
     //glDisable(GL_CULL_FACE);
     glEnable(GL_TEXTURE_2D);
     glPointSize(4);
+
+    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHTING);
 
     bool redraw = true;
     while(window.isOpen()) {
