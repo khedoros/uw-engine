@@ -19,23 +19,32 @@ bool mouse_buttons[sf::Mouse::ButtonCount];
 int winW = 800;
 int winH = 600;
 sf::Vector2i mousePos, mouseDelt, mouseCent(winW/2, winH/2), realCent(winW/2, winH/2);
-float theta = 180.0;
-float phi   = 0.0;
-float thetaR = M_PI;
-float phiR = 0.0;
-float camXPos = 64.0;
-float camYPos = 7.5;
-float camZPos = 4.0;
 
-#ifndef DEVBUILD
-float old_camXPos = 64.0;
-float old_camYPos = 7.5;
-float old_camZPos = 4.0;
+struct camera {
+    float theta = 180.0;
+    float phi   = 0.0;
+    float thetaR = M_PI;
+    float phiR = 0.0;
+    float camXPos = 64.0;
+    float camYPos = 7.5;
+    float camZPos = 4.0;
+    float old_camXPos = 64.0;
+    float old_camYPos = 7.5;
+    float old_camZPos = 4.0;
+};
+
+camera walker;
+#ifdef DEVBUILD
+camera flyer;
 #endif
+
+camera * cam = &walker;
+
 
 wchar_t textChar;
 bool mouseCap = false;
 bool inFocus = true;
+bool lighting = false;
 int anim_framecount = 0;
 int anim_div = 0;
 int hi_obj_id = 0;
@@ -94,7 +103,7 @@ class sprite_info {
             yloc = float(y) * 2.0 + (float(sm.levels[cur_lev].items[index - 256].ypos) / 4.0);
             zloc = float(sm.levels[cur_lev].items[index - 256].zpos) / 16.0;
        }
-       distance = sqrt(((xloc - camXPos) * (xloc - camXPos)) + ((yloc - camZPos) * (yloc - camZPos)) + ((zloc - camYPos) * (zloc - camYPos)));
+       distance = sqrt(((xloc - cam->camXPos) * (xloc - cam->camXPos)) + ((yloc - cam->camZPos) * (yloc - cam->camZPos)) + ((zloc - cam->camYPos) * (zloc - cam->camYPos)));
     }
 
     float distance;
@@ -166,12 +175,6 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
         sf::Texture::bind(NULL);
     }
 
-    //TODO: Remove DEV
-#ifdef DEVBUILD
-    sf::Texture::bind(NULL);
-    glColor3f(1.0,0.5,0.0); //walls +Z Axis (bright blue)
-#endif
-
     heading += 180.0f;
     if(heading >= 360.0f)
         heading -= 360.0f;
@@ -217,12 +220,10 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
 
     glVertexPointer(3, GL_FLOAT, 0, &mod_vertex[model_num][0]);
     glEnableClientState(GL_VERTEX_ARRAY);
-#ifndef DEVBUILD
     glTexCoordPointer(2, GL_FLOAT, 0, &mod_texmap[model_num][0]);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glColorPointer(3, GL_FLOAT, 0, &mod_color[model_num][0]);
     glEnableClientState(GL_COLOR_ARRAY);
-#endif
 
     assert(mod_color.size() == mod_vertex.size());
     //int verts_to_draw = (mod_vertex[model_num].size() / 3 > ptcnt) ? ptcnt : mod_vertex[model_num].size() / 3;
@@ -240,31 +241,29 @@ void draw_model(float xloc, float yloc, float zloc, float heading, int model_num
     //    glDrawArrays(GL_TRIANGLES, 0, faces * 3); //3 = number of coordinates per vertex
     //}
 
-#ifndef DEVBUILD
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-#endif
     glDisableClientState(GL_VERTEX_ARRAY);
 
-#ifdef DEVBUILD
-    glColor3f(0.0,0.0,1.0); //walls +Z Axis (bright blue)
-    glBegin(GL_LINES);
-      glVertex3f(model[model_num].cent_x, 0.0,model[model_num].cent_y);
-      glVertex3f(model[model_num].cent_x,40.0,model[model_num].cent_y);
-    glEnd();
+    if(mouseCap) {
+        glColor3f(0.0,0.0,1.0); //walls +Z Axis (bright blue)
+        glBegin(GL_LINES);
+          glVertex3f(model[model_num].cent_x, 0.0,model[model_num].cent_y);
+          glVertex3f(model[model_num].cent_x,40.0,model[model_num].cent_y);
+        glEnd();
 
-    glColor3f(1.0,0.0,0.0); //walls +Z Axis (bright blue)
-    glBegin(GL_LINES);
-      glVertex3f(model[model_num].cent_x1, 0.0,model[model_num].cent_y1);
-      glVertex3f(model[model_num].cent_x1,40.0,model[model_num].cent_y1);
-    glEnd();
+        glColor3f(1.0,0.0,0.0); //walls +Z Axis (bright blue)
+        glBegin(GL_LINES);
+          glVertex3f(model[model_num].cent_x1, 0.0,model[model_num].cent_y1);
+          glVertex3f(model[model_num].cent_x1,40.0,model[model_num].cent_y1);
+        glEnd();
 
-    glColor3f(1.0,1.0,1.0); //walls +Z Axis (bright blue)
-    glBegin(GL_LINES);
-      glVertex3f(0.0, 0.0,0.0);
-      glVertex3f(0.0,40.0,0.0);
-    glEnd();
-#endif
+        glColor3f(1.0,1.0,1.0); //walls +Z Axis (bright blue)
+        glBegin(GL_LINES);
+          glVertex3f(0.0, 0.0,0.0);
+          glVertex3f(0.0,40.0,0.0);
+        glEnd();
+    }
     glPopMatrix();
 }
 
@@ -279,14 +278,12 @@ void draw_objs(const std::vector<sprite_info>& info) {
         y = i.y;
         first_obj = i.index;
 
-#ifndef DEVBUILD
-        if(i.distance >= 10) continue;
-#endif
+        if(!mouseCap && i.distance >= 10) continue;
 
         if(first_obj == 0) return;
         float xloc = 0.0, yloc = 0.0, zloc = 0.0, w = 0.0, h = 0.0, hsx = 0.0, hsy = 0.0, scale = 32.0;
-        float obj_theta = -1 * theta;
-        float obj_phi = -1 * phi;
+        float obj_theta = -1 * cam->theta;
+        float obj_phi = -1 * cam->phi;
         float heading = 0;
         uint16_t obj_id = 0;
         bool is_npc = (first_obj < 256);
@@ -306,8 +303,8 @@ void draw_objs(const std::vector<sprite_info>& info) {
             heading = obj.info.heading;
             heading *= 45.0;
             
-            float cam_heading = atan((yloc - camZPos) / (xloc - camXPos) ) * 180.0 / M_PI; //camera heading to the npc
-            if(xloc - camXPos < 0) cam_heading += 180; //tan^-1's output doesn't distinguish which side of the circle the angle's on
+            float cam_heading = atan((yloc - cam->camZPos) / (xloc - cam->camXPos) ) * 180.0 / M_PI; //camera heading to the npc
+            if(xloc - cam->camXPos < 0) cam_heading += 180; //tan^-1's output doesn't distinguish which side of the circle the angle's on
             heading = heading - cam_heading; //Find the difference between where the npc is facing and the direction to the camera
             if(heading > 360.0) heading -= 360.0; //Keep the heading within the expected range.
             if(heading < 0.0) heading += 360.0;
@@ -471,104 +468,106 @@ float slope_mod(float x, float z) {
 }
 
 void constrain_movement(float new_xpos, float new_ypos, float new_zpos) {
-#ifdef DEVBUILD
-    camXPos = new_xpos;
-    camYPos = new_ypos;
-    camZPos = new_zpos;
+    if(mouseCap) {
+        cam->camXPos = new_xpos;
+        cam->camYPos = new_ypos;
+        cam->camZPos = new_zpos;
+    }
+    else {
     //cout<<"("<<camXPos<<", "<<camYPos<<", "<<camZPos<<")"<<endl;
-#else
 
-    bool movethere = true;
-    //TODO: 
-    // - Work out bridges
-    // - Work out open vs closed doors
-    // - For bridges+doors, maybe add something to simple_map to query if they exist for a block, find their state, etc
+        bool movethere = true;
+        //TODO: 
+        // - Work out bridges
+        // - Work out open vs closed doors
+        // - For bridges+doors, maybe add something to simple_map to query if they exist for a block, find their state, etc
 
 
-    //Calculate which tiles I'm in, for comparison
-    int cur_tile_x = int((128.0f - camXPos) / 2.0f);
-    int cur_tile_z = int(camZPos / 2.0f);
-    int new_tile_x = int((128.0f-new_xpos)/2.0f);
-    int new_tile_z = int(new_zpos / 2.0f);
+        //Calculate which tiles I'm in, for comparison
+        int cur_tile_x = int((128.0f - cam->camXPos) / 2.0f);
+        int cur_tile_z = int(cam->camZPos / 2.0f);
+        int new_tile_x = int((128.0f-new_xpos)/2.0f);
+        int new_tile_z = int(new_zpos / 2.0f);
 
-    simple_map::map_data tiledat = sm.levels[cur_lev].d[cur_tile_x][cur_tile_z];
-    simple_map::map_data new_tiledat = sm.levels[cur_lev].d[new_tile_x][new_tile_z];
+        simple_map::map_data tiledat = sm.levels[cur_lev].d[cur_tile_x][cur_tile_z];
+        simple_map::map_data new_tiledat = sm.levels[cur_lev].d[new_tile_x][new_tile_z];
 
-    //If not staying in the current tile...
-    if(cur_tile_x != new_tile_x || cur_tile_z != new_tile_z) {
-        //Make the data more easily-visible
+        //If not staying in the current tile...
+        if(cur_tile_x != new_tile_x || cur_tile_z != new_tile_z) {
+            //Make the data more easily-visible
 
-        //Don't move onto solid/invalid tiles, unless you're already on one (somehow)
-        if((new_tiledat.type == simple_map::SOLID_TILE || new_tiledat.type == simple_map::INVALID) 
-                && tiledat.type != simple_map::SOLID_TILE 
-                && tiledat.type != simple_map::INVALID) {
-            movethere = false;
+            //Don't move onto solid/invalid tiles, unless you're already on one (somehow)
+            if((new_tiledat.type == simple_map::SOLID_TILE || new_tiledat.type == simple_map::INVALID) 
+                    && tiledat.type != simple_map::SOLID_TILE 
+                    && tiledat.type != simple_map::INVALID) {
+                movethere = false;
+            }
+
+            //Can't go up things that are too high
+            if(new_tiledat.height > tiledat.height + 1) {
+                movethere = false;
+            }
         }
 
-        //Can't go up things that are too high
-        if(new_tiledat.height > tiledat.height + 1) {
-            movethere = false;
+        float sub_x = fmod(new_xpos,2.0f);
+        float sub_z = fmod(new_zpos,2.0f);
+        if(new_tiledat.type == simple_map::DIAG_SE) {
+            if(sub_z > -sub_x + 2) movethere = false;
+        }
+        else if(new_tiledat.type == simple_map::DIAG_SW) {
+            if(sub_z > sub_x) movethere = false;
+        }
+        else if(new_tiledat.type == simple_map::DIAG_NE) {
+            if(sub_z < sub_x) movethere = false;
+        }
+        else if(new_tiledat.type == simple_map::DIAG_NW) {
+            if(sub_z < -sub_x + 2) movethere = false;
+        }
+
+        //cout<<"New tile: ("<<new_tile_x<<", "<<new_tile_z<<") height "<<new_tiledat.height<<", old tile: ("<<cur_tile_x<<", "<<cur_tile_z<<") height "<<tiledat.height<<endl;
+        //Apply the decisions that were made, regarding the camera
+        if(movethere) {
+            cam->camXPos = new_xpos;
+            cam->camZPos = new_zpos;
+            cam->camYPos = new_tiledat.height / 2.0 + slope_mod(cam->camXPos, cam->camZPos) + 1.5;
+            float base_y = new_tiledat.height / 2.0 + 1.5;
+            if(cam->camYPos != base_y) {
+                //cout<<"("<<camXPos<<", "<<camYPos<<" ("<<base_y<<"), "<<camZPos<<")"<<endl;
+            }
         }
     }
-
-    float sub_x = fmod(new_xpos,2.0f);
-    float sub_z = fmod(new_zpos,2.0f);
-    if(new_tiledat.type == simple_map::DIAG_SE) {
-        if(sub_z > -sub_x + 2) movethere = false;
-    }
-    else if(new_tiledat.type == simple_map::DIAG_SW) {
-        if(sub_z > sub_x) movethere = false;
-    }
-    else if(new_tiledat.type == simple_map::DIAG_NE) {
-        if(sub_z < sub_x) movethere = false;
-    }
-    else if(new_tiledat.type == simple_map::DIAG_NW) {
-        if(sub_z < -sub_x + 2) movethere = false;
-    }
-
-    //cout<<"New tile: ("<<new_tile_x<<", "<<new_tile_z<<") height "<<new_tiledat.height<<", old tile: ("<<cur_tile_x<<", "<<cur_tile_z<<") height "<<tiledat.height<<endl;
-    //Apply the decisions that were made, regarding the camera
-    if(movethere) {
-        camXPos = new_xpos;
-        camZPos = new_zpos;
-        camYPos = new_tiledat.height / 2.0 + slope_mod(camXPos, camZPos) + 1.5;
-        float base_y = new_tiledat.height / 2.0 + 1.5;
-        if(camYPos != base_y) {
-            //cout<<"("<<camXPos<<", "<<camYPos<<" ("<<base_y<<"), "<<camZPos<<")"<<endl;
-        }
-    }
-#endif
 }
 
 void constrain_angles(float new_theta, float new_phi) {
-#ifdef DEVBUILD    
-    if(new_phi > 90.0) phi = 90.0;
-    else if(new_phi < -90.0) phi = -90.0;
-    else phi = new_phi;
-#else
-    if(new_phi > 45.0) phi = 45.0;
-    else if(new_phi < -45.0) phi = -45.0;
-    else phi = new_phi;
-#endif
+    if(mouseCap) {
+        if(new_phi > 90.0) cam->phi = 90.0;
+        else if(new_phi < -90.0) cam->phi = -90.0;
+        else cam->phi = new_phi;
+    }
+    else {
+        if(new_phi > 45.0) cam->phi = 45.0;
+        else if(new_phi < -45.0) cam->phi = -45.0;
+        else cam->phi = new_phi;
+    }
 
-    if(new_theta > 360.0) theta -= 360.0;
-    else if(new_theta < -360.0) theta += 360.0;
-    else theta = new_theta;
+    if(new_theta > 360.0) cam->theta -= 360.0;
+    else if(new_theta < -360.0) cam->theta += 360.0;
+    else cam->theta = new_theta;
 }
 
 void update_state(sf::RenderWindow &window) {
 
-    float prop_theta = theta, prop_phi = phi, prop_camXPos = camXPos, prop_camYPos = camYPos, prop_camZPos = camZPos;
+    float prop_theta = cam->theta, prop_phi = cam->phi, prop_camXPos = cam->camXPos, prop_camYPos = cam->camYPos, prop_camZPos = cam->camZPos;
 
     //Keyboard control of view
     if(keys[sf::Keyboard::J])
-        prop_theta = theta - 5.0;
+        prop_theta = cam->theta - 5.0;
     if(keys[sf::Keyboard::L])
-        prop_theta = theta + 5.0;
+        prop_theta = cam->theta + 5.0;
     if(keys[sf::Keyboard::I])
-        prop_phi = phi - 5.0;
+        prop_phi = cam->phi - 5.0;
     if(keys[sf::Keyboard::K])
-        prop_phi = phi + 5.0;
+        prop_phi = cam->phi + 5.0;
     //Mouse control of view
     if(mouseCap && inFocus && mousePos != mouseCent) { //detect mouse movement
         mouseDelt = mousePos - mouseCent;
@@ -615,29 +614,43 @@ void update_state(sf::RenderWindow &window) {
 
     constrain_angles(prop_theta, prop_phi);
 
-    thetaR = theta * M_PI / 180.0;
-    phiR = phi * M_PI / 180.0;
+    cam->thetaR = cam->theta * M_PI / 180.0;
+    cam->phiR = cam->phi * M_PI / 180.0;
     float speed = 0.25f;
     //Keyboard movement control
     if(keys[sf::Keyboard::A]) {
-        prop_camXPos += -speed * cos(thetaR) * cos(phiR);
+        prop_camXPos += -speed * cos(cam->thetaR) * cos(cam->phiR);
         prop_camYPos +=  0;
-        prop_camZPos += -speed * sin(thetaR) * cos(phiR);
+        prop_camZPos += -speed * sin(cam->thetaR) * cos(cam->phiR);
     }
     if(keys[sf::Keyboard::D]) {
-        prop_camXPos +=  speed * cos(thetaR) * cos(phiR);
+        prop_camXPos +=  speed * cos(cam->thetaR) * cos(cam->phiR);
         prop_camYPos +=  0;
-        prop_camZPos +=  speed * sin(thetaR) * cos(phiR);
+        prop_camZPos +=  speed * sin(cam->thetaR) * cos(cam->phiR);
     }
     if(keys[sf::Keyboard::S]) {
-        prop_camXPos += -speed * sin(thetaR) * cos(phiR);
-        prop_camYPos +=  speed * sin(phiR);
-        prop_camZPos +=  speed * cos(thetaR) * cos(phiR);
+        prop_camXPos += -speed * sin(cam->thetaR) * cos(cam->phiR);
+        prop_camYPos +=  speed * sin(cam->phiR);
+        prop_camZPos +=  speed * cos(cam->thetaR) * cos(cam->phiR);
     }
     if(keys[sf::Keyboard::W]) {
-        prop_camXPos +=  speed * sin(thetaR) * cos(phiR);
-        prop_camYPos += -speed * sin(phiR);
-        prop_camZPos += -speed * cos(thetaR) * cos(phiR);
+        prop_camXPos +=  speed * sin(cam->thetaR) * cos(cam->phiR);
+        prop_camYPos += -speed * sin(cam->phiR);
+        prop_camZPos += -speed * cos(cam->thetaR) * cos(cam->phiR);
+    }
+    if(keys[sf::Keyboard::F]) {
+#ifdef DEVBUILD
+        lighting = !lighting;
+#endif
+        if(lighting) {
+            glEnable(GL_LIGHT0);
+            glEnable(GL_LIGHTING);
+        }
+        else {
+            glDisable(GL_LIGHT0);
+            glDisable(GL_LIGHTING);
+        }
+        keys[sf::Keyboard::F] = false;
     }
     if(keys[sf::Keyboard::Space]) {
         prop_camYPos +=  speed;
@@ -672,17 +685,17 @@ void update_state(sf::RenderWindow &window) {
 
     constrain_movement(prop_camXPos, prop_camYPos, prop_camZPos);
 
-    #ifndef DEVBUILD
-    float diffx = camXPos - old_camXPos;
-    float diffy = camYPos - old_camYPos;
-    float diffz = camZPos - old_camZPos;
-    if(diffx*diffx + diffy*diffy + diffz*diffz > 9) {
-        map_needs_update = true;
-        old_camXPos = camXPos;
-        old_camYPos = camYPos;
-        old_camZPos = camZPos;
+    if(!mouseCap) {
+        float diffx = cam->camXPos - cam->old_camXPos;
+        float diffy = cam->camYPos - cam->old_camYPos;
+        float diffz = cam->camZPos - cam->old_camZPos;
+        if(diffx*diffx + diffy*diffy + diffz*diffz > 9) {
+            map_needs_update = true;
+            cam->old_camXPos = cam->camXPos;
+            cam->old_camYPos = cam->camYPos;
+            cam->old_camZPos = cam->camZPos;
+        }
     }
-    #endif
 }
 
 void draw_level_bounds() {
@@ -771,7 +784,9 @@ void update_level_map() {
     }
 
 #ifdef DEVBUILD
-    tris.resize(0);
+    if(mouseCap) {
+        tris.resize(0);
+    }
 #endif
     for(int texnum=0;texnum < 512; texnum++) {
         quads[texnum].resize(0);
@@ -783,12 +798,12 @@ void update_level_map() {
         for(int z = 0;z<64;++z) {
             int x_index = 63 - x; //I want x to go in the other direction
 
-#ifndef DEVBUILD
-            float xdiff = x * 2 - camXPos;
-            float zdiff = z * 2 - camZPos;
+            if(!mouseCap) {
+                float xdiff = x * 2 - cam->camXPos;
+                float zdiff = z * 2 - cam->camZPos;
 
-            if(xdiff*xdiff + zdiff*zdiff >= 100) continue;
-#endif
+                if(xdiff*xdiff + zdiff*zdiff >= 100) continue;
+            }
 
             simple_map::level level = sm.levels[cur_lev];
             simple_map::map_data tiledat = level.d[x_index][z];
@@ -860,9 +875,7 @@ void update_level_map() {
                 index = fti;
             }
 
-#ifndef DEVBUILD
-            if(t == simple_map::SOLID_TILE) continue;
-#endif
+            if(!mouseCap && t == simple_map::SOLID_TILE) continue;
 
             //Draw the floor
             //TODO: floors aren't all straight up, might need fixed if the lighting is noticeably wrong
@@ -916,11 +929,12 @@ void update_level_map() {
             if(t == simple_map::DIAG_SE) {
             //Draw SE top cap
 #ifdef DEVBUILD
-                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
-                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
-                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
+                if(mouseCap) {
+                    tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
+                    tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
+                    tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
+                }
 #endif
-
                 push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x,8.0,2*z+2);
                 push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x+2,8.0,2*z);
                 push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x+2,h,2*z);
@@ -929,11 +943,12 @@ void update_level_map() {
             else if(t == simple_map::DIAG_NW) {
             //Draw NW top cap
 #ifdef DEVBUILD
-                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
-                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
-                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
+                if(mouseCap) {
+                    tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
+                    tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
+                    tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
+                }
 #endif
-
                 push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x+2,8.0,2*z);
                 push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x,8.0,2*z+2);
                 push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x,h,2*z+2);
@@ -942,11 +957,12 @@ void update_level_map() {
             else if(t == simple_map::DIAG_SW) {
             //Draw SW top cap
 #ifdef DEVBUILD
-                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
-                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
-                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
+                if(mouseCap) {
+                    tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
+                    tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
+                    tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
+                }
 #endif
-
                 push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x,8.0,2*z);
                 push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x+2,8.0,2*z+2);
                 push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
@@ -955,11 +971,12 @@ void update_level_map() {
             else if(t == simple_map::DIAG_NE) {
             //Draw NE top cap
 #ifdef DEVBUILD
-                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
-                tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
-                tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
+                if(mouseCap) {
+                    tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
+                    tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z);
+                    tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
+                }
 #endif
-
                 push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x+2,8.0,2*z+2);
                 push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x,8.0,2*z);
                 push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x,h,2*z);
@@ -1003,19 +1020,19 @@ void render_3d() {
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glLoadIdentity ();
 
-    glRotatef(theta, 0.0, 1.0, 0.0); //Rotate perspective around Y axis
-    glRotatef(phi, cos(thetaR), 0.0, sin(thetaR)); //Rotate pespective around camera's X axis
+    glRotatef(cam->theta, 0.0, 1.0, 0.0); //Rotate perspective around Y axis
+    glRotatef(cam->phi, cos(cam->thetaR), 0.0, sin(cam->thetaR)); //Rotate pespective around camera's X axis
 
-    glTranslatef(-1.0*camXPos, -1.0*camYPos, -1.0*camZPos); //Translate the world to where the camera expects it to be
+    glTranslatef(-1.0*cam->camXPos, -1.0*cam->camYPos, -1.0*cam->camZPos); //Translate the world to where the camera expects it to be
 
     //GLfloat position[] = {camXPos, camYPos, camZPos, 1.0};
     GLfloat position[] = {0,0,0, 1.0};
     glLightfv(GL_LIGHT0, GL_POSITION, &position[0]);
 
-#ifdef DEVBUILD
-    //Draw a bounding/orientation box around the level
-    draw_level_bounds();
-#endif
+    if(mouseCap) {
+        //Draw a bounding/orientation box around the level
+        draw_level_bounds();
+    }
 
     simple_map::level level = sm.levels[cur_lev];
     uint16_t cti = level.ceil_tex_index;
@@ -1099,14 +1116,16 @@ void render_3d() {
     }
 
 #ifdef DEVBUILD
-    //Draw the triangular top caps of the level
-    sf::Texture::bind(NULL);
-    glColor3f(0.0,0.0,0.0);
-    glVertexPointer(3, GL_FLOAT, 0, &tris[0]);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glDrawArrays(GL_TRIANGLES, 0, tris.size() / 3); //3 = number of coordinates per vertex
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glColor3f(1.0,1.0,1.0);
+    if(mouseCap) {
+        //Draw the triangular top caps of the level
+        sf::Texture::bind(NULL);
+        glColor3f(0.0,0.0,0.0);
+        glVertexPointer(3, GL_FLOAT, 0, &tris[0]);
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glDrawArrays(GL_TRIANGLES, 0, tris.size() / 3); //3 = number of coordinates per vertex
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glColor3f(1.0,1.0,1.0);
+    }
 #endif
 
     if(sprite_sorter.size() != 0) {
@@ -1303,9 +1322,15 @@ void gameloop() {
     glEnable(GL_TEXTURE_2D);
     glPointSize(4);
 
+#ifndef DEVBUILD
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHTING);
-
+    lighting = true;
+#else
+    glDisable(GL_LIGHT0);
+    glDisable(GL_LIGHTING);
+    lighting = false;
+#endif
     bool redraw = true;
     while(window.isOpen()) {
         sf::Clock c;
@@ -1344,9 +1369,18 @@ void gameloop() {
                     if(event.key.code == sf::Keyboard::Q)
                         window.close();
                     else if(event.key.code == sf::Keyboard::Tab && !keys[sf::Keyboard::Tab]) {
+#ifdef DEVBUILD
                        mouseCap = !mouseCap; 
+                       if(mouseCap) {
+                           cam = &flyer;
+                       }
+                       else {
+                           cam = &walker;
+                       }
+                       map_needs_update = true;
                        cout<<"Mouse captured: "<<mouseCap<<endl;
                        window.setMouseCursorVisible(!mouseCap);
+#endif
                     }
                     keys[event.key.code] = true;
                 }
