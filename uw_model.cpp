@@ -768,6 +768,19 @@ std::vector<float> uw_model::get_verts(output_type type) {
             }
             assert(ret.size() >= faces.size() * 3);
             break;
+        case normals:
+            for(int f = 0; f < faces.size(); f++) {
+                if(!faces[f].fugly || faces[f].points.size() < 4) {
+                    for(int p = 0; p < faces[f].points.size() - 2; p++) {
+                        ret.push_back(faces[f].nx); ret.push_back(faces[f].nz); ret.push_back(faces[f].ny);
+                        ret.push_back(faces[f].nx); ret.push_back(faces[f].nz); ret.push_back(faces[f].ny);
+                        ret.push_back(faces[f].nx); ret.push_back(faces[f].nz); ret.push_back(faces[f].ny);
+                    }
+                }
+                else {
+                }
+            }
+            break;
         case colors:
             //cout<<"Working on "<<faces.size()<<" faces"<<endl;
             for(int f = 0; f < faces.size(); f++) {
