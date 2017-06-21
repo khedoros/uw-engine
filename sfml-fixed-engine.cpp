@@ -57,6 +57,7 @@ std::vector<float> tris(0); //Triangular "top" caps
 #endif
 std::vector<std::vector<float>> quads(512);
 std::vector<std::vector<float>> tex(512);
+std::vector<std::vector<float>> norms(512);
 
 std::vector<uw_model> model;
 std::vector<std::vector<float>> mod_vertex;
@@ -402,6 +403,21 @@ void draw_objs(const std::vector<sprite_info>& info) {
               0.0f-(w/2.0f), 0.0f+h, 0.0f,
           };
 
+          float nx = 0;
+          float ny = 0;
+          float nz = 1;
+          /*
+          float nx = -cos(thetaR) * -cos(phiR);
+          float ny = -sin(phiR);
+          float nz = -sin(thetaR) * -cos(phiR);
+          */
+          const float norm_coords[] = {
+              nx, ny, nz,
+              nx, ny, nz,
+              nx, ny, nz,
+              nx, ny, nz
+          };
+
           sf::Texture::bind(tex);
 
           glVertexPointer(3, GL_FLOAT, 0, vert_coords);
@@ -410,8 +426,12 @@ void draw_objs(const std::vector<sprite_info>& info) {
           glTexCoordPointer(2, GL_FLOAT, 0, tex_coords);
           glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
+          glNormalPointer(GL_FLOAT, 0, norm_coords);
+          glEnableClientState(GL_NORMAL_ARRAY);
+
           glDrawArrays(GL_QUADS, 0, 4);
 
+          glDisableClientState(GL_NORMAL_ARRAY);
           glDisableClientState(GL_TEXTURE_COORD_ARRAY);
           glDisableClientState(GL_VERTEX_ARRAY);
         glPopMatrix();
@@ -737,9 +757,12 @@ void draw_level_bounds() {
     }
 }
 
-void push_vert(std::vector<float>& t, std::vector<float>& vert, float u, float v, float x, float y, float z) {
+void push_vert(std::vector<float>& t, std::vector<float>& vert, std::vector<float>& norm, float u, float v, float x, float y, float z, float nx=0, float ny=0, float nz=0) {
     t.push_back(u); t.push_back(v);
     vert.push_back(x); vert.push_back(y); vert.push_back(z);
+    if(nx || ny || nz) {
+        norm.push_back(nx); norm.push_back(ny); norm.push_back(nz);
+    }
 }
 
 void update_level_map() {
@@ -842,10 +865,11 @@ void update_level_map() {
 #endif
 
             //Draw the floor
-            push_vert(tex[index], quads[index], 1.0, 1.0, 2.0f*x,      neb, 2.0f*z+2.0f);
-            push_vert(tex[index], quads[index], 0.0, 1.0, 2.0f*x+2.0f, nwb, 2.0f*z+2.0f);
-            push_vert(tex[index], quads[index], 0.0, 0.0, 2.0f*x+2.0f, swb, 2.0f*z     );
-            push_vert(tex[index], quads[index], 1.0, 0.0, 2.0f*x,      seb, 2.0f*z     );
+            //TODO: floors aren't all straight up, might need fixed if the lighting is noticeably wrong
+            push_vert(tex[index], quads[index], norms[index], 1.0, 1.0, 2.0f*x,      neb, 2.0f*z+2.0f, 0.0, 1.0, 0.0);
+            push_vert(tex[index], quads[index], norms[index], 0.0, 1.0, 2.0f*x+2.0f, nwb, 2.0f*z+2.0f, 0.0, 1.0, 0.0);
+            push_vert(tex[index], quads[index], norms[index], 0.0, 0.0, 2.0f*x+2.0f, swb, 2.0f*z ,     0.0, 1.0, 0.0);
+            push_vert(tex[index], quads[index], norms[index], 1.0, 0.0, 2.0f*x,      seb, 2.0f*z ,     0.0, 1.0, 0.0);
 
             //If no animated texture wall exists, bind the static one. Otherwise, bind the appropriate frame of the animated texture.
             //if(walls.animtex[wti].size() == 0)
@@ -862,31 +886,31 @@ void update_level_map() {
 
                 //North wall
                 if(nnet > neb || nnwt > nwb) {
-                    push_vert(tex[index], quads[index], 1.0,  (8.0 - nnet)/2.0,      2*x,   nnet, 2*z+2); 
-                    push_vert(tex[index], quads[index], 0.0,  (8.0 - nnwt)/2.0,      2*x+2, nnwt, 2*z+2);
-                    push_vert(tex[index], quads[index], 0.0,  (8.0 - nwb )/2.0,  2*x+2, nwb,  2*z+2);
-                    push_vert(tex[index], quads[index], 1.0,  (8.0 - neb )/2.0,  2*x,   neb,  2*z+2);
+                    push_vert(tex[index], quads[index], norms[index], 1.0,  (8.0 - nnet)/2.0,      2*x,   nnet, 2*z+2); 
+                    push_vert(tex[index], quads[index], norms[index], 0.0,  (8.0 - nnwt)/2.0,      2*x+2, nnwt, 2*z+2);
+                    push_vert(tex[index], quads[index], norms[index], 0.0,  (8.0 - nwb )/2.0,  2*x+2, nwb,  2*z+2);
+                    push_vert(tex[index], quads[index], norms[index], 1.0,  (8.0 - neb )/2.0,  2*x,   neb,  2*z+2);
                 }
                 //South wall
                 if(sset > seb || sswt > swb) {
-                    push_vert(tex[index], quads[index], 1.0,  (8.0-sswt)/2.0,       2*x+2,sswt,2*z);
-                    push_vert(tex[index], quads[index], 0.0,  (8.0-sset)/2.0,       2*x,  sset,2*z);
-                    push_vert(tex[index], quads[index], 0.0,  (8.0-seb)/2.0, 2*x,  seb, 2*z);
-                    push_vert(tex[index], quads[index], 1.0,  (8.0-swb)/2.0, 2*x+2,swb, 2*z);
+                    push_vert(tex[index], quads[index], norms[index], 1.0,  (8.0-sswt)/2.0,       2*x+2,sswt,2*z);
+                    push_vert(tex[index], quads[index], norms[index], 0.0,  (8.0-sset)/2.0,       2*x,  sset,2*z);
+                    push_vert(tex[index], quads[index], norms[index], 0.0,  (8.0-seb)/2.0, 2*x,  seb, 2*z);
+                    push_vert(tex[index], quads[index], norms[index], 1.0,  (8.0-swb)/2.0, 2*x+2,swb, 2*z);
                 }
                 //East wall
                 if(enet > neb || eset > seb) {
-                    push_vert(tex[index], quads[index], 1.0,  (8.0 - eset)/2.0,     2*x,eset,2*z);
-                    push_vert(tex[index], quads[index], 0.0,  (8.0 - enet)/2.0,     2*x,enet,2*z+2);
-                    push_vert(tex[index], quads[index], 0.0,  (8.0-neb)/2.0, 2*x,neb, 2*z+2);
-                    push_vert(tex[index], quads[index], 1.0,  (8.0-seb)/2.0, 2*x,seb, 2*z);
+                    push_vert(tex[index], quads[index], norms[index], 1.0,  (8.0 - eset)/2.0,     2*x,eset,2*z);
+                    push_vert(tex[index], quads[index], norms[index], 0.0,  (8.0 - enet)/2.0,     2*x,enet,2*z+2);
+                    push_vert(tex[index], quads[index], norms[index], 0.0,  (8.0-neb)/2.0, 2*x,neb, 2*z+2);
+                    push_vert(tex[index], quads[index], norms[index], 1.0,  (8.0-seb)/2.0, 2*x,seb, 2*z);
                 }
                 //West wall
                 if(wnwt > nwb || wswt > swb) {
-                    push_vert(tex[index], quads[index], 1.0,  (8.0-wnwt)/2.0,    2*x+2,wnwt,2*z+2);
-                    push_vert(tex[index], quads[index], 0.0,  (8.0-wswt)/2.0,    2*x+2,wswt,2*z);
-                    push_vert(tex[index], quads[index], 0.0,  (8.0-swb)/2.0, 2*x+2,swb,2*z);
-                    push_vert(tex[index], quads[index], 1.0,  (8.0-nwb)/2.0, 2*x+2,nwb,2*z+2);
+                    push_vert(tex[index], quads[index], norms[index], 1.0,  (8.0-wnwt)/2.0,    2*x+2,wnwt,2*z+2);
+                    push_vert(tex[index], quads[index], norms[index], 0.0,  (8.0-wswt)/2.0,    2*x+2,wswt,2*z);
+                    push_vert(tex[index], quads[index], norms[index], 0.0,  (8.0-swb)/2.0, 2*x+2,swb,2*z);
+                    push_vert(tex[index], quads[index], norms[index], 1.0,  (8.0-nwb)/2.0, 2*x+2,nwb,2*z+2);
                 }
             }
             if(t == simple_map::DIAG_SE) {
@@ -897,10 +921,10 @@ void update_level_map() {
                 tris.push_back(2*x+2); tris.push_back(8.0); tris.push_back(2*z+2);
 #endif
 
-                push_vert(tex[index], quads[index], 1.0,0.0,2*x,8.0,2*z+2);
-                push_vert(tex[index], quads[index], 0.0,0.0,2*x+2,8.0,2*z);
-                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x+2,h,2*z);
-                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x,h,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x+2,h,2*z);
+                push_vert(tex[index], quads[index], norms[index], 1.0,(8.0-h)/2.0,2*x,h,2*z+2);
             }
             else if(t == simple_map::DIAG_NW) {
             //Draw NW top cap
@@ -910,10 +934,10 @@ void update_level_map() {
                 tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
 #endif
 
-                push_vert(tex[index], quads[index], 1.0,0.0,2*x+2,8.0,2*z);
-                push_vert(tex[index], quads[index], 0.0,0.0,2*x,8.0,2*z+2);
-                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x,h,2*z+2);
-                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x+2,h,2*z);
+                push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x,h,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 1.0,(8.0-h)/2.0,2*x+2,h,2*z);
             }
             else if(t == simple_map::DIAG_SW) {
             //Draw SW top cap
@@ -923,10 +947,10 @@ void update_level_map() {
                 tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z+2);
 #endif
 
-                push_vert(tex[index], quads[index], 1.0,0.0,2*x,8.0,2*z);
-                push_vert(tex[index], quads[index], 0.0,0.0,2*x+2,8.0,2*z+2);
-                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
-                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x,h,2*z);
+                push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x,8.0,2*z);
+                push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 1.0,(8.0-h)/2.0,2*x,h,2*z);
             }
             else if(t == simple_map::DIAG_NE) {
             //Draw NE top cap
@@ -936,38 +960,38 @@ void update_level_map() {
                 tris.push_back(2*x);   tris.push_back(8.0); tris.push_back(2*z);
 #endif
 
-                push_vert(tex[index], quads[index], 1.0,0.0,2*x+2,8.0,2*z+2);
-                push_vert(tex[index], quads[index], 0.0,0.0,2*x,8.0,2*z);
-                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x,h,2*z);
-                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x,8.0,2*z);
+                push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x,h,2*z);
+                push_vert(tex[index], quads[index], norms[index], 1.0,(8.0-h)/2.0,2*x+2,h,2*z+2);
             }
             //South wall
             if(st != simple_map::SOLID_TILE && (t == simple_map::DIAG_NW || t == simple_map::DIAG_NE)) {
-                push_vert(tex[index], quads[index], 1.0,0.0,2*x,8.0,2*z);
-                push_vert(tex[index], quads[index], 0.0,0.0,2*x+2,8.0,2*z);
-                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x+2,swb,2*z);
-                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x,seb,2*z);
+                push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x,8.0,2*z);
+                push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x+2,swb,2*z);
+                push_vert(tex[index], quads[index], norms[index], 1.0,(8.0-h)/2.0,2*x,seb,2*z);
             }
             //North wall
             if(nt != simple_map::SOLID_TILE && (t == simple_map::DIAG_SW || t == simple_map::DIAG_SE)) {
-                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x,neb,2*z+2);
-                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
-                push_vert(tex[index], quads[index], 1.0,0.0,2*x+2,8.0,2*z+2);
-                push_vert(tex[index], quads[index], 0.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x,neb,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 1.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x,8.0,2*z+2);
             }
             //East wall
             if(et != simple_map::SOLID_TILE && (t == simple_map::DIAG_NW || t == simple_map::DIAG_SW)) {
-                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x,seb,2*z);
-                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x,neb,2*z+2);
-                push_vert(tex[index], quads[index], 1.0,0.0,2*x,8.0,2*z+2);
-                push_vert(tex[index], quads[index], 0.0,0.0,2*x,8.0,2*z);
+                push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x,seb,2*z);
+                push_vert(tex[index], quads[index], norms[index], 1.0,(8.0-h)/2.0,2*x,neb,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x,8.0,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x,8.0,2*z);
             }
             //West wall
             if(wt != simple_map::SOLID_TILE && (t == simple_map::DIAG_NE || t == simple_map::DIAG_SE)) {
-                push_vert(tex[index], quads[index], 0.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
-                push_vert(tex[index], quads[index], 1.0,(8.0-h)/2.0,2*x+2,swb,2*z);
-                push_vert(tex[index], quads[index], 1.0,0.0,2*x+2,8.0,2*z);
-                push_vert(tex[index], quads[index], 0.0,0.0,2*x+2,8.0,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 0.0,(8.0-h)/2.0,2*x+2,nwb,2*z+2);
+                push_vert(tex[index], quads[index], norms[index], 1.0,(8.0-h)/2.0,2*x+2,swb,2*z);
+                push_vert(tex[index], quads[index], norms[index], 1.0,0.0,2*x+2,8.0,2*z);
+                push_vert(tex[index], quads[index], norms[index], 0.0,0.0,2*x+2,8.0,2*z+2);
             }
 
         }
@@ -983,6 +1007,10 @@ void render_3d() {
     glRotatef(phi, cos(thetaR), 0.0, sin(thetaR)); //Rotate pespective around camera's X axis
 
     glTranslatef(-1.0*camXPos, -1.0*camYPos, -1.0*camZPos); //Translate the world to where the camera expects it to be
+
+    //GLfloat position[] = {camXPos, camYPos, camZPos, 1.0};
+    GLfloat position[] = {0,0,0, 1.0};
+    glLightfv(GL_LIGHT0, GL_POSITION, &position[0]);
 
 #ifdef DEVBUILD
     //Draw a bounding/orientation box around the level
