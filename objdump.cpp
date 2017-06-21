@@ -73,7 +73,10 @@ int main(int argc, char *argv[]) {
                 tsize = read16(in);
                 print_raw(in,tag,tsize,data);
                 printf("COMENT: type %02x, class %02x", data[0],data[1]);
-                if(data[1] == 0x00) {
+                if(size < 4) {
+                    cout<<"\n"<<endl;
+                }
+                else if(data[1] == 0x00) {
                     printf(" data: \"");
                     for(int i=0;i<data[2];i++) cout<<data[3+i];
                     cout<<"\"\n"<<endl;
