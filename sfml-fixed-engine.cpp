@@ -616,7 +616,10 @@ void update_state(sf::RenderWindow &window) {
 
     cam->thetaR = cam->theta * M_PI / 180.0;
     cam->phiR = cam->phi * M_PI / 180.0;
-    float speed = 0.25f;
+    float speed = 0.125f;
+    if(mouseCap) {
+        speed = 1.0f;
+    }
     //Keyboard movement control
     if(keys[sf::Keyboard::A]) {
         prop_camXPos += -speed * cos(cam->thetaR) * cos(cam->phiR);
