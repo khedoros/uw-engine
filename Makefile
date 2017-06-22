@@ -69,3 +69,6 @@ cutscene: cutscene.cpp uwfont.o util.o lpfcut.o UwText.o cutscene.h uwfont.h uti
 
 start: start.o lpfcut.o lpfcut.h palette.o palette.h texfile.o texfile.h util.o util.h uwfont.o uwfont.h UwText.o UwText.h cutscene.o cutscene.h audio/midi_event.o audio/midi_event.h audio/opl_music.o audio/opl_music.h audio/uw_patch.o audio/uw_patch.h audio/vocfile.o audio/vocfile.h audio/xmi.o audio/xmi.h audio/opl/OPL3.o audio/opl/opl.h
 	$(CXX) $(CXXFLAGS) -o start start.o lpfcut.o palette.o texfile.o util.o uwfont.o UwText.o cutscene.o audio/midi_event.o audio/opl_music.o audio/uw_patch.o audio/vocfile.o audio/xmi.o audio/opl/OPL3.o $(LDFLAGS)
+
+objdump: objdump.o util.o util.h
+	$(CXX) $(CXXFLAGS) -o objdump objdump.o util.o

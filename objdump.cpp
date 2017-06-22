@@ -1,7 +1,18 @@
 #include "util.h"
 #include<iostream>
 #include<fstream>
+#include<string>
 using namespace std;
+
+/*
+ * Ordered Collections: All indexes are 1-based
+ * Names from LNAMES entries, ref'd as a name index
+ * Logical segments from SEGDEF entries, ref'd as a segment index
+ * Groups from GRPDEF entries, ref'd as a group index
+ * External Symbols ordered by occurrence of EXTDEF, COMDEF, LEXTDEF, and LCOMDEF entries, ref'd as an external name index (in FIXUP subrecords)
+ */
+
+vector<string> names(0);
 
 //Consumes the tag, but also reads it into "data"
 void print_raw(ifstream& in, uint8_t tag, uint16_t tsize, vector<uint8_t>& data) {
@@ -43,7 +54,7 @@ void print_raw(ifstream& in, uint8_t tag, uint16_t tsize, vector<uint8_t>& data)
 
 int main(int argc, char *argv[]) {
     if(argc != 2) {
-        cerr<<"Provide a library name."<<endl;
+        cerr<<"Provide an OMF library or object file name."<<endl;
         return 1;
     }
     ifstream in(argv[1]);
@@ -73,20 +84,47 @@ int main(int argc, char *argv[]) {
                 tsize = read16(in);
                 print_raw(in,tag,tsize,data);
                 printf("COMENT: type %02x, class %02x", data[0],data[1]);
-                if(size < 4) {
+                if(tsize < 4) {
                     cout<<"\n"<<endl;
                 }
                 else if(data[1] == 0x00) {
                     printf(" data: \"");
-                    for(int i=0;i<data[2];i++) cout<<data[3+i];
+                    for(int i=0;i<tsize-3;i++) cout<<data[2+i];
                     cout<<"\"\n"<<endl;
                 }
                 else if(data[1] == 0xe9) {
-                    printf(" data: \"", data[0],data[1]);
+                    printf(" data: \"");
                     for(int i=0;i<data[6];i++) cout<<data[7+i];
                     cout<<"\"\n"<<endl;
                 }
                 else {
+                    cout<<"\n"<<endl;
+                }
+                break;/*
+            case 0x8a:
+                tsize = read16(in);
+                print_raw(in,tag,tsize,data);
+                cout<<"MODEND: 
+*/
+            case 0x96:
+                tsize = read16(in);
+                print_raw(in,tag,tsize,data);
+                cout<<"LNAMES: ";
+                {
+                    int i=0;
+                    int start=names.size();
+                    while(i<tsize-3) {
+                        string t = "";
+                        int s=data[i];
+                        for(int j=1;j<=s;j++) {
+                            t+=data[i+j];
+                        }
+                        names.push_back(t);
+                        i = i + s + 1;
+                    }
+                    for(int j=start;j<names.size();j++) {
+                        cout<<names[j]<<"("<<j+1<<") ";
+                    }
                     cout<<"\n"<<endl;
                 }
                 break;
