@@ -13,6 +13,7 @@ using namespace std;
  */
 
 vector<string> names(0);
+vector<string> externals(0);
 
 //Consumes the tag, but also reads it into "data"
 void print_raw(ifstream& in, uint8_t tag, uint16_t tsize, vector<uint8_t>& data) {
@@ -68,6 +69,7 @@ int main(int argc, char *argv[]) {
     uint16_t tsize = 0;
     vector<uint8_t> data(0);
     size_t offset = 0;
+    bool library=false;
     while(tag != 0xf1 && !in.eof()) {
         tag = read8(in);
         tag_types[tag] = true;
@@ -100,12 +102,43 @@ int main(int argc, char *argv[]) {
                 else {
                     cout<<"\n"<<endl;
                 }
-                break;/*
+                break;
             case 0x8a:
                 tsize = read16(in);
                 print_raw(in,tag,tsize,data);
-                cout<<"MODEND: 
-*/
+                cout<<"MODEND: ignoring data for now."<<endl;
+                if(library) {
+                    size_t addr = in.tellg() % 16;
+                    if(addr) {
+                        in.seekg(16-addr,ios::cur);
+                    }
+                }
+                else {
+                    return 0;
+                }
+                break;
+            case 0x8c:
+                tsize = read16(in);
+                print_raw(in,tag,tsize,data);
+                cout<<"EXTDEF: ";
+                {
+                    int i=0;
+                    int start = externals.size();
+                    while(i<tsize-3) {
+                        string t = "";
+                        int s=data[i];
+                        for(int j=1;j<=s;j++) {
+                            t+=data[i+j];
+                        }
+                        externals.push_back(t);
+                        i = i + s + 1;
+                    }
+                    for(int j=start;j<externals.size();j++) {
+                        cout<<externals[j]<<"("<<j+1<<") ";
+                    }
+                    cout<<"\n"<<endl;
+                }
+                break;
             case 0x96:
                 tsize = read16(in);
                 print_raw(in,tag,tsize,data);
@@ -129,9 +162,10 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case 0xf0:
-                cerr<<"Library; not handled yet."<<endl;
-                in.close();
-                return 1;
+                library = true;
+                tsize = read16(in);
+                print_raw(in,tag,tsize,data);
+                cout<<"Library: "<<endl;
                 break;
             default:
                 tsize = read16(in);
