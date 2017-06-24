@@ -10,6 +10,8 @@ uint8_t read8(std::ifstream& in);
 uint16_t read16(std::ifstream& in);
 uint32_t read32(std::ifstream& in);
 uint64_t read64(std::ifstream& in);
+void print_raw(std::ifstream& in, uint8_t tag, uint32_t tsize, std::vector<uint8_t>& data, int line_length = 32, bool reset = false);
+void print_raw(uint32_t tsize, std::vector<uint8_t>& data, int line_length = 32);
 
 class binifstream : public std::ifstream {
 public:

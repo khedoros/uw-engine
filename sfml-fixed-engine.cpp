@@ -1315,7 +1315,7 @@ void gameloop() {
     set_viewport();
     glMatrixMode (GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45.0, float(winW)/float(winH), 0.1, 200.0);
+    gluPerspective(45.0, 4.0/3.0, 0.1, 200.0);
     glMatrixMode (GL_MODELVIEW);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1350,7 +1350,7 @@ void gameloop() {
                 set_viewport();
                 glMatrixMode (GL_PROJECTION);
                 glLoadIdentity ();
-                gluPerspective(95.0, float(winW)/float(winH), 0.1, 200.0);
+                gluPerspective(95.0, 4.0/3.0, 0.1, 200.0);
                 glMatrixMode (GL_MODELVIEW);
                 //cout<<"Resizing not handled yet."<<endl;
                 break;

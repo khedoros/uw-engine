@@ -15,44 +15,6 @@ using namespace std;
 vector<string> names(0);
 vector<string> externals(0);
 
-//Consumes the tag, but also reads it into "data"
-void print_raw(ifstream& in, uint8_t tag, uint16_t tsize, vector<uint8_t>& data) {
-    data.resize(tsize);
-    size_t offset = in.tellg();
-    printf("%02x (%04x bytes):\n", tag, tsize);
-    in.read(reinterpret_cast<char *>(&data[0]), tsize);
-    for(int line=0;line<tsize/32;line++) {
-        for(int c=0;c<32;c++) {
-            printf("%02x ", data[line*32+c]);
-        }
-        printf(" |");
-        for(int c=0;c<32;c++) {
-            if(data[line*32+c] > ' ' && data[line*32+c] < 127) {
-                printf("%c", data[line*32+c]);
-            }
-            else {
-                printf(".");
-            }
-        }
-        printf("| \n");
-    }
-    if(tsize%32) {
-        for(int c=0;c<tsize%32;c++) {
-            printf("%02x ", data[c+tsize-tsize%32]);
-        }
-        printf(" |");
-        for(int c=0;c<tsize%32;c++) {
-            if(data[c+tsize-tsize%32] > ' ' && data[c+tsize-tsize%32] < 127) {
-                printf("%c", data[c+tsize-tsize%32]);
-            }
-            else {
-                printf(".");
-            }
-        }
-        printf("| \n");
-    }
-}
-
 int main(int argc, char *argv[]) {
     if(argc != 2) {
         cerr<<"Provide an OMF library or object file name."<<endl;
@@ -70,7 +32,7 @@ int main(int argc, char *argv[]) {
     vector<uint8_t> data(0);
     size_t offset = 0;
     bool library=false;
-    while(tag != 0xf1 && !in.eof()) {
+    while(!in.eof()) {
         tag = read8(in);
         tag_types[tag] = true;
         data.resize(0);
@@ -165,8 +127,13 @@ int main(int argc, char *argv[]) {
                 library = true;
                 tsize = read16(in);
                 print_raw(in,tag,tsize,data);
-                cout<<"Library: "<<endl;
+                cout<<"Library Start\n-------------"<<endl;
                 break;
+            case 0xf1:
+                library = false;
+                tsize = read16(in);
+                cout<<"-----------\nLibrary End\n"<<tsize<<" bytes of filler, then the dictionary follows."<<endl;
+                return 0;
             default:
                 tsize = read16(in);
                 print_raw(in,tag,tsize,data);

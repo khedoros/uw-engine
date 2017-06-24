@@ -72,3 +72,6 @@ start: start.o lpfcut.o lpfcut.h palette.o palette.h texfile.o texfile.h util.o 
 
 objdump: objdump.o util.o util.h
 	$(CXX) $(CXXFLAGS) -o objdump objdump.o util.o
+
+savefile: savefile.cpp savefile.h util.o util.h
+	$(CXX) $(CXXFLAGS) -DSTANDALONE_SAVE -o savefile savefile.cpp util.o

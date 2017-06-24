@@ -68,3 +68,50 @@ float frac2float(uint16_t d) {
     return float(d)/65536.0;
 }
 
+void print_raw(std::ifstream& in, uint8_t tag, uint32_t tsize, std::vector<uint8_t>& data, int line_length/* = 32*/, bool reset/* = false*/) {
+    data.resize(tsize);
+    size_t offset = 0;
+    printf("%02x (%04x bytes):\n", tag, tsize);
+    if(in.is_open()) {
+        offset = in.tellg();
+        in.read(reinterpret_cast<char *>(&data[0]), tsize);
+    }
+    for(int line=0;line<tsize/line_length;line++) {
+        for(int c=0;c<line_length;c++) {
+            printf("%02x ", data[line*line_length+c]);
+        }
+        printf(" |");
+        for(int c=0;c<line_length;c++) {
+            if(data[line*line_length+c] > ' ' && data[line*line_length+c] < 127) {
+                printf("%c", data[line*line_length+c]);
+            }
+            else {
+                printf(".");
+            }
+        }
+        printf("| \n");
+    }
+    if(tsize%line_length) {
+        for(int c=0;c<tsize%line_length;c++) {
+            printf("%02x ", data[c+tsize-tsize%line_length]);
+        }
+        printf(" |");
+        for(int c=0;c<tsize%line_length;c++) {
+            if(data[c+tsize-tsize%line_length] > ' ' && data[c+tsize-tsize%line_length] < 127) {
+                printf("%c", data[c+tsize-tsize%line_length]);
+            }
+            else {
+                printf(".");
+            }
+        }
+        printf("| \n");
+    }
+    if(reset) {
+        in.seekg(offset);
+    }
+}
+
+void print_raw(uint32_t tsize, std::vector<uint8_t>& data, int line_length/* = 32 */) {
+    std::ifstream temp;
+    print_raw(temp, 0, tsize, data, line_length, false);
+}

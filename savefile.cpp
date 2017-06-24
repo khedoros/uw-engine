@@ -2,6 +2,8 @@
 #include<fstream>
 #include<vector>
 #include<stdint.h>
+#include "util.h"
+
 using namespace std;
 
 #ifdef STANDALONE_SAVE
@@ -20,11 +22,14 @@ int main(int argc, char **argv) {
     in.read(reinterpret_cast<char *>(&key), 1);
     in.read(reinterpret_cast<char *>(&data[0]), filesize-1);
     in.close();
-    for(int i=0;i<220;++i) {
+    for(int i=0;i<216;++i) {
         key+=3;
         data[i] ^= key;
     }
-    cout<<"Name: ";
+
+    cout<<"Raw dump: ";
+    print_raw(data.size(), data, 16);
+    cout<<"\nName: ";
     int i=0;
     for(;i<14;++i) cout<<data[i];
     cout<<hex<<'	'<<i<<dec<<endl;
