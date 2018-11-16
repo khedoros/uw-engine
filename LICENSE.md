@@ -6,7 +6,7 @@ I'm using a C++ port of [Robson Cozendey's Java OPL3 emulator](http://opl3.cozen
 
 ### GPL 2.0
 
-I also include the fmopl OPL3 emulator from MAME, also via the ZDoom Doom engine implementation, and modified by that project. I don't actually use their OPL3 code itself, but I'm using their interface to emulators similar to Cozendeys.
+I also include the fmopl OPL3 emulator from MAME, also via the ZDoom Doom engine implementation, and modified by that project.
 
 ### GPL 3.0+, with font embedding clause
 
