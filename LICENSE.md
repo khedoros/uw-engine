@@ -1,3 +1,23 @@
+## External Software
+
+### LGPL 2.1+
+
+I'm using a C++ port of [Robson Cozendey's Java OPL3 emulator](http://opl3.cozendey.com), which was distributed under an LGPL 2.1+ license. The port comes from the [ZDoom project](https://github.com/rheit/zdoom/blob/master/src/oplsynth/OPL3.cpp), which [ZDoom licenses](https://zdoom.org/wiki/License) under the terms of the LGPL 2.1+ license.
+
+### GPL 2.0
+
+I also include the fmopl OPL3 emulator from MAME, also via the ZDoom Doom engine implementation, and modified by that project. I don't actually use their OPL3 code itself, but I'm using their interface to emulators similar to Cozendeys.
+
+### GPL 3.0+, with font embedding clause
+
+FreeSans.ttf is from the GNU FreeFont project, and is licensed under GPLv3+, but with an added exception involving embedding the font in a document, that means that a document with the font embedded doesn't fall under the GPLv3 license itself.
+
+### 3-point modified BSD license
+
+I use code modified from the ZDoom project's OPL emulator interface.
+
+## This Project's Software
+
 ### GNU GENERAL PUBLIC LICENSE
 
 Version 3, 29 June 2007
