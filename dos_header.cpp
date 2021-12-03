@@ -3,34 +3,18 @@
 #include<stdint.h>
 #include<assert.h>
 #include<vector>
+#include<string>
+#include "dos_header.h"
 using namespace std;
 
-typedef struct {
-    char magic[2];
-    uint16_t last_page_bytes;
-    uint16_t total_pages;
-    uint16_t reloc_entries;
-    uint16_t header_para_size;
-    uint16_t min_paras_after_code;
-    uint16_t max_paras_after_code;
-    uint16_t stack_seg_offset;
-    uint16_t initial_sp;
-    uint16_t chksum;
-    uint16_t init_ip;
-    uint16_t init_cs;
-    uint16_t reloc_offset;
-    uint16_t overlay_num;
-    uint8_t poss_id[4];
-} mz_header;
-
-int main(int argc, char *argv[]) {
+void printHeaderInfo(const string& filename) {
     assert(sizeof(mz_header) == 32);
     ifstream in;
-    in.open(argv[1]);
+    in.open(filename.c_str());
     in.seekg(0,ios::end);
     size_t size = in.tellg();
     in.seekg(0,ios::beg);
-    cout<<"Filename: "<<argv[1]<<endl<<"Filesize: "<<size<<endl;
+    cout<<"Filename: "<<filename<<endl<<"Filesize: "<<size<<endl;
     mz_header h;
     in.read(reinterpret_cast<char *>(&h), sizeof(mz_header));
     vector<uint16_t> reloc_table;
@@ -51,5 +35,4 @@ int main(int argc, char *argv[]) {
             offset = off;
         odd=!odd;
     }
-    return 0;
 }
