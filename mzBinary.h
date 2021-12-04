@@ -33,18 +33,25 @@ typedef struct {
     uint16_t nextstubseg;
 } overlay_description;
 
+typedef struct {
+    int overlayIndex;
+    overlay_description ovrDesc;
+    std::vector<uint8_t> overlayBinary;
+    std::vector<uint16_t> overlayRelocs;
+} overlay_data;
+
 class mzBinary {
-	mz_header header;
-	std::vector<overlay_description> ovr_desc;
-	std::vector<std::pair<uint16_t, uint16_t>> relocs;
-	std::vector<uint8_t> main_binary;
-	std::vector<std::vector<uint8_t>> overlay_binary;
 	mzBinary(const std::string& filename);
 	void printHeaderInfo();
 	void clearRelocs();
 	void clearOvrRelocs(int overlay);
+
 	std::string fileName;
 	size_t fileSize;
+	mz_header header;
+	std::vector<std::pair<uint16_t, uint16_t>> relocs;
+	std::vector<uint8_t> main_binary;
+	std::vector<overlay_data> overlays;
 private:
 	size_t findOverlayTable();
 	size_t findOverlayDataBase();

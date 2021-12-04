@@ -45,14 +45,48 @@ mzBinary::mzBinary(const std::string& filename) : fileName(filename) {
     size_t size = in.tellg();
 	fileSize = size;
     in.seekg(0,ios::beg);
-    cout<<"Filename: "<<filename<<endl<<"Filesize: "<<size<<endl;
     in.read(reinterpret_cast<char *>(&header), sizeof(mz_header));
     in.seekg(header.reloc_offset,ios::beg);
-	uint16_t reloc_entry[2];
-	for(int i=0;i<header.reloc_entries;i++) {
-	    in.read(reinterpret_cast<char *>(&(reloc_entry[0])), 2 * sizeof(uint16_t));
-		relocs.emplace(relocs.end(), std::make_pair(reloc_entry[0],reloc_entry[1]));
-	}
+    uint16_t reloc_entry[2];
+    for(int i=0;i<header.reloc_entries;i++) {
+        in.read(reinterpret_cast<char *>(&(reloc_entry[0])), 2 * sizeof(uint16_t));
+    	relocs.emplace(relocs.end(), std::make_pair(reloc_entry[0],reloc_entry[1]));
+    }
+
+    size_t binarySize = (header.total_pages - 1) * 512 + header.last_page_bytes;
+    in.seekg(16 * header.header_para_size, ios::beg);
+    main_binary.resize(binarySize);
+    in.read(reinterpret_cast<char *>(main_binary.data()), binarySize);
+
+    // findOverlayTable
+    // read overlay descriptions into overlays, into ovrDesc
+    // findOverlayDataBase
+    // Use the table and base address to iterate through the overlays, reading them into "overlays" "overlayBinary" and "overlayRelocs" fields
+    in.close(); 
 }
 
+size_t mzBinary::findOverlayTable() {
+    size_t location = 0;
+    for(int i = 0; i < main_binary.size(); i+=0x10) {
+        
+    }
+    return location;
+}
 
+size_t mzBinary::findOverlayDataBase() {
+    return 0;
+}
+
+size_t mzBinary::findOverlayBinary(int overlay) {
+    return 0;
+}
+
+size_t mzBinary::findOverlayRelocs(int overlay) {
+    return 0;
+}
+
+void mzBinary::dumpBinaryToFile(int index, std::string& filename, bool clearReloc) {}
+void mzBinary::dumpOverlayToFile(int index, std::string& filename, bool clearReloc) {}
+
+void mzBinary::clearRelocs();
+void mzBinary::clearOvrRelocs(int overlay);
