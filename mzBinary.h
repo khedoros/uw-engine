@@ -1,6 +1,7 @@
 #include<cstdint>
 #include<string>
 #include<utility>
+#include<vector>
 
 typedef struct {
 	char magic[2];
@@ -41,20 +42,20 @@ typedef struct {
 } overlay_data;
 
 class mzBinary {
+	public:
 	mzBinary(const std::string& filename);
 	void printHeaderInfo();
 	void clearRelocs();
 	void clearOvrRelocs(int overlay);
 	void dumpBinaryToFile(int index, std::string& filename, bool clearReloc);
 	void dumpOverlayToFile(int index, std::string& filename, bool clearReloc);
-
+	private:
 	std::string fileName;
 	size_t fileSize;
 	mz_header header;
 	std::vector<std::pair<uint16_t, uint16_t>> relocs;
 	std::vector<uint8_t> main_binary;
 	std::vector<overlay_data> overlays;
-private:
 	size_t findOverlayTable();
 	size_t findOverlayDataBase();
 	size_t findOverlayBinary(int overlay);

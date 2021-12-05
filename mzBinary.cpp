@@ -59,8 +59,8 @@ mzBinary::mzBinary(const std::string& filename) : fileName(filename) {
 	main_binary.resize(binarySize);
 	in.read(reinterpret_cast<char *>(main_binary.data()), binarySize);
 
-	size_t ovrEntryOff = findOverlayTable();
-	size_t ovrEntryDat = findOverlayDataBase();
+	size_t ovrEntryOff = findOverlayTable(); // Located within bounds of loaded binary, so I can look in the main_binary vector
+	size_t ovrEntryDat = findOverlayDataBase(); // Should be right at the end of the loaded binary data
 
 	int index = 0;
 	std::cout<<"Found beginning of table at 0x"<<std::hex<<ovrEntryOff<<" and start of overlay data at 0x"<<ovrEntryDat<<".\n";
