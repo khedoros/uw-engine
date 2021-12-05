@@ -21,13 +21,13 @@ typedef struct {
 } mz_header;
 
 typedef struct {
-	uint8_t int_code[2];    // Overlay manager interrupt
-	uint16_t memswap;       // Runtime memory swap address
-	uint32_t fileoff;       // Offset in the file to the code
-	uint16_t codesize;      // Code size
-	uint16_t relsize;       // Relocation area size
-	uint16_t nentries;      // Number of overlay entries
-	uint16_t prevstuboff;   // Previous stub
+	uint8_t int_code[2];		// Overlay manager interrupt
+	uint16_t memswap;		   // Runtime memory swap address
+	uint32_t fileoff;		   // Offset in the file to the code
+	uint16_t codesize;		  // Code size
+	uint16_t relsize;		   // Relocation area size
+	uint16_t nentries;		  // Number of overlay entries
+	uint16_t prevstuboff;	   // Previous stub
 	uint16_t prevstubseg;
 	uint16_t nextstuboff;
 	uint16_t nextstubseg;
@@ -45,6 +45,8 @@ class mzBinary {
 	void printHeaderInfo();
 	void clearRelocs();
 	void clearOvrRelocs(int overlay);
+	void dumpBinaryToFile(int index, std::string& filename, bool clearReloc);
+	void dumpOverlayToFile(int index, std::string& filename, bool clearReloc);
 
 	std::string fileName;
 	size_t fileSize;
