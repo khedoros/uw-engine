@@ -1,14 +1,14 @@
 #include<iostream>
 #include<fstream>
-#include<stdint.h>
-#include<assert.h>
+#include<cstdint>
+#include<cassert>
 #include<vector>
 #include<string>
 #include<cstring>
 #include "mzBinary.h"
 using namespace std;
 
-void mzBinary::printHeaderInfo() {
+void mzBinary::printHeaderInfo(bool printRelocs/* = false*/) {
 	cout<<"Filename: "<<fileName<<endl<<"Filesize: "<<fileSize<<endl;
 	printf("Bytes on last page: %04x\n"
 		   "Total pages: %04x\n"
@@ -30,12 +30,14 @@ void mzBinary::printHeaderInfo() {
 	if(header.poss_id[0] == 0x01 && header.poss_id[1] == 0x00 && header.poss_id[2] == 0xfb) {
 		std::cout<<"Probably Borland TLink, version "<<header.poss_id[3]/16<<endl;
 	}
-	cout<<"Relocation table: "<<header.reloc_entries<<" entries"<<endl;
-	bool odd=false;
-	uint16_t offset=0;
-	for(auto off:relocs) {
-		printf("%04x:%04x\n",off.first,off.second);
-	}
+    if(printRelocs) {
+    	cout<<"Relocation table: "<<header.reloc_entries<<" entries"<<endl;
+	    bool odd=false;
+    	uint16_t offset=0;
+	    for(auto off:relocs) {
+		    printf("%04x:%04x\n",off.first,off.second);
+    	}
+    }
 }
 
 mzBinary::mzBinary(const std::string& filename) : fileName(filename) {
@@ -59,23 +61,28 @@ mzBinary::mzBinary(const std::string& filename) : fileName(filename) {
 	main_binary.resize(binarySize);
 	in.read(reinterpret_cast<char *>(main_binary.data()), binarySize);
 
-	size_t ovrEntryOff = findOverlayTable(); // Located within bounds of loaded binary, so I can look in the main_binary vector
-	size_t ovrEntryDat = findOverlayDataBase(); // Should be right at the end of the loaded binary data
+	size_t ovrEntryOff = findOverlayTable();      // Located within bounds of loaded binary, so I can look in the main_binary vector
+	size_t ovrEntryDat = findOverlayDataBase(in); // Should be right at the end of the loaded binary data
 
 	int index = 0;
 	std::cout<<"Found beginning of table at 0x"<<std::hex<<ovrEntryOff<<" and start of overlay data at 0x"<<ovrEntryDat<<".\n";
-	for(;ovrEntryOff < binarySize && main_binary[ovrEntryOff] == 0xcd && main_binary[ovrEntryOff] == 0x3f;) {
+	for(;ovrEntryOff < binarySize && main_binary[ovrEntryOff] == 0xcd && main_binary[ovrEntryOff + 1] == 0x3f;) {
 		overlays.resize(overlays.size()+1);
 		auto& curOvr = overlays.back();
+        assert(main_binary[ovrEntryOff] == 0xcd);
 		std::memcpy(&curOvr.ovrDesc, &main_binary[ovrEntryOff],sizeof(overlay_description));
 		ovrEntryOff += 32;
 		for(int entry=0; entry < curOvr.ovrDesc.nentries; entry++) {
-			
+			ovrEntryOff += 2; // skip CD 3F
+            uint16_t funcOffset = main_binary[ovrEntryOff] + 256 * main_binary[ovrEntryOff+1];
+            curOvr.overlayFuncs.push_back(funcOffset);
+            ovrEntryOff += 3; // skip func offset and extra byte
 		}
+        // Calculate next page to advance the offset to, to be ready to read the next overlay description
+        // Jump to ovrEntryDat+curOvr.ovrDesc.
+        // Read chunk of overlay binary into `overlayBinary`
+        // Read any overlay relocation entries into `overlayRelocs`
 	}
-	// read overlay descriptions into overlays, into ovrDesc
-	// findOverlayDataBase
-	// Use the table and base address to iterate through the overlays, reading them into "overlays" "overlayBinary" and "overlayRelocs" fields
 	in.close(); 
 }
 
@@ -89,13 +96,14 @@ size_t mzBinary::findOverlayTable() {
 	return -1;
 }
 
-size_t mzBinary::findOverlayDataBase() {
-	size_t offset = (header.total_pages - 1) * 512 + header.last_page_bytes;
-	if(main_binary[offset] == 'F' &&
-	   main_binary[offset] == 'B' &&
-	   main_binary[offset] == 'O' &&
-	   main_binary[offset] == 'V' )
-		return offset;
+size_t mzBinary::findOverlayDataBase(std::ifstream& in) {
+    char buffer[16];
+    in.read(buffer, 16);
+	if(buffer[0] == 'F' &&
+	   buffer[1] == 'B' &&
+	   buffer[2] == 'O' &&
+	   buffer[3] == 'V' )
+		return in.tellg();
 	return -1;
 }
 

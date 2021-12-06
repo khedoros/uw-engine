@@ -2,6 +2,7 @@
 #include<string>
 #include<utility>
 #include<vector>
+#include<fstream>
 
 typedef struct {
 	char magic[2];
@@ -38,13 +39,14 @@ typedef struct {
 	int overlayIndex;
 	overlay_description ovrDesc;
 	std::vector<uint8_t> overlayBinary;
+    std::vector<uint16_t> overlayFuncs;
 	std::vector<uint16_t> overlayRelocs;
 } overlay_data;
 
 class mzBinary {
 	public:
 	mzBinary(const std::string& filename);
-	void printHeaderInfo();
+	void printHeaderInfo(bool printRelocs = false);
 	void clearRelocs();
 	void clearOvrRelocs(int overlay);
 	void dumpBinaryToFile(int index, std::string& filename, bool clearReloc);
@@ -57,7 +59,7 @@ class mzBinary {
 	std::vector<uint8_t> main_binary;
 	std::vector<overlay_data> overlays;
 	size_t findOverlayTable();
-	size_t findOverlayDataBase();
+	size_t findOverlayDataBase(std::ifstream& in);
 	size_t findOverlayBinary(int overlay);
 	size_t findOverlayRelocs(int overlay);
 };
