@@ -3,10 +3,11 @@
 #include<fstream>
 #include<vector>
 #include<algorithm>
-#include<assert.h>
+#include<cassert>
 #include<cstdio>
 #include<byteswap.h>
-#include<stdint.h>
+#include<cstdint>
+#include<unordered_map>
 
 #include<timidity.h>
 //#include<SDL/SDL.h>
@@ -14,19 +15,7 @@
 #include "util.h"
 
 using namespace std;
-/*
-class binifstream : public ifstream {
-public:
-    template <typename T>
-    binifstream& operator>>(T& val) {
-        char *temp=new char[sizeof(T)];
-        this->read(temp,sizeof(T));
-        val=T(*(reinterpret_cast<T *>(temp)));
-        delete[] temp;
-        return *this;
-    }
-};
-*/
+
 unsigned int decode_quantity(binifstream &filein,unsigned int start) {
     unsigned char digit;
     unsigned int retval=start;
@@ -145,170 +134,23 @@ vector<midi_command*> midi_builder;
 unsigned char mt2gm(unsigned char patch) {
     bool known=true;
     unsigned char retval;
-    switch(patch) {
-        case 0:
-            retval=0;
-            break;
-        case 1:
-            retval=1;
-            break;
-        case 13:
-            retval=19;
-            break;
-        case 16:
-            retval=6;
-            break;
-        case 22:
-            retval=8;
-            break;
-        case 23:
-            retval=8;
-            break;
-        case 24:
-            retval=62;
-            break;
-        case 25:
-            retval=63;
-            break;
-        case 32:
-            retval=88;
-            break;
-        case 33:
-            retval=101;
-            break;
-        case 34:
-            retval=52;
-            break;
-        case 36:
-            retval=97;
-            break;
-        case 38:
-            retval=93;
-            break;
-        case 43:
-            retval=102;
-            break;
-        case 48:
-            retval=48;
-            break;
-        case 49:
-            retval=49;
-            break;
-        case 51:
-            retval=45;
-            break;
-        case 52:
-            retval=40;
-            break;
-        case 53:
-            retval=40;
-            break;
-        case 54:
-            retval=42;
-            break;
-        case 55:
-            retval=42;
-            break;
-        case 56:
-            retval=43;
-            break;
-        case 57:
-            retval=46;
-        case 58:
-            retval=46;
-            break;
-        case 59:
-            retval=24;
-            break;
-        case 70:
-            retval=35;
-            break;
-        case 72:
-            retval=73;
-            break;
-        case 73:
-            retval=73;
-            break;
-        case 74:
-            retval=72;
-            break;
-        case 77:
-            retval=74;
-            break;
-        case 82:
-            retval=71;
-            break;
-        case 83:
-            retval=71;
-            break;
-        case 84:
-            retval=68;
-            break;
-        case 85:
-            retval=69;
-            break;
-        case 86:
-            retval=70;
-            break;
-        case 88:
-            retval=56;
-            break;
-        case 89:
-            retval=56;
-            break;
-        case 90:
-            retval=57;
-            break;
-        case 92:
-            retval=60;
-        case 93:
-            retval=60;
-            break;
-        case 94:
-            retval=58;
-            break;
-        case 96:
-            retval=61;
-            break;
-        case 97:
-            retval=11;
-            break;
-        case 103:
-            retval=13;
-            break;
-        case 104:
-            retval=12;
-            break;
-        case 105:
-            retval=107;
-            break;
-        case 107:
-            retval=77;
-            break;
-        case 108:
-            retval=78;
-            break;
-        case 109:
-            retval=79;
-            break;
-        case 112:
-            retval=47;
-            break;
-        case 117:
-            retval=116;
-            break;
-        case 121:
-            retval=112;
-            break;
-        case 122:
-            retval=55;
-            break;
-        case 127:
-            retval=121;
-            break;
-        default:
-            known=false;
-            retval=patch;
+    std::unordered_map<uint8_t, uint8_t> gmMapping {
+        {  0,  0 }, {  1,  1 }, { 13, 19},
+        { 16,  6 }, { 22,  8 }, { 23,  8 }, { 24, 62 }, { 25, 63 },
+        { 32, 88 }, { 33,101 }, { 34, 52 }, { 36, 97 }, { 38, 93 }, { 43,102 },
+        { 48, 48 }, { 49, 49 }, { 51, 45 }, { 52, 40 }, { 53, 40 }, { 54, 42 }, { 55, 42 }, { 56, 43 }, { 57, 46 }, { 58, 46 }, { 59, 24 },
+        { 70, 35 }, { 72, 73 }, { 73, 73 }, { 74, 72 }, { 77, 74 },
+        { 82, 71 }, { 83, 71 }, { 84, 68 }, { 85, 69 }, { 86, 70 }, { 88, 56 }, { 89, 56 }, { 90, 57 }, { 92, 60 }, { 93, 60 }, { 94, 58 },
+        { 96, 61 }, { 97, 11 }, {103, 13 }, {104, 12 }, {105,107 }, {107, 77 }, {108, 78 }, {109, 79 }, {112, 47 },
+        {117,116 }, {121,112 }, {122, 55 }, {127,121 }
+    };
+    auto p = gmMapping.find(patch);
+    if(p == gmMapping.end()) {
+        known=false;
+        retval=patch;
+    }
+    else {
+        retval = (*p).second;
     }
     if(known) {
         cout<<"Translated MT patch #"<<dec<<int(patch)<<" to GM patch #"<<int(retval)<<endl;
@@ -316,8 +158,7 @@ unsigned char mt2gm(unsigned char patch) {
     else {
         cout<<"Left MT patch #"<<dec<<int(patch)<<" untranslated."<<endl;
     }
-    //return retval;
-    return patch;
+    return retval;
 }
 
 bool process_events(binifstream &filein) {
@@ -338,6 +179,9 @@ bool process_events(binifstream &filein) {
     while(!filein.eof()) {
         filein>>event;
         channel=(event&0xf);
+        if(channel == 8) { // Translate MT-32's rhythm channel to GM's rhythm channel
+            event++;
+        }
         if(event>127) {
             //cout<<hex<<"Found event>: "<<int(event)<<endl;
         }
@@ -365,8 +209,9 @@ bool process_events(binifstream &filein) {
         case 0x70:
             break;
         case 0x80://Note stop
+            filein>>note_num>>velocity;
             cout<<"Shouldn't be present in an xmi!"<<endl;
-            return false;
+            //return false;
             break;
         case 0x90://Note start
             filein>>note_num>>velocity;
@@ -697,9 +542,13 @@ void play_midi(unsigned int midi_data_size) { //SDL-based play_midi method
 */
 
 void play_midi(unsigned int midi_data_size) { //SFML-based play_midi method
-    int status=mid_init("/usr/share/midi/eawpats12/timidity.cfg");
+    int status=mid_init("/etc/timidity.cfg");
     cout<<"Timidity initiation: "<<status<<endl;
-    MidIStream *stream=mid_istream_open_mem(&(midi_buffer[0]),midi_data_size,0);
+    if(status == -1) {
+        std::cerr<<"Failed to init Timidity.\n";
+        return;
+    }
+    MidIStream *stream=mid_istream_open_mem(midi_buffer.data(), midi_buffer.size());
     MidSongOptions *opts=new MidSongOptions;
     opts->rate=22050;
     opts->channels=2;
@@ -712,17 +561,12 @@ void play_midi(unsigned int midi_data_size) { //SFML-based play_midi method
     int ms = song_length%1000;
     cout<<"Song length: "<<minutes<<"m "<<seconds<<"."<<ms<<"s"<<endl;
     mid_song_start(song);
-    int song_samples = (song_length/1000) * 22050 * 2; //Seconds in the recording, times rate
-    vector<int16_t> vbuffer;
-    vbuffer.resize(vbuffer.size() + 1024);
-    while(mid_song_get_time(song) < song_length) {
-        vbuffer.resize(vbuffer.size() + 1024);
-        mid_song_read_wave(song,&(vbuffer[vbuffer.size()-1024]),2048);
-    }
+    uint32_t song_samples = ((song_length * 22050) / 1000); //Seconds in the recording, times rate
+    vector<int8_t> vbuffer(song_samples * sizeof(int16_t) * 2, 0);
+    mid_song_read_wave(song,vbuffer.data(),vbuffer.size());
     sf::SoundBuffer midi_song_buf;
-    //cout<<"About to load samples from audio buffer."<<endl;
     
-    midi_song_buf.loadFromSamples(const_cast<const int16_t *>(&(vbuffer[0])),vbuffer.size(),2,22050);
+    midi_song_buf.loadFromSamples(reinterpret_cast<const int16_t *>(vbuffer.data()),vbuffer.size() / 2,2,22050);
     sf::Time length = midi_song_buf.getDuration();
     //cout<<"Midi library reported song length: "<<song_length<<" ms. SFML reported song length: "<<length.asMilliseconds()<<endl;
     //cout<<"Buffer sample count: "<<midi_song_buf.getSampleCount()<<endl;
