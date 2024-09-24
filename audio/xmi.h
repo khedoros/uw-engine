@@ -1,8 +1,8 @@
 #ifndef XMI_H
 #define XMI_H
 
-#include "../util.h"
-#include "midi_event.h"
+#include "util.h"
+#include "midiEvent.h"
 
 #include<stdint.h>
 #include<string>
@@ -12,7 +12,7 @@ using namespace std;
 
 class xmi {
 public:
-    xmi() : curtime(0), timbres(0), events(0) {}
+    xmi() : timbres(0), events(0), curtime(0) {}
     bool load(string fn);
     pair<uint8_t, uint8_t> * next_timbre();
     void reset_timbre_it() { t_it = timbres.begin(); }

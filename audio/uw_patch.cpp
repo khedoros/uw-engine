@@ -1,5 +1,6 @@
-#include "../util.h"
-#include "uw_patch.h"
+#include "util.h"
+#include "uwPatch.h"
+#include "uwPatchNames.h"
 #include <cstring>
 #include <iostream>
 #include <iomanip>
@@ -26,6 +27,9 @@ void uw_patch_file::patchdat::setpat(std::vector<uint8_t> d, uint8_t b, uint8_t 
         memcpy(reinterpret_cast<void *>(&ad_patchdatastruct), reinterpret_cast<void *>(&(d[0])), d.size());
         ad_patchdata = d;
         has_opl2 = true;
+        if(name == "") {
+            name = getName(bank,patch);
+        }
         /* std::cout<<"Added Adlib Patch data"<<std::endl;*/
     }
     else if(d.size() == 0xf8) {
@@ -57,6 +61,9 @@ void uw_patch_file::patchdat::setpat(std::vector<uint8_t> d, uint8_t b, uint8_t 
         tv_patchdatastruct.update_data.resize((d.size() - offset) / 2);
         memcpy(reinterpret_cast<void *>(&(tv_patchdatastruct.update_data[0])), reinterpret_cast<void *>(&(d[offset])), d.size() - offset);
         has_tvfx = true;
+        if(name == "") {
+            name = getName(bank, patch);
+        }
     }
     else {
         std::cerr<<"Unimplemented patch type, size: "<<d.size()<<" bytes."<<std::endl;
@@ -115,29 +122,25 @@ bool uw_patch_file::load(std::string fna, std::string fnm /*= ""*/) {
     }
     if(!load_patches(ina)) return false;
     if(fnm != "" && !load_patches(inm)) return false;
-    #ifdef STAND_ALONE_PATCH
-    for(auto it = bank_data.begin(); it != bank_data.end(); ++it) {
-        std::cout<<"Bank: "<<int(it->bank)<<" Patch: "<<int(it->patch);
-        if(it->name != "") {
-            std::cout<<" Name: "<<it->name;
-        }
-        if(it->mt_patchdata.size() > 0) std::cout<<" Has MT-32  Data, size: "<<it->mt_patchdata.size()<<"\n";
-        if(it->ad_patchdata.size() > 0) {
-            std::cout<<" Has Adblib Data, size: "<<it->ad_patchdata.size()<<"  {\n";
-            for(auto it2 = it->ad_patchdata.begin(); it2 != it->ad_patchdata.end(); ++it2) {
-                std::cout<<std::hex<<" "<<int(*it2)<<std::dec;
-            }
-            std::cout<<"\n}"<<std::endl;
-            if(it->has_opl2) {
-                print_opl(it->ad_patchdatastruct);
-            }
-            else if(it->has_tvfx) {
-                print_tvfx(it->tv_patchdatastruct);
-            }
-        }
-    }
-    #endif
     return true;
+}
+
+std::string uw_patch_file::getName(int bank, int patch) {
+    switch(bank) {
+        case 0:
+            if(patch < melodyInstruments.size())
+                return melodyInstruments.at(patch);
+            break;
+        case 1:
+            if(patch < tvfxInstruments.size())
+                return tvfxInstruments.at(patch);
+            break;
+        case 127:
+            if(patch < rhythmInstruments.size())
+                return rhythmInstruments.at(patch);
+            break;
+    }
+    return "";
 }
 
 #ifdef STAND_ALONE_PATCH
@@ -158,21 +161,22 @@ int main(int argc, char *argv[]) {
         if(it->name != "") {
             std::cout<<" Name: "<<it->name;
         }
+        std::cout<<"\n";
         if(it->mt_patchdata.size() > 0) std::cout<<" Has MT-32  Data, size: "<<it->mt_patchdata.size()<<"\n";
         if(it->ad_patchdata.size() > 0) {
-        std::cout<<" Has Adblib Data, size: "<<it->ad_patchdata.size()<<"  {\n";
-        for(auto it2 = it->ad_patchdata.begin(); it2 != it->ad_patchdata.end(); ++it2) {
-            std::cout<<std::hex<<" "<<int(*it2)<<std::dec;
+            std::cout<<" Has Adblib Data, size: "<<it->ad_patchdata.size()<<"  {\n";
+            for(auto it2 = it->ad_patchdata.begin(); it2 != it->ad_patchdata.end(); ++it2) {
+                std::printf(" %02x", *it2);
+            }
+            std::cout<<"\n}"<<std::endl;
+            if(it->has_opl2) {
+                uw_patch_file::print_opl(it->ad_patchdatastruct);
+            }
+            else if(it->has_tvfx) {
+                uw_patch_file::print_tvfx(it->tv_patchdatastruct);
+            }
         }
-        std::cout<<"\n}"<<std::endl;
-        if(it->has_opl2) {
-            uw_patch_file::print_opl(it->ad_patchdatastruct);
-        }
-        else if(it->has_tvfx) {
-            uw_patch_file::print_tvfx(it->tv_patchdatastruct);
-        }
-    }
-        uw_patch_file::print_opl(it->ad_patchdatastruct);
+        std::cout<<"\n";
     }
 }
 #endif

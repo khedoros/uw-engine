@@ -19,7 +19,7 @@ const char xmi::TIMB[] = {'T','I','M','B','\0'};
 pair<uint8_t, uint8_t> * xmi::next_timbre() {
     if(t_it != timbres.end())
         return &(*(t_it++));
-    else return NULL;
+    else return nullptr;
 }
 
 uint32_t xmi::tick_count() {
@@ -29,7 +29,7 @@ uint32_t xmi::tick_count() {
 midi_event * xmi::next_event() {
     if(e_it != events.end())
         return &(*(e_it++));
-    else return NULL;
+    else return nullptr;
 }
 
 bool xmi::load(string filename) {
@@ -110,6 +110,7 @@ bool xmi::load_tags(binifstream &in) {
         cout<<"Unknown tag: "<<hex<<curtag<<endl;
         return false;
     }
+    return true;
 }
 
 bool xmi::load_timbres(binifstream &in, uint16_t timbre_count) {
@@ -153,6 +154,17 @@ bool xmi::load_events(binifstream &in) {
                 data.push_back(velocity);
                 events.push_back(midi_event(curtime, data));
                 data[0] -= 0x10;
+                note_off_time = curtime + midi_event::vlq2int(in);
+                //cout<<"Note off (note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<dec<<note_off_time<<")"<<endl;
+                events.push_back(midi_event(note_off_time, data));
+                break;
+            case 0xa0: // Key Pressure / Aftertouch
+                in>>note>>velocity;
+                //cout<<hex<<"Note aftertouch (channel: "<<(event&0x0f)<<" note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<dec<<curtime<<")"<<endl;
+                data.push_back(note);
+                data.push_back(velocity);
+                events.push_back(midi_event(curtime, data));
+                data[0] -= 0x20;
                 note_off_time = curtime + midi_event::vlq2int(in);
                 //cout<<"Note off (note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<dec<<note_off_time<<")"<<endl;
                 events.push_back(midi_event(note_off_time, data));
@@ -233,7 +245,7 @@ int main(int argc, char *argv[]) {
     int at_once_max = 0;
     int on_count = 0;
     int off_count = 0;
-    while(a != NULL) {
+    while(a != nullptr) {
         a->toString();
         int16_t channel=0, command=0;
         command = a->get_command();

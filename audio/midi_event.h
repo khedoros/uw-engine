@@ -2,8 +2,8 @@
 #define MIDI_EVENT_H
 
 #include<vector>
-#include<stdint.h>
-#include "../util.h"
+#include<cstdint>
+#include "util.h"
 #include<iostream>
 
 class midi_event {
