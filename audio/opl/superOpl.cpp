@@ -3,12 +3,13 @@
 #include<memory>
 #include "superOpl.h"
 #include "../../util.h"
-
+/*
 OPLEmul *superOplCreate(bool stereo)
 {
-    /* emulator create */
+    // emulator create
     return new superOpl(stereo);
 }
+*/
 
 void superOpl::Reset() {
     for(int addr=0;addr<255;addr++) {
@@ -215,9 +216,9 @@ void superOpl::WriteReg(int reg, int val) {
 }
 
 void superOpl::SetPanning(int channel, float left, float right) {}
-void superOpl::Update(float* buffer, int sampleCnt) {}
+//void superOpl::Update(float* buffer, int sampleCnt) {}
 
-void superOpl::Update(int16_t* buffer, int sampleCnt) {
+void superOpl::Update(std::vector<int16_t> buffer, int sampleCnt) {
     std::lock_guard<std::mutex> guard(regMutex);
     for(int i=0;i<sampleCnt*audioChannels;i+=audioChannels) {
         envCounter++;

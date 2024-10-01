@@ -7,16 +7,15 @@
 
 OPLEmul* superOplCreate(bool stereo);
 
-class superOpl: public OPLEmul {
+class superOpl/*: public OPLEmul */{
 public:
     superOpl();
     superOpl(bool stereo);
 
-    virtual void Reset() override;
-    virtual void WriteReg(int reg, int v) override;
-    virtual void Update(float *buffer, int length) override;
-    virtual void Update(int16_t *buffer, int length) override;
-    virtual void SetPanning(int channel, float left, float right) override;
+    virtual void Reset();
+    virtual void WriteReg(int reg, int v);
+    virtual void Update(std::vector<int16_t> buffer, int length);
+    virtual void SetPanning(int channel, float left, float right);
 
 private:
     class inst_t;
