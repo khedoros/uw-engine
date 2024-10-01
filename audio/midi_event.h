@@ -3,7 +3,7 @@
 
 #include<vector>
 #include<cstdint>
-#include "util.h"
+#include "../util.h"
 #include<iostream>
 
 class midi_event {

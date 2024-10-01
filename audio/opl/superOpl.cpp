@@ -1,16 +1,16 @@
 #include<iostream>
 #include<cmath>
 #include<memory>
-#include "yamahaYm3812.h"
-#include "util.h"
+#include "superOpl.h"
+#include "../../util.h"
 
-OPLEmul *YamahaYm3812Create(bool stereo)
+OPLEmul *superOplCreate(bool stereo)
 {
     /* emulator create */
-    return new YamahaYm3812(stereo);
+    return new superOpl(stereo);
 }
 
-void YamahaYm3812::Reset() {
+void superOpl::Reset() {
     for(int addr=0;addr<255;addr++) {
         if(addr >= 0x40 && addr < 0x60) {
             WriteReg(addr,0x3f);
@@ -44,17 +44,17 @@ void YamahaYm3812::Reset() {
     }
 }
 
-YamahaYm3812::YamahaYm3812() : curReg(0), statusVal(0), envCounter(0), audioChannels(2) {
+superOpl::superOpl() : curReg(0), statusVal(0), envCounter(0), audioChannels(2) {
     initTables();
     Reset();
 }
 
-YamahaYm3812::YamahaYm3812(bool stereo) : curReg(0), statusVal(0), envCounter(0), audioChannels(stereo?2:1) {
+superOpl::superOpl(bool stereo) : curReg(0), statusVal(0), envCounter(0), audioChannels(stereo?2:1) {
     initTables();
     Reset();
 }
 
-void YamahaYm3812::WriteReg(int reg, int val) {
+void superOpl::WriteReg(int reg, int val) {
     std::lock_guard<std::mutex> guard(regMutex);
     val &= 0xff;
     reg &= 0xff;
@@ -129,9 +129,9 @@ void YamahaYm3812::WriteReg(int reg, int val) {
     else if(reg >= 0xa0 && reg < 0xe0) { // Register writes that affect the channels
         uint8_t chNum = reg & 0x0f;
         if(chNum > 15) return; // invalid channel
-        YamahaYm3812::chan_t& channel = chan[chNum];
-        YamahaYm3812::op_t& modOp = channel.modOp;
-        YamahaYm3812::op_t& carOp = channel.carOp;
+        superOpl::chan_t& channel = chan[chNum];
+        superOpl::op_t& modOp = channel.modOp;
+        superOpl::op_t& carOp = channel.carOp;
         switch(reg & 0xf0) {
             case 0xa0:
                 channel.fNum &= 0x300;
@@ -214,10 +214,10 @@ void YamahaYm3812::WriteReg(int reg, int val) {
     }
 }
 
-void YamahaYm3812::SetPanning(int channel, float left, float right) {}
-void YamahaYm3812::Update(float* buffer, int sampleCnt) {}
+void superOpl::SetPanning(int channel, float left, float right) {}
+void superOpl::Update(float* buffer, int sampleCnt) {}
 
-void YamahaYm3812::Update(int16_t* buffer, int sampleCnt) {
+void superOpl::Update(int16_t* buffer, int sampleCnt) {
     std::lock_guard<std::mutex> guard(regMutex);
     for(int i=0;i<sampleCnt*audioChannels;i+=audioChannels) {
         envCounter++;
@@ -282,7 +282,7 @@ void YamahaYm3812::Update(int16_t* buffer, int sampleCnt) {
     }
 }
 
-void YamahaYm3812::initTables() {
+void superOpl::initTables() {
     for (int i = 0; i < 256; ++i) {
         logsinTable[i] = round(-log2(sin((double(i) + 0.5) * M_PI_2 / 256.0)) * 256.0);
         logsinTable[511 - i] = logsinTable[i];
@@ -312,12 +312,12 @@ void YamahaYm3812::initTables() {
     }
 }
 
-int YamahaYm3812::lookupSin(int val, int wf) {
+int superOpl::lookupSin(int val, int wf) {
     val &= 1023;
     return logsinTable[1024 * wf + val];
 }
 
-int YamahaYm3812::lookupExp(int val) {
+int superOpl::lookupExp(int val) {
     bool sign = val & 0x8000;
     int t = expTable[(val & 255)];
     int result = (t >> ((val & 0x7F00) >> 8));
@@ -325,11 +325,11 @@ int YamahaYm3812::lookupExp(int val) {
     return result;
 }
 
-int YamahaYm3812::convertWavelength(int wavelength) {
+int superOpl::convertWavelength(int wavelength) {
     return (static_cast<int64_t>(wavelength) * static_cast<int64_t>(NATIVE_SAMPLE_RATE)) / static_cast<int64_t>(OPL_SAMPLE_RATE);
 }
 
-void YamahaYm3812::updatePhases() {
+void superOpl::updatePhases() {
     if(envCounter % amPhaseSampleLength == 0) {
         amPhase++;
         amPhase %= amTable.size();
@@ -350,7 +350,7 @@ void YamahaYm3812::updatePhases() {
     }
 }
 
-void YamahaYm3812::updateEnvelopes() {
+void superOpl::updateEnvelopes() {
     for(auto& ch: chan) {
         if(ch.modOp.envPhase != adsrPhase::silent) {
             // std::cout<<"Modulator: ";
@@ -365,7 +365,7 @@ void YamahaYm3812::updateEnvelopes() {
     }
 }
 
-void YamahaYm3812::op_t::updateEnvelope(unsigned int counter) {
+void superOpl::op_t::updateEnvelope(unsigned int counter) {
     if(envPhase == adsrPhase::attack && (envLevel <= 0)) { // Transition from attack to decay when at max volume
         envPhase = adsrPhase::decay;
         envAccum = 0;
@@ -430,7 +430,7 @@ void YamahaYm3812::op_t::updateEnvelope(unsigned int counter) {
     else if(envLevel > 255) envLevel = 255; //assume it just overflowed the 8-bit value
 }
 
-void YamahaYm3812::op_t::printOperator() {
+void superOpl::op_t::printOperator() {
     std::cout<<std::boolalpha<<"0x20: AM:"<<amActive<<" VIB:"<<vibActive<<" sustain:"<<sustain<<" KSR:"<<keyScaleRate<<" mult:"<<int(multVal[freqMult])<<"\n";
     std::cout<<"0x40: KSL:"<<keyScaleLevel<<" TL:"<<totalLevel<<"\n";
     std::cout<<"0x60: AR:"<<attackRate<<" DR:"<<decayRate<<"\n";
@@ -439,7 +439,7 @@ void YamahaYm3812::op_t::printOperator() {
     std::cout<<"0xE0: Waveform:"<<waveform<<"\n";
 }
 
-void YamahaYm3812::chan_t::printChannel() {
+void superOpl::chan_t::printChannel() {
     std::cout<<"Block: "<<octave<<" FNum: "<<fNum<<"\n";
     std::cout<<"Modulator:\n";
     modOp.printOperator();
@@ -448,7 +448,7 @@ void YamahaYm3812::chan_t::printChannel() {
     std::cout<<"\n";
 }
 
-const std::array<int,210> YamahaYm3812::amTable {
+const std::array<int,210> superOpl::amTable {
     0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4,
     4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 
     9,10,10,10,10,11,11,11,11,12,12,12,12,13,13,13,13,14,14,14,14,
@@ -461,7 +461,7 @@ const std::array<int,210> YamahaYm3812::amTable {
     6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1
     };
 
-const std::array<int,64> YamahaYm3812::fmTable {{
+const std::array<int,64> superOpl::fmTable {{
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 1, 0, 0, 0,-1, 0,
     0, 1, 2, 1, 0,-1,-2,-1,
@@ -472,7 +472,7 @@ const std::array<int,64> YamahaYm3812::fmTable {{
     0, 3, 7, 3, 0,-3,-7,-3
 }};
 
-const std::array<int,128> YamahaYm3812::kslTable {
+const std::array<int,128> superOpl::kslTable {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 4, 5, 6, 7, 8,
     0, 0, 0, 0, 0, 3, 5, 7, 8,10,11,12,13,14,15,16,
@@ -483,16 +483,16 @@ const std::array<int,128> YamahaYm3812::kslTable {
     0,24,32,37,40,43,45,47,48,50,51,52,53,54,55,56
     };
 
-const std::array<float,4> YamahaYm3812::attackTableBase {
+const std::array<float,4> superOpl::attackTableBase {
     2826.24, 2252.8, 1884.16, 1597.44
 };
 
-const std::array<float, 4> YamahaYm3812::decayTableBase {
+const std::array<float, 4> superOpl::decayTableBase {
     39280.64, 31416.32, 26173.44, 22446.08
 };
 
 // These are measured in microseconds per change of level
-std::array<int,64> YamahaYm3812::attackTable {
+std::array<int,64> superOpl::attackTable {
     0, 0, 0, 0, // Skip level 0, because 0 means "no attack"
     11083, 8835, 7389, 6264,
     5542, 4417, 3694, 3132,
@@ -512,7 +512,7 @@ std::array<int,64> YamahaYm3812::attackTable {
 };
 
 // These are measured in microseconds per change of level
-std::array<int,64> YamahaYm3812::decayTable {
+std::array<int,64> superOpl::decayTable {
     0, 0, 0, 0, // Skip level 0, because 0 means "no decay"
     154042, 123201, 102641, 88024,
     77021, 61601, 51320, 44012,
@@ -531,11 +531,11 @@ std::array<int,64> YamahaYm3812::decayTable {
     9, 9, 9, 9
 };
 
-std::array<int,1024*4> YamahaYm3812::logsinTable;
-std::array<int,256> YamahaYm3812::expTable;
-const std::array<uint8_t,16> YamahaYm3812::multVal {1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 24, 24, 30, 30};
-const int YamahaYm3812::NATIVE_SAMPLE_RATE;
-const std::array<std::string,5> YamahaYm3812::adsrPhaseNames {
+std::array<int,1024*4> superOpl::logsinTable;
+std::array<int,256> superOpl::expTable;
+const std::array<uint8_t,16> superOpl::multVal {1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 24, 24, 30, 30};
+const int superOpl::NATIVE_SAMPLE_RATE;
+const std::array<std::string,5> superOpl::adsrPhaseNames {
     "silent",
     "attack",
     "decay",

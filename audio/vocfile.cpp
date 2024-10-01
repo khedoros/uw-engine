@@ -1,5 +1,5 @@
 #include<vector>
-#include<stdint.h>
+#include<cstdint>
 #include "vocfile.h"
 #include<iostream>
 #include<fstream>

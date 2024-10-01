@@ -5,12 +5,12 @@
 #include<mutex>
 #include "opl.h"
 
-OPLEmul* YamahaYm3812Create(bool stereo);
+OPLEmul* superOplCreate(bool stereo);
 
-class YamahaYm3812: public OPLEmul {
+class superOpl: public OPLEmul {
 public:
-    YamahaYm3812();
-    YamahaYm3812(bool stereo);
+    superOpl();
+    superOpl(bool stereo);
 
     virtual void Reset() override;
     virtual void WriteReg(int reg, int v) override;

@@ -1,4 +1,6 @@
-#include<std::string>
+#include<string>
+
+#include "opl/superOpl.h"
 
 class audioManager {
 public:
@@ -8,10 +10,10 @@ public:
     void audioManager::playSfx(int number);
     void audioManager::enqueueSong(std::string& xmiFile);
     void audioManager::clearQueue();
-    void audioManager::startMusic()
-    void audioManager::stopMusic()
-    void audioManager::muteMusic()
-    void audioManager::restartMusic()
+    void audioManager::startMusic();
+    void audioManager::stopMusic();
+    void audioManager::muteMusic();
+    void audioManager::restartMusic();
     void audioManager::setVol(int level);
 private:
     int volumeLevel;

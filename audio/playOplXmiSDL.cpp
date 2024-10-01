@@ -12,14 +12,14 @@
 #include<thread>
 
 #include "oplStream.h"
-#include "uwPatch.h"
-#include "opl.h"
-#include "yamahaYm3812.h"
+#include "uw_patch.h"
+#include "opl/opl.h"
+#include "opl/superOpl.h"
 #include "xmi.h"
-#include "midiEvent.h"
+#include "midi_event.h"
 
 //Store midi note number mappings to OPL block number and OPL F-num values
-vector<tuple<uint8_t,    uint8_t,     uint16_t>> freqs;
+std::vector<std::tuple<uint8_t,    uint8_t,     uint16_t>> freqs;
 std::unique_ptr<oplStream> opl;
 uw_patch_file uwpf;
 
@@ -165,7 +165,7 @@ void calc_freqs() {
             }
         }
         if(diff < 10) {
-            freqs.push_back(make_tuple(mid_num,blk,f_num));
+            freqs.push_back(std::make_tuple(mid_num,blk,f_num));
         }
         else {
             //cout<<" OPL: Out of Range\n";
@@ -198,7 +198,7 @@ void init_opl2() {
       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   //e0-ef Set waveforms to sine
       0,   0,   0,   0,   0,   0};                                                    //f0-f5 '                   '
 
-    for(size_t reg = 0; reg < 0xf6; ++reg) {
+    for(std::size_t reg = 0; reg < 0xf6; ++reg) {
         opl->WriteReg(reg,init_array1[reg]);
     }
 }
@@ -337,7 +337,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    string output_file = "";
+    std::string output_file = "";
 
     if(argc == 4) {
         output_file = argv[3];
@@ -349,7 +349,7 @@ int main(int argc, char* argv[]) {
     calc_freqs();//Populate the frequency conversion table
 
     // Initial timbres to load into the timbre cache
-    pair<uint8_t,uint8_t> * p = xmifile.next_timbre();
+    std::pair<uint8_t,uint8_t> * p = xmifile.next_timbre();
 
     while(p != nullptr) {
         std::cout<<"Timbre: Bank: "<<int(p->first)<<" Patch: "<<int(p->second)<<'\n';
@@ -395,8 +395,8 @@ int main(int argc, char* argv[]) {
             if(voice_num == -1) break;
 
             opl_note_assignment[voice_num] = -1;
-            block = get<1>(freqs[midi_num]);
-            f_num = get<2>(freqs[midi_num]);
+            block = std::get<1>(freqs[midi_num]);
+            f_num = std::get<2>(freqs[midi_num]);
             opl->WriteReg(voice_base2[voice_num]+ON_BLK_NUM, (block<<(2)) + ((f_num&0xff00)>>(8)));
             break;
         case midi_event::NOTE_ON: //0x90
@@ -430,12 +430,12 @@ int main(int argc, char* argv[]) {
             }
 
             if(channel == 9) {
-                block = get<1>(freqs[rhythm_channel_note]);
-                f_num = get<2>(freqs[rhythm_channel_note]);
+                block = std::get<1>(freqs[rhythm_channel_note]);
+                f_num = std::get<2>(freqs[rhythm_channel_note]);
             }
             else {
-                block = get<1>(freqs[midi_num]);
-                f_num = get<2>(freqs[midi_num]);
+                block = std::get<1>(freqs[midi_num]);
+                f_num = std::get<2>(freqs[midi_num]);
             }
 
             opl->WriteReg(voice_base2[voice_num]+0xa0, (f_num&0xff));
@@ -462,10 +462,10 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-            std::cout<<dec<<"Program change: Channel "<<int(channel)<<"->"<<int(channel_bank_num[channel])<<":"<<int(channel_patch_num[channel])<<'\n';
+            std::cout<<std::dec<<"Program change: Channel "<<int(channel)<<"->"<<int(channel_bank_num[channel])<<":"<<int(channel_patch_num[channel])<<'\n';
             break;
         case midi_event::CONTROL_CHANGE: //0xb0
-            std::cout<<"CC: "<<hex<<int(midi_data[0])<<" "<<int(midi_data[1])<<" "<<int(midi_data[2])<<'\n';
+            std::cout<<"CC: "<<std::hex<<int(midi_data[0])<<" "<<int(midi_data[1])<<" "<<int(midi_data[2])<<'\n';
             meta = e->get_meta();
             if(meta == 0x01) { //Modulation change (set vibrato if over 64)
                 channel_modulation[channel] = midi_data[2];
@@ -510,7 +510,7 @@ int main(int argc, char* argv[]) {
                         channel_patch[channel] = &patch;
                     }
                 }
-                std::cout<<dec<<"Bank change: Channel "<<int(channel)<<"->"<<int(channel_bank_num[channel])<<":"<<int(channel_patch_num[channel])<<'\n';
+                std::cout<<std::dec<<"Bank change: Channel "<<int(channel)<<"->"<<int(channel_bank_num[channel])<<":"<<int(channel_patch_num[channel])<<'\n';
             }           
             else if(meta == 0x6e) std::cout<<"Channel lock (not implemented)\n";
             else if(meta == 0x6f) std::cout<<"Channel lock protect (not implemented)\n";
@@ -520,14 +520,14 @@ int main(int argc, char* argv[]) {
             else if(meta == 0x74) {
                 std::cout<<"For loop controller (not implemented) data: ";
                 for(int i=0;i<e->get_data_size();++i) {
-                    std::cout<<hex<<int(midi_data[i])<<" ";
+                    std::cout<<std::hex<<int(midi_data[i])<<" ";
                 }
                 std::cout<<'\n';
             }
             else if(meta == 0x75) {
                 std::cout<<"Next/Break loop controller (not implemented) data: ";
                 for(int i=0;i<e->get_data_size();++i) {
-                    std::cout<<hex<<int(midi_data[i])<<" ";
+                    std::cout<<std::hex<<int(midi_data[i])<<" ";
                 }
                 std::cout<<'\n';
             }
@@ -574,7 +574,7 @@ int main(int argc, char* argv[]) {
         }
             break;
         default:
-            std::cout<<"Not implemented, yet: "<<hex<<int(midi_data[0])<<" "<<int(midi_data[1])<<" "<<int(midi_data[2])<<'\n';
+            std::cout<<"Not implemented, yet: "<<std::hex<<int(midi_data[0])<<" "<<int(midi_data[1])<<" "<<int(midi_data[2])<<'\n';
         }
 
         e = xmifile.next_event();

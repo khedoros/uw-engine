@@ -16,7 +16,7 @@ const char xmi::RBRN[] = {'R','B','R','N','\0'};
 const char xmi::EVNT[] = {'E','V','N','T','\0'};
 const char xmi::TIMB[] = {'T','I','M','B','\0'};
 
-pair<uint8_t, uint8_t> * xmi::next_timbre() {
+std::pair<uint8_t, uint8_t> * xmi::next_timbre() {
     if(t_it != timbres.end())
         return &(*(t_it++));
     else return nullptr;
@@ -32,7 +32,7 @@ midi_event * xmi::next_event() {
     else return nullptr;
 }
 
-bool xmi::load(string filename) {
+bool xmi::load(std::string filename) {
     curtime = 0;
     timbres.resize(0);
     events.resize(0);
@@ -41,12 +41,12 @@ bool xmi::load(string filename) {
     in.open(filename.c_str());
     bool opened = in.is_open();
     if(!opened) {
-        cout<<"Failed to open the file '"<<filename<<". Aborting."<<endl;
+        std::cout<<"Failed to open the file '"<<filename<<". Aborting."<<std::endl;
         return false;
     }
-    //cout<<"Going to load tags"<<endl;
+    //std::cout<<"Going to load tags"<<std::endl;
     return load_tags(in);
-    //cout<<"Loaded tags"<<endl;
+    //std::cout<<"Loaded tags"<<std::endl;
 }
 
 bool xmi::load_tags(binifstream &in) {
@@ -54,60 +54,60 @@ bool xmi::load_tags(binifstream &in) {
     uint32_t curtag_size;
     in>>curtag;
     if(curtag == tag(FORM)) {
-        //cout<<"Found a FORM tag, size: ";
+        //std::cout<<"Found a FORM tag, size: ";
         in>>curtag_size; curtag_size = bswap_32(curtag_size);
-        //cout<<curtag_size<<endl;
+        //std::cout<<curtag_size<<std::endl;
         load_tags(in);
     }
     else if(curtag == tag(INFO)) {
          in>>curtag_size; curtag_size = bswap_32(curtag_size);
-         //cout<<"Found an INFO tag, size: "<<curtag_size<<endl;
+         //std::cout<<"Found an INFO tag, size: "<<curtag_size<<std::endl;
          uint16_t form_count = 0;
          in>>form_count;
          if(form_count == 1) {
-             //cout<<"There is "<<form_count<<" track in this file. Good."<<endl;
+             //std::cout<<"There is "<<form_count<<" track in this file. Good."<<std::endl;
          }
          else {
-             //cout<<"There are "<<form_count<<" tracks in this file. I hate you, so I'll only load the first."<<endl;
+             //std::cout<<"There are "<<form_count<<" tracks in this file. I hate you, so I'll only load the first."<<std::endl;
          }
          load_tags(in);
     }
     else if(curtag == tag(CAT_)) {
         in>>curtag_size; curtag_size = bswap_32(curtag_size);
-        //cout<<"Found a 'CAT ' tag, size: "<<curtag_size<<endl;
+        //std::cout<<"Found a 'CAT ' tag, size: "<<curtag_size<<std::endl;
         load_tags(in);
     }
     else if(curtag == tag(TIMB)) {
         in>>curtag_size; curtag_size = bswap_32(curtag_size);
         uint16_t timbre_count = 0;
         in>>timbre_count;
-        //cout<<"Found a TIMB tag, defining "<<timbre_count<<" timbres:"<<endl;
-        //cout<<"Going to load timbres"<<endl;
+        //std::cout<<"Found a TIMB tag, defining "<<timbre_count<<" timbres:"<<std::endl;
+        //std::cout<<"Going to load timbres"<<std::endl;
         load_timbres(in, timbre_count);
-        //cout<<"Loaded timbres."<<endl;
+        //std::cout<<"Loaded timbres."<<std::endl;
         load_tags(in);
     }
     else if(curtag == tag(EVNT)) {
         in>>curtag_size; curtag_size = bswap_32(curtag_size);
-        //cout<<"Found an EVNT tag, size: "<<curtag_size<<endl;
-        //cout<<"Going to load events."<<endl;
+        //std::cout<<"Found an EVNT tag, size: "<<curtag_size<<std::endl;
+        //std::cout<<"Going to load events."<<std::endl;
         return load_events(in);
     }
     else if(curtag == tag(XDIR)) {
-        //cout<<"Found an XDIR tag"<<endl;
+        //std::cout<<"Found an XDIR tag"<<std::endl;
         load_tags(in);
     }
     else if(curtag == tag(XMID)) {
-        //cout<<"Found an XMID tag"<<endl;
+        //std::cout<<"Found an XMID tag"<<std::endl;
         load_tags(in);
     }
     else if(curtag == tag(RBRN)) { //Ignore RBRN, because I don't care
         in>>curtag_size; curtag_size = bswap_32(curtag_size);
-        in.seekg(curtag_size, ios::cur);
+        in.seekg(curtag_size, std::ios::cur);
         load_tags(in);
     }
     else {
-        cout<<"Unknown tag: "<<hex<<curtag<<endl;
+        std::cout<<"Unknown tag: "<<std::hex<<curtag<<std::endl;
         return false;
     }
     return true;
@@ -118,8 +118,8 @@ bool xmi::load_timbres(binifstream &in, uint16_t timbre_count) {
     for(int i=0;i<timbre_count;++i) {
         uint8_t patch=0, bank=0;
         in>>patch>>bank;
-        //cout<<hex<<"\t#"<<i<<": Bank: "<<int(bank)<<"\tPatch: "<<int(patch)<<endl;
-        timbres.push_back(pair<uint8_t,uint8_t>(bank,patch));
+        //std::cout<<std::hex<<"\t#"<<i<<": Bank: "<<int(bank)<<"\tPatch: "<<int(patch)<<std::endl;
+        timbres.push_back(std::pair<uint8_t,uint8_t>(bank,patch));
     }
     t_it = timbres.begin();
     return true;
@@ -135,7 +135,7 @@ bool xmi::load_events(binifstream &in) {
     uint8_t note = 0;
     uint8_t velocity = 0;
     uint32_t note_off_time = 0;
-    vector<uint8_t> data;
+    std::vector<uint8_t> data;
     assert(events.size() == 0);
     while(!in.eof()) {
         data.clear();
@@ -143,42 +143,42 @@ bool xmi::load_events(binifstream &in) {
         data.push_back(event);
         if(event < 128) {
             curtime += event;
-            //cout<<dec<<curtime - event<<" + "<<int(event)<<" = "<<curtime<<" * 1/120 seconds"<<endl;
+            //std::cout<<std::dec<<curtime - event<<" + "<<int(event)<<" = "<<curtime<<" * 1/120 seconds"<<std::endl;
         }
         else {
             switch(event & 0xf0) {
             case 0x90: // NOTE ON
                 in>>note>>velocity;
-                //cout<<hex<<"Note on (channel: "<<(event&0x0f)<<" note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<dec<<curtime<<")"<<endl;
+                //std::cout<<std::hex<<"Note on (channel: "<<(event&0x0f)<<" note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<std::dec<<curtime<<")"<<std::endl;
                 data.push_back(note);
                 data.push_back(velocity);
                 events.push_back(midi_event(curtime, data));
                 data[0] -= 0x10;
                 note_off_time = curtime + midi_event::vlq2int(in);
-                //cout<<"Note off (note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<dec<<note_off_time<<")"<<endl;
+                //std::cout<<"Note off (note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<std::dec<<note_off_time<<")"<<std::endl;
                 events.push_back(midi_event(note_off_time, data));
                 break;
             case 0xa0: // Key Pressure / Aftertouch
                 in>>note>>velocity;
-                //cout<<hex<<"Note aftertouch (channel: "<<(event&0x0f)<<" note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<dec<<curtime<<")"<<endl;
+                //std::cout<<std::hex<<"Note aftertouch (channel: "<<(event&0x0f)<<" note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<std::dec<<curtime<<")"<<std::endl;
                 data.push_back(note);
                 data.push_back(velocity);
                 events.push_back(midi_event(curtime, data));
                 data[0] -= 0x20;
                 note_off_time = curtime + midi_event::vlq2int(in);
-                //cout<<"Note off (note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<dec<<note_off_time<<")"<<endl;
+                //std::cout<<"Note off (note: "<<int(note)<<" velocity: "<<int(velocity)<<" at "<<std::dec<<note_off_time<<")"<<std::endl;
                 events.push_back(midi_event(note_off_time, data));
                 break;
             case 0xb0: //CTRL_CHANGE
                 in>>controller>>value;
-                //cout<<"Control change ("<<hex<<int(controller)<<" = "<<int(value)<<")"<<endl;
+                //std::cout<<"Control change ("<<std::hex<<int(controller)<<" = "<<int(value)<<")"<<std::endl;
                 data.push_back(controller);
                 data.push_back(value);
                 events.push_back(midi_event(curtime, data));
                 break;
             case 0xc0: //PRG_CHANGE
                 in>>value;
-                //cout<<"Patch change (Channel #"<<(event&0x0f)<<" = "<<int(value)<<")"<<endl;
+                //std::cout<<"Patch change (Channel #"<<(event&0x0f)<<" = "<<int(value)<<")"<<std::endl;
                 data.push_back(value);
                 events.push_back(midi_event(curtime, data));
                 break;
@@ -191,29 +191,29 @@ bool xmi::load_events(binifstream &in) {
                 break;
             case 0xf0: //META_EVENT
                 in>>meta_event>>meta_size;
-                //cout<<"Meta event "<<hex<<int(meta_event);
+                //std::cout<<"Meta event "<<std::hex<<int(meta_event);
                 data.push_back(meta_event);
                 data.push_back(meta_size);
                 for(size_t i = 0; i < meta_size; ++i) {
                     in>>cur_data_byte;
-                    //cout<<hex<<" "<<int(cur_data_byte);
+                    //std::cout<<std::hex<<" "<<int(cur_data_byte);
                     data.push_back(cur_data_byte);
                 }
-                //cout<<endl;
+                //std::cout<<std::endl;
                 events.push_back(midi_event(curtime, data));
                 if(meta_event == 0x2f) {
                     //events.push_back(midi_event(curtime,data));
-                    cout<<"Loading reached the end of the track. Found "<<dec<<events.size()<<" MIDI events."<<endl;
-                    //cout<<"Sorting the events"<<endl;
+                    std::cout<<"Loading reached the end of the track. Found "<<std::dec<<events.size()<<" MIDI events."<<std::endl;
+                    //std::cout<<"Sorting the events"<<std::endl;
                     sort(events.begin(), events.end(), midi_event::sort_by_time);
-                    //cout<<"Done sorting the events."<<endl;
+                    //std::cout<<"Done sorting the events."<<std::endl;
                     e_it = events.begin();
                     return true;
                 }
 
                 break;
             default:
-                cout<<"Hullo, I don't know what command "<<hex<<(event & 0xf0)<<" is for yet :-D"<<endl;
+                std::cout<<"Hullo, I don't know what command "<<std::hex<<(event & 0xf0)<<" is for yet :-D"<<std::endl;
                 return false;
             }
             //events.push_back(midi_event(curtime,data));
@@ -231,10 +231,10 @@ int main(int argc, char *argv[]) {
     xmi in;
     bool success = in.load(argv[1]);
     if(success) {
-        cout<<"Successfully loaded the XMI file."<<endl;
+        std::cout<<"Successfully loaded the XMI file."<<std::endl;
     }
     else {
-        cout<<"There was an error loading the XMI file."<<endl;
+        std::cout<<"There was an error loading the XMI file."<<std::endl;
         return 1;
     }
     midi_event  * a = in.next_event();
@@ -250,12 +250,12 @@ int main(int argc, char *argv[]) {
         int16_t channel=0, command=0;
         command = a->get_command();
         channel = a->get_channel();
-        cout<<dec;
+        std::cout<<std::dec;
         if(command == 0x80) { //midi note-off
             channel_on[channel]--;
             at_once--;
             on_count++;
-            //cout<<"Reduced channel "<<channel<<"'s playing notes to "<<channel_on[channel]<<" and total playing to "<<at_once<<endl;
+            //std::cout<<"Reduced channel "<<channel<<"'s playing notes to "<<channel_on[channel]<<" and total playing to "<<at_once<<std::endl;
         }
         else if(command == 0x90) {
             channel_on[channel]++;
@@ -263,13 +263,13 @@ int main(int argc, char *argv[]) {
             off_count++;
             if(at_once > at_once_max) { at_once_max = at_once; }
             if(channel_on[channel] > channel_max[channel]) { channel_max[channel] = channel_on[channel]; total_max[channel] = at_once; }
-            //cout<<"Increased channel "<<channel<<"'s playing notes to "<<channel_on[channel]<<" and total playing to "<<at_once<<endl;
+            //std::cout<<"Increased channel "<<channel<<"'s playing notes to "<<channel_on[channel]<<" and total playing to "<<at_once<<std::endl;
         }
         a = in.next_event();
     }
-    cout<<"Saw a maximum of "<<at_once_max<<" notes playing at once. Saw "<<on_count<<" note-on events, saw "<<off_count<<" note-off events."<<endl;
-    cout<<"Maximums:\n";
+    std::cout<<"Saw a maximum of "<<at_once_max<<" notes playing at once. Saw "<<on_count<<" note-on events, saw "<<off_count<<" note-off events."<<std::endl;
+    std::cout<<"Maximums:\n";
     for(int i=0;i<16;++i)
-        cout<<"\tChannel "<<i<<": "<<channel_max[i]<<" ( out of "<<total_max[i]<<" playing at the time)"<<endl;
+        std::cout<<"\tChannel "<<i<<": "<<channel_max[i]<<" ( out of "<<total_max[i]<<" playing at the time)"<<std::endl;
 }
 #endif
