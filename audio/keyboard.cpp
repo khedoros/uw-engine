@@ -8,7 +8,7 @@
 #include<SDL2/SDL.h>
 #include "opl.h"
 #include "oplStream.h"
-#include "uwPatch.h"
+#include "uw_patch.h"
 
 std::vector<std::tuple<uint8_t,uint8_t,uint16_t>> freqs;
 

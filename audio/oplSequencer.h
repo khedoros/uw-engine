@@ -11,6 +11,7 @@ class oplSequencer {
 public:
     oplSequencer(const std::string& uwpfFile);
     bool loadXmi(const std::string& xmiFile);
+    void keyOffAll();
     void playSfx(int number);
     std::vector<int16_t> tick();
 
@@ -35,6 +36,28 @@ private:
     void calcFreqs();
     void writeVolume(int8_t note_num);
     bool copy_patch(int voice, int noteIndex);
+
+    bool switch_tvfx_phase(int voice);
+    void tvfx_update_voice(int voice);
+
+    // Sound effect tracking data
+    enum tvfxOffset {
+        freq,
+        level0,
+        level1,
+        priority,
+        feedback,
+        mult0,
+        mult1,
+        waveform
+    };
+    static constexpr int TVFX_ELEMENT_COUNT = 8;
+
+    bool iterateTvfxCommandList(int voice, tvfxOffset element);
+    void tvfx_note_free(int voice);
+    void tvfx_note_off(int voice);
+    void iterateTvfx();
+
 
     static std::array<std::tuple<uint8_t,uint8_t,uint16_t>, 128> freqs;
 
@@ -91,4 +114,46 @@ private:
 
     midi_event* next_event;
 
+
+    // TVFX stuff
+    enum timbre_type {
+        BNK_INST = 0,                       // S_type[] equates
+        TV_INST = 1,
+        TV_EFFECT = 2,
+        OPL3_INST = 3
+    };
+
+    struct tvfxElement {
+        uint16_t offset;
+        uint16_t counter;
+        uint16_t value;
+        uint16_t increment;
+    };
+
+    std::array<std::array<tvfxElement, TVFX_ELEMENT_COUNT>, OPL_VOICE_COUNT> tvfxElements;
+
+    std::array<uint8_t, OPL_VOICE_COUNT> S_kbf_shadow; // shadowed KON-BLOCK-FNUM(H) registers
+    std::array<uint8_t, OPL_VOICE_COUNT> S_block;      // KON/BLOCK values
+    std::array<uint8_t, OPL_VOICE_COUNT> S_fbc;
+    std::array<uint8_t, OPL_VOICE_COUNT> S_ksltl_0;
+    std::array<uint8_t, OPL_VOICE_COUNT> S_ksltl_1;
+    std::array<uint8_t, OPL_VOICE_COUNT> S_avekm_0;
+    std::array<uint8_t, OPL_VOICE_COUNT> S_avekm_1;
+    std::array<uw_patch_file::tvfx_patch*, OPL_VOICE_COUNT> S_tvfx_patch;
+    std::array<uint16_t, OPL_VOICE_COUNT> tvfx_duration;
+    enum tvfxStatus {
+        FREE, KEYON, KEYOFF
+    };
+    std::array<int, OPL_VOICE_COUNT> tvfx_status {FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE };
+    std::array<uint8_t, OPL_VOICE_COUNT> tvfx_update;
+
+    #define U_FREQ (1<<freq)
+    #define U_LEVEL0 (1<<level0)
+    #define U_LEVEL1 (1<<level1)
+    #define U_PRIORITY (1<<priority)
+    #define U_FEEDBACK (1<<feedback)
+    #define U_MULT0 (1<<mult0)
+    #define U_MULT1 (1<<mult1)
+    #define U_WAVEFORM (1<<waveform)
+    #define U_ALL (U_FREQ|U_LEVEL0|U_LEVEL1|U_PRIORITY|U_FEEDBACK|U_MULT0|U_MULT1|U_WAVEFORM)
 };

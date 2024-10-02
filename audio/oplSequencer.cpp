@@ -184,7 +184,12 @@ oplSequencer::oplSequencer(const std::string& uwpfFile) {
     status = unloaded;
 }
 
+// Should be called at 120Hz for the music and sound effects to behave properly
 std::vector<int16_t> oplSequencer::tick() {
+    if(curTick % 2 == 0) {
+        // serve tvfx at 60Hz
+        iterateTvfx();
+    }
 
     uint32_t curTime = 0;
     uint8_t meta = 0;
@@ -219,6 +224,7 @@ std::vector<int16_t> oplSequencer::tick() {
             if(voice_num == -1) break;
 
             opl_note_assignment[voice_num] = -1;
+            note_voice[note_index] = -1;
             block = std::get<1>(freqs[midi_num]);
             f_num = std::get<2>(freqs[midi_num]);
             opl.WriteReg(voice_base2[voice_num]+ON_BLK_NUM, (block<<(2)) + ((f_num&0xff00)>>(8)));
@@ -409,12 +415,349 @@ bool oplSequencer::loadXmi(const std::string& xmiFileName) {
             }
         }
     }
+    /*
+    for(int )
+    */
     status = playing;
     return true;
 }
 
 oplSequencer::musicStatus oplSequencer::getStatus() {
     return status;
+}
+
+void oplSequencer::keyOffAll() {
+    for(int i = 0; i < MIDI_NOTE_COUNT; i++) {
+        int8_t& channel = note_channel[i];
+        if(channel == -1) {
+            continue;
+        }
+
+        int8_t& voice = note_voice[i];
+
+        if(voice == -1) {
+            channel = -1;
+        }
+        else {
+            if(channel_bank_num[channel] == 1) { // Skip notes representing sound effects
+                continue;
+            }
+            int8_t midi_num = note_midi_num[i];
+            uint8_t block = std::get<1>(freqs[midi_num]);
+            uint8_t f_num = std::get<2>(freqs[midi_num]);
+            opl.WriteReg(voice_base2[voice]+ON_BLK_NUM, (block<<(2)) + ((f_num&0xff00)>>(8)));
+            opl_note_assignment[voice] = -1;
+            voice = -1;
+            channel = -1;
+        }
+    }
+}
+
+void oplSequencer::playSfx(int number) {
+    int voiceIndex = find_unused_voice();
+    if(voiceIndex == -1) {
+        return;
+    }
+    std::cout<<"playing "<<number<<" on voice "<<voiceIndex<<"\n";
+    for(auto& pat: uwpf.bank_data) {
+        if(pat.bank == 1 && pat.patch == number) {
+            tvfx_status[voiceIndex] = KEYON;
+            opl_note_assignment[voiceIndex] = 127;
+            S_tvfx_patch[voiceIndex] = &(pat.tv_patchdatastruct);
+        }
+    }
+    switch_tvfx_phase(voiceIndex);
+}
+
+// Sets up the voice for the tvfx keyon and keyoff stages
+bool oplSequencer::switch_tvfx_phase(int voice) {
+    if(voice == -1 || voice >= OPL_VOICE_COUNT) {
+        std::cerr<<"Invalid voice\n";
+        return false;
+    }
+
+    bool keyOn = (tvfx_status[voice] == KEYON);
+
+    auto pat = S_tvfx_patch[voice];
+
+    //designate initial values for the modulator and carrier:
+    S_fbc[voice] = 0;        // FM synth, no feedback; feedback comes from time-variant part)
+    S_ksltl_0[voice] = 0;    // volume=zero, ksl=0 (TL will typically come from the time-variant part)
+    S_ksltl_1[voice] = 0;    // volume=zero, ksl=0
+    S_avekm_0[voice] = 0x20; // SUSTAIN=1, AM=0, FM=0, Mult=0 (Mult will typically come from TV part)
+    S_avekm_1[voice] = 0x20; // SUSTAIN=1, AM=0, FM=0, Mult=0
+    
+    uint8_t timbreType = pat->init.type;
+
+    if(timbreType != TV_INST) {
+        S_block[voice] = 0x28;
+    }
+    else {
+        S_block[voice] = 0x20;
+    }
+
+    if(!pat->uses_opt) { // Apply default ADSR values
+        std::printf("default adsr %02x%02x %02x%02x\n", 0xff, 0x0f, 0xff, 0x0f);
+        opl.WriteReg(voice_base_mod[voice]+AD, 0xff);
+        opl.WriteReg(voice_base_mod[voice]+SR, 0x0f);
+        opl.WriteReg(voice_base_car[voice]+AD, 0xff);
+        opl.WriteReg(voice_base_car[voice]+SR, 0x0f);
+    }
+    else {
+        if(keyOn) { // ADSR values defined by the sound effect timbre
+            std::printf("keyon adsr %02x%02x %02x%02x\n", pat->opt.keyon_ad_0, pat->opt.keyon_sr_0, pat->opt.keyon_ad_1, pat->opt.keyon_sr_1);
+            opl.WriteReg(voice_base_mod[voice]+AD, pat->opt.keyon_ad_0);
+            opl.WriteReg(voice_base_mod[voice]+SR, pat->opt.keyon_sr_0);
+            opl.WriteReg(voice_base_car[voice]+AD, pat->opt.keyon_ad_1);
+            opl.WriteReg(voice_base_car[voice]+SR, pat->opt.keyon_sr_1);
+        }
+        else {
+            std::printf("keyoff adsr %02x%02x %02x%02x\n", pat->opt.release_ad_0, pat->opt.release_sr_0, pat->opt.release_ad_1, pat->opt.release_sr_1);
+            opl.WriteReg(voice_base_mod[voice]+AD, pat->opt.release_ad_0);
+            opl.WriteReg(voice_base_mod[voice]+SR, pat->opt.release_sr_0);
+            opl.WriteReg(voice_base_car[voice]+AD, pat->opt.release_ad_1);
+            opl.WriteReg(voice_base_car[voice]+SR, pat->opt.release_sr_1);
+        }
+    }
+
+    // Original offsets were based on byte offsets in the whole timbre
+    // The indices here only include the command lists themselves, and address 16-bit words.
+    // These values are the key to the "time-variant effects"
+    if(keyOn) {
+        tvfx_duration[voice] = pat->init.duration + 1;
+
+        tvfxElements[voice][freq].offset = (pat->init.keyon_f_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][level0].offset = (pat->init.keyon_v0_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][level1].offset = (pat->init.keyon_v1_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][priority].offset = (pat->init.keyon_p_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][feedback].offset = (pat->init.keyon_fb_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][mult0].offset = (pat->init.keyon_m0_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][mult1].offset = (pat->init.keyon_m1_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][waveform].offset = (pat->init.keyon_ws_offset - pat->init.keyon_f_offset) / 2;
+
+        tvfxElements[voice][freq].value = pat->init.init_f_val;
+        tvfxElements[voice][level0].value = pat->init.init_v0_val;
+        tvfxElements[voice][level1].value = pat->init.init_v1_val;
+        tvfxElements[voice][priority].value = pat->init.init_p_val;
+        tvfxElements[voice][feedback].value = pat->init.init_fb_val;
+        tvfxElements[voice][mult0].value = pat->init.init_m0_val;
+        tvfxElements[voice][mult1].value = pat->init.init_m1_val;
+        tvfxElements[voice][waveform].value = pat->init.init_ws_val;
+    }
+    else {
+        tvfxElements[voice][freq].offset = (pat->init.release_f_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][level0].offset = (pat->init.release_v0_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][level1].offset = (pat->init.release_v1_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][priority].offset = (pat->init.release_p_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][feedback].offset = (pat->init.release_fb_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][mult0].offset = (pat->init.release_m0_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][mult1].offset = (pat->init.release_m1_offset - pat->init.keyon_f_offset) / 2;
+        tvfxElements[voice][waveform].offset = (pat->init.release_ws_offset - pat->init.keyon_f_offset) / 2;
+    }
+
+    for(int element = 0; element < TVFX_ELEMENT_COUNT; element++) {
+        tvfxElements[voice][element].counter = 1;
+        tvfxElements[voice][element].increment = 0;
+    }
+
+    tvfx_update[voice] = U_ALL;
+    return true;
+}
+
+// Write current TVFX state out to the OPL hardware
+void oplSequencer::tvfx_update_voice(int voice) {
+    if(tvfx_update[voice] & U_MULT0) {
+        uint16_t m0_val = tvfxElements[voice][mult0].value;
+        uint8_t AVEKM_0 = S_avekm_0[voice];
+        m0_val >>= 12; // take the top 4 bits
+        opl.WriteReg(voice_base_mod[voice]+AVEKM, m0_val | AVEKM_0);
+        tvfx_update[voice] &= (~U_MULT0);
+    }
+    if(tvfx_update[voice] & U_MULT1) {
+        uint16_t m1_val = tvfxElements[voice][mult1].value;
+        uint8_t AVEKM_1 = S_avekm_1[voice];
+        m1_val >>= 12; // take the top 4 bits
+        opl.WriteReg(voice_base_car[voice] + AVEKM, m1_val | AVEKM_1);
+        tvfx_update[voice] &= (~U_MULT1);
+    }
+    if(tvfx_update[voice] & U_LEVEL0) {
+        uint8_t KSLTL_0 = S_ksltl_0[voice];
+        uint16_t v0_val = tvfxElements[voice][level0].value;
+        v0_val >>= 10; // take the top 6 bits
+        v0_val = (~v0_val) & 0x3f;
+        v0_val |= KSLTL_0;
+        opl.WriteReg(voice_base_mod[voice] + KSL_TL, v0_val);
+        tvfx_update[voice] &= (~U_LEVEL0);
+    }
+    if(tvfx_update[voice] & U_LEVEL1) {
+        uint8_t KSLTL_1 = S_ksltl_1[voice];
+        uint16_t v1_val = tvfxElements[voice][level1].value;
+        v1_val >>= 10; // take the top 6 bits
+        v1_val = (~v1_val) & 0x3f;
+        v1_val |= KSLTL_1;
+        opl.WriteReg(voice_base_car[voice] + KSL_TL, v1_val);
+        tvfx_update[voice] &= (~U_LEVEL1);
+    }
+    if(tvfx_update[voice] & U_WAVEFORM) {            //   __WS:   mov al,BYTE PTR ws_val
+        uint16_t ws_val = tvfxElements[voice][waveform].value;
+        opl.WriteReg(voice_base_mod[voice] + WS, ws_val >> 8);
+        opl.WriteReg(voice_base_car[voice] + WS, (ws_val & 0xff));
+        tvfx_update[voice] &= (~U_WAVEFORM);         //           call write_register C,voice0,0e0h,ax
+    }
+    if(tvfx_update[voice] & U_FEEDBACK) {
+        uint16_t fb_val = tvfxElements[voice][feedback].value;
+        uint8_t FBC = S_fbc[voice];
+        fb_val >>= 12; // Take the top 4 bits
+        fb_val &= 0b1110;
+        int fbc = FBC & 1;
+        opl.WriteReg(voice_base2[voice] + FB_C, fb_val | fbc);
+        tvfx_update[voice] &= (~U_FEEDBACK);
+    }
+    if(tvfx_update[voice] & U_FREQ) {
+        uint16_t f_num = (tvfxElements[voice][freq].value >> 6);
+        opl.WriteReg(voice_base2[voice] + F_NUM_L, f_num & 0xff);
+
+        S_kbf_shadow[voice] = ((f_num >> 8) | S_block[voice]);
+        opl.WriteReg(voice_base2[voice] + ON_BLK_NUM, S_kbf_shadow[voice]);
+        tvfx_update[voice] &= (~U_FREQ);
+    }   
+}
+
+// Do the next step in the command list for a specific time-variant element
+bool oplSequencer::iterateTvfxCommandList(int voice, tvfxOffset element) {
+    uw_patch_file::tvfx_patch* patchDat = S_tvfx_patch[voice];
+    auto& offset = tvfxElements[voice][element].offset;
+    auto& value = tvfxElements[voice][element].value;
+    auto& increment = tvfxElements[voice][element].increment;
+    auto& counter = tvfxElements[voice][element].counter;
+
+    bool valChanged = false;
+    //std::cout<<"iterateTvfxCommandList()\n";
+    for(int iter = 0; iter < 10; iter++) {
+        uint16_t command = patchDat->update_data[offset+0];
+        uint16_t data = patchDat->update_data[offset+1];
+        //std::printf("iteration: %d command: %04x data: %04x\n", iter, command, data);
+        if(command == 0) {
+            offset += (data / 2);
+        }
+        else {
+            offset += 2;
+            if(command == 0xffff) {
+                value = data;
+                valChanged = true;
+                tvfx_update[voice] |= (1 << element);
+            }
+            else if(command == 0xfffe) {
+                valChanged = true;
+                if(element == freq) {
+                    S_block[voice] = (data >> 8);
+                    tvfx_update[voice] |= U_FREQ;
+                }
+                else if(element == level0) {
+                    S_ksltl_0[voice] = data & 0xff;
+                    tvfx_update[voice] |= U_LEVEL0;
+                }
+                else if(element == level1) {
+                    S_ksltl_1[voice] = data & 0xff;
+                    tvfx_update[voice] |= U_LEVEL1;
+                }
+                else if(element == feedback) {
+                    S_fbc[voice] = (data >> 8);
+                    tvfx_update[voice] |= U_FEEDBACK;
+                }
+                else if(element == mult0) {
+                    S_avekm_0[voice] = (data & 0xff);
+                    tvfx_update[voice] |= U_MULT0;
+                }
+                else if(element == mult1) {
+                    S_avekm_1[voice] = (data & 0xff);
+                    tvfx_update[voice] |= U_MULT1;
+                }
+            }
+            else {
+                counter = command;
+                increment = data;
+                return valChanged;
+            }
+        }
+    }
+    return valChanged;
+}
+
+// Free a voice from tvfx control when the sound effect has ended
+void oplSequencer::tvfx_note_free(int voice) {
+    opl_note_assignment[voice] = -1;
+    std::cout<<"tvfx free voice "<<voice<<"\n";
+    S_kbf_shadow[voice] = (S_kbf_shadow[voice] & (~0x20));
+    S_block[voice] = (S_block[voice] & (~0x20));
+    opl.WriteReg(voice_base2[voice]+ON_BLK_NUM, S_kbf_shadow[voice]);
+    tvfx_status[voice] = FREE;
+}
+
+// KEYOFF a tvfx effect when duration has been reached
+void oplSequencer::tvfx_note_off(int voice) {
+    std::cout<<"tvfx note-off, voice "<<voice<<"\n";
+    tvfx_status[voice] = KEYOFF;
+    switch_tvfx_phase(voice);
+}
+
+// Iterate TVFX voices for duration, value increment for each element, and iterate command lists when count hits 0.
+// Also monitors volume for the end of the sound effect. Needs to be called at 60Hz.
+void oplSequencer::iterateTvfx() {
+    for(int voice = 0; voice < OPL_VOICE_COUNT; voice++) {
+        if(tvfx_status[voice] == FREE) continue;
+        if(tvfx_duration[voice]) {
+            tvfx_duration[voice]--;
+        }
+        else if(tvfx_status[voice] == KEYON) {
+            tvfx_note_off(voice);
+        }
+
+        for(uint element = 0; element < TVFX_ELEMENT_COUNT; element++) {
+            bool changed = false;
+
+            if(tvfxElements[voice][element].increment != 0) {
+                changed = true;
+                uint16_t previous = tvfxElements[voice][element].value;
+                tvfxElements[voice][element].value += tvfxElements[voice][element].increment;
+
+                if(tvfx_status[voice] == KEYOFF && (element == level0 || element == level1)) {
+                    uint16_t newVal = tvfxElements[voice][element].value;
+                    if((previous ^ newVal) >= 0x8000 && (newVal ^ tvfxElements[voice][element].increment) < 0x8000) {
+                        tvfxElements[voice][element].value = 0;
+                    }
+                }
+            }
+
+            tvfxElements[voice][element].counter--;
+            //std::cout<<"Counter for "<<element<<": "<<*counters[element]<<"\n";
+            if(!tvfxElements[voice][element].counter) {
+                changed = iterateTvfxCommandList(voice, static_cast<tvfxOffset>(element));
+            }
+
+            if(changed) {
+                tvfx_update[voice] |= (1<<element);
+            }
+        }
+        if(tvfx_status[voice] == KEYOFF && 
+           static_cast<int16_t>(tvfxElements[voice][level0].value) < 0x400 && 
+           static_cast<int16_t>(tvfxElements[voice][level1].value) < 0x400) {
+            tvfx_note_free(voice);
+        }
+        else if(tvfx_status[voice] == KEYOFF) {
+            int16_t l0 = tvfxElements[voice][level0].value;
+            int16_t l1 = tvfxElements[voice][level1].value;
+            std::printf("%04x %04x, %d %d\n", tvfxElements[voice][level0].value, tvfxElements[voice][level1].value, l0, l1);
+        }
+
+        if(tvfx_update[voice] != 0) {
+            tvfx_update_voice(voice);
+        }
+    }
+//serve_synth called at 120Hz, services tvfx at 60Hz, updates priority at 24Hz.
+//For each TVFX slot, decrement all the counters, apply value increments, mark for voice update. If volume == 0 for a slot, TVFX_increment_stage. If anything marked for voice update, tvfx_update_voice(slot).
+//If KEYON and duration>0, decrement duration, otherwise, set KEYOFF and run TV_phase(slot).
+//If either volume value is above 0x400, then continue, otherwise release_voice(slot), S_status[slot]=FREE, TVFX_switch_voice()
 }
 
 std::array<std::tuple<uint8_t,uint8_t,uint16_t>, 128> oplSequencer::freqs;
