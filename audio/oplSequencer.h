@@ -14,6 +14,15 @@ public:
     void playSfx(int number);
     std::vector<int16_t> tick();
 
+    enum musicStatus {
+        unloaded,
+        playing,
+        ended
+    };
+
+    musicStatus getStatus();
+    musicStatus status;
+
 private:
     superOpl opl;
     uw_patch_file uwpf;

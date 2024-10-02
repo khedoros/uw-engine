@@ -181,6 +181,7 @@ oplSequencer::oplSequencer(const std::string& uwpfFile) {
     if(!success) {
         std::cerr<<"Couldn't load timbre database at "<<uwpfFile<<"\n";
     }
+    status = unloaded;
 }
 
 std::vector<int16_t> oplSequencer::tick() {
@@ -388,6 +389,9 @@ std::vector<int16_t> oplSequencer::tick() {
     const int sampleCount = 48000 / 120;
     std::vector<int16_t> samples(sampleCount * 2, 0);
     opl.Update(samples, sampleCount);
+    if(!next_event) {
+        status = ended;
+    }
     return samples;
 }
 
@@ -405,7 +409,12 @@ bool oplSequencer::loadXmi(const std::string& xmiFileName) {
             }
         }
     }
+    status = playing;
     return true;
+}
+
+oplSequencer::musicStatus oplSequencer::getStatus() {
+    return status;
 }
 
 std::array<std::tuple<uint8_t,uint8_t,uint16_t>, 128> oplSequencer::freqs;
