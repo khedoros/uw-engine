@@ -218,7 +218,7 @@ void superOpl::WriteReg(int reg, int val) {
 void superOpl::SetPanning(int channel, float left, float right) {}
 //void superOpl::Update(float* buffer, int sampleCnt) {}
 
-void superOpl::Update(std::vector<int16_t> buffer, int sampleCnt) {
+void superOpl::Update(std::vector<int16_t>& buffer, int sampleCnt) {
     std::lock_guard<std::mutex> guard(regMutex);
     for(int i=0;i<sampleCnt*audioChannels;i+=audioChannels) {
         envCounter++;

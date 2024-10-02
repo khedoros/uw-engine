@@ -1,5 +1,5 @@
-#include "util.h"
-#include "uwPatch.h"
+#include "../util.h"
+#include "uw_patch.h"
 #include "uwPatchNames.h"
 #include <cstring>
 #include <iostream>

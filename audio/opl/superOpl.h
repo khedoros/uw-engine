@@ -2,6 +2,7 @@
 #include<utility>
 #include<string>
 #include<array>
+#include<vector>
 #include<mutex>
 #include "opl.h"
 
@@ -14,7 +15,7 @@ public:
 
     virtual void Reset();
     virtual void WriteReg(int reg, int v);
-    virtual void Update(std::vector<int16_t> buffer, int length);
+    virtual void Update(std::vector<int16_t>& buffer, int length);
     virtual void SetPanning(int channel, float left, float right);
 
 private:

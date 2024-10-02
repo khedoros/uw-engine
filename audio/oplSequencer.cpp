@@ -31,6 +31,32 @@ int8_t oplSequencer::find_unused_voice() {
     return -1;
 }
 
+void oplSequencer::calcFreqs() {
+    int element = 0;
+    double base_freq = 440.0;
+    uint8_t base_mid_num = 69;
+    for(uint16_t mid_num = 0; mid_num < 128; ++mid_num) {
+        double midi_freq = base_freq * std::pow(2.0, (mid_num - base_mid_num)/12.0);
+        double diff = 9999999999.0;
+        uint8_t blk = 0;
+        uint16_t f_num = 0;
+        for(uint32_t block = 0; block < 8; ++block) {
+            for(uint32_t f_number = 0; f_number < 1024; ++f_number) {
+                double opl_freq = double(f_number * /*49716*/ NATIVE_OPL_SAMPLE_RATE ) / pow(2.0, 20 - double(block));
+                if(abs(opl_freq - midi_freq) < diff) {
+                    diff = abs(opl_freq - midi_freq);
+                    f_num = f_number;
+                    blk = block;
+                }
+            }
+        }
+        if(diff < 10) {
+            freqs[mid_num] = std::make_tuple(mid_num,blk,f_num);
+        }
+
+    }
+}
+
 //Write values to the OPL2 emulator to initialize it to defaults
 void oplSequencer::init_opl2() {
     opl.Reset();
@@ -108,7 +134,6 @@ bool oplSequencer::copy_patch(int voice, int noteIndex) {
     std::vector<uint8_t>& pat = channel_patch[channel]->ad_patchdata;
     bool am = channel_patch[channel]->ad_patchdatastruct.connection;
 
-    #ifndef GM_MODE
     if(channel == 9) { // In MT-32 mode, channel 9 (0-based) is always rhythm. The MIDI note is the instrument, and the transpose value is the actual MIDI note to play.
         for(auto& patch: uwpf.bank_data) {
             if(patch.patch == note_midi_num[noteIndex] && patch.bank == 127) {
@@ -118,7 +143,6 @@ bool oplSequencer::copy_patch(int voice, int noteIndex) {
             }
         }
     }
-    #endif
 
     //Write the values to the modulator:
     uint8_t mod_avekm = pat[uw_patch_file::patchIndices::mod_avekm];
@@ -151,11 +175,16 @@ bool oplSequencer::copy_patch(int voice, int noteIndex) {
 }
 
 oplSequencer::oplSequencer(const std::string& uwpfFile) {
-    uwpf.load(uwpfFile);
+    bool success = uwpf.load(uwpfFile);
     init_opl2();
+    calcFreqs();
+    if(!success) {
+        std::cerr<<"Couldn't load timbre database at "<<uwpfFile<<"\n";
+    }
 }
 
 std::vector<int16_t> oplSequencer::tick() {
+
     uint32_t curTime = 0;
     uint8_t meta = 0;
     uint8_t channel = 0;
@@ -171,14 +200,13 @@ std::vector<int16_t> oplSequencer::tick() {
     int for_nesting = 0;
 
     //Start processing MIDI events from the XMI file
-    midi_event* e = xmiFile.next_event();
 
-    while(e != nullptr && e->get_time() == curTick) {
-        midi_data = e->get_data();
-        channel = e->get_channel();
-        curTime = e->get_time();
+    while(next_event != nullptr && next_event->get_time() == curTick) {
+        midi_data = next_event->get_data();
+        channel = next_event->get_channel();
+        curTime = next_event->get_time();
         bool retval = true;
-        switch(e->get_command()) {
+        switch(next_event->get_command()) {
         case midi_event::NOTE_OFF: //0x80
             //Look up the voice playing the note, and the block+f_num values
             midi_num = midi_data[1];
@@ -254,7 +282,7 @@ std::vector<int16_t> oplSequencer::tick() {
             break;
         case midi_event::CONTROL_CHANGE: //0xb0
             std::cout<<"CC: "<<std::hex<<int(midi_data[0])<<" "<<int(midi_data[1])<<" "<<int(midi_data[2])<<'\n';
-            meta = e->get_meta();
+            meta = next_event->get_meta();
             if(meta == 0x01) { //Modulation change (set vibrato if over 64)
                 channel_modulation[channel] = midi_data[2];
                 for(int i=0;i<MIDI_NOTE_COUNT;++i) {
@@ -262,7 +290,7 @@ std::vector<int16_t> oplSequencer::tick() {
                         uint8_t car_avekm = channel_patch[channel]->ad_patchdata[uw_patch_file::patchIndices::car_avekm];
                         car_avekm &= 0b10111111;
                         car_avekm |= ((midi_data[2] > 64) ? 0b01000000 : 0);
-                        opl->WriteReg(voice_base_car[note_voice[i]]+AVEKM, car_avekm);
+                        opl.WriteReg(voice_base_car[note_voice[i]]+AVEKM, car_avekm);
                     }
                 }
             }
@@ -279,7 +307,7 @@ std::vector<int16_t> oplSequencer::tick() {
                 /*
                 for(int i=0;i<OPL_VOICE_COUNT;++i) {
                     if(opl_channel_assignment[i] == channel)
-                        opl->SetPanning(channel, 0.5 * (1.0 - float(midi_data[2])/MIDI_MAX_VAL), 0.5*(float(midi_data[2])/MIDI_MAX_VAL));
+                        opl.SetPanning(channel, 0.5 * (1.0 - float(midi_data[2])/MIDI_MAX_VAL), 0.5*(float(midi_data[2])/MIDI_MAX_VAL));
                 }
                 */
             }
@@ -307,14 +335,14 @@ std::vector<int16_t> oplSequencer::tick() {
             else if(meta == 0x73) std::cout<<"Indirect controller prefix (not implemented)\n";
             else if(meta == 0x74) {
                 std::cout<<"For loop controller (not implemented) data: ";
-                for(int i=0;i<e->get_data_size();++i) {
+                for(int i=0;i<next_event->get_data_size();++i) {
                     std::cout<<std::hex<<int(midi_data[i])<<" ";
                 }
                 std::cout<<'\n';
             }
             else if(meta == 0x75) {
                 std::cout<<"Next/Break loop controller (not implemented) data: ";
-                for(int i=0;i<e->get_data_size();++i) {
+                for(int i=0;i<next_event->get_data_size();++i) {
                     std::cout<<std::hex<<int(midi_data[i])<<" ";
                 }
                 std::cout<<'\n';
@@ -326,9 +354,9 @@ std::vector<int16_t> oplSequencer::tick() {
                 std::cout<<"Other unimplemented control change: "<<int(midi_data[1])<<" = "<<int(midi_data[2])<<'\n';
             break;
         case midi_event::META: //0xff
-            if(e->get_command() != 0xf0)
-                std::cout<<"Unexpected command coming into META: "<<int(e->get_command())<<'\n';
-            meta = e->get_meta();
+            if(next_event->get_command() != 0xf0)
+                std::cout<<"Unexpected command coming into META: "<<int(next_event->get_command())<<'\n';
+            meta = next_event->get_meta();
             if(meta == 0x2f) {
                 std::cout<<"End of track."<<'\n';
             }
@@ -350,7 +378,10 @@ std::vector<int16_t> oplSequencer::tick() {
             std::cout<<"Not implemented, yet: "<<std::hex<<int(midi_data[0])<<" "<<int(midi_data[1])<<" "<<int(midi_data[2])<<'\n';
         }
 
-        e = xmiFile.next_event();
+        next_event = xmiFile.next_event();
+        if(next_event) {
+            next_event->toString();
+        }
     }
 
     curTick++;
@@ -364,5 +395,17 @@ bool oplSequencer::loadXmi(const std::string& xmiFileName) {
     bool success = xmiFile.load(xmiFileName);
     if(!success) return false;
     curTick = 0;
-
+    next_event = xmiFile.next_event();
+    next_event->toString();
+    for(int chan = 0; chan < MIDI_CHANNEL_COUNT; chan++) {
+        for(auto& patch: uwpf.bank_data) {
+            if(patch.patch == channel_patch_num[chan] && patch.bank == channel_bank_num[chan]) {
+                channel_patch[chan] = &patch;
+                break;
+            }
+        }
+    }
+    return true;
 }
+
+std::array<std::tuple<uint8_t,uint8_t,uint16_t>, 128> oplSequencer::freqs;
