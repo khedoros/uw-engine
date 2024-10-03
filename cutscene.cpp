@@ -4,6 +4,7 @@
 #include "UwText.h"        //Text strings
 #include "uwfont.h"        //Underworld font importer
 #include "util.h"
+#include "audio/audioManager.h"
 #include<iostream>
 #include<fstream>
 
@@ -83,6 +84,7 @@ bool cutscene::load_lpf(std::string& filename) {
     else {
         std::cerr<<"Loaded "<<frame.size()<<" frames, but the lpf reports that "<<lpf.rec_count<<" should be available!"<<std::endl;
     }
+    return true;
 }
 
 bool cutscene::load_font(std::string& filename) {
@@ -171,15 +173,27 @@ std::string cutscene::format_string(std::string& input) {
         }
         split_loc += char_skip;
     }
+    return output;
 } 
 
 void cutscene::play(sf::RenderWindow& screen) {
+    audioManager am(base_dir+"/sound/uw.ad","","");
+    am.playMusic(base_dir + "/sound/aw01.xmi");
     sf::Sprite spr;
     spr.scale(1,1.2);
     sf::Text txt("", cs_font, 10);
     int prev_frame = 1;
     int fps = 5;
     for(int i=0; i<cmd.size();i++) {
+        sf::Event event;
+        while(screen.pollEvent(event)) {
+            switch(event.type) {
+            case sf::Event::Closed:
+                screen.close();
+                return;
+            }
+        }
+
         screen.setFramerateLimit(5);
         fps = 5;
         cur_frame = cmd[i].frame;
@@ -326,6 +340,9 @@ void cutscene::play(sf::RenderWindow& screen) {
                     sf::sleep(sf::milliseconds(cmd[i].args[1]*1000));
                 }
                 break;
+            case 0x0f: // Play "klang" sound effect
+                am.playSfx(3);
+                break;
             default:
                 std::cout<<"Not implemented: "<<cmd[i].tostring()<<std::endl;
                 break;
@@ -375,6 +392,7 @@ std::string cutscene::cut_cmd::tostring() {
     else if(cmd_num >=16 && cmd_num < 32) {
         return std::string("Probably a command from a UW2 cutscene. Parsing past this point is broken :-)");
     }
+    return std::string("empty bo-bempty");
 }
 
 #ifdef STAND_ALONE_CS
