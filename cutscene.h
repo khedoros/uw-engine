@@ -5,12 +5,13 @@
 #include<vector>
 #include<SFML/Graphics.hpp>
 #include<SFML/Audio.hpp>
+#include "audio/audioManager.h"
 
 class cutscene {
 public:
     cutscene(bool subs = true,bool vocs = true);
     bool load(const std::string& dat_dir, int cut_num);
-    void play(sf::RenderWindow&);
+    void play(sf::RenderWindow&,audioManager&);
 private:
     std::string to_octal2(int input);
     std::string to_octal3(int input);

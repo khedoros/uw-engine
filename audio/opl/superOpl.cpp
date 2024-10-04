@@ -404,6 +404,7 @@ void superOpl::op_t::updateEnvelope(unsigned int counter) {
         case adsrPhase::release: activeRate = releaseRate; break;
         default: activeRate = 0;
             std::cout<<"Unhandled envPhase: "<<envPhase<<"\n";
+            envPhase = adsrPhase::silent;
             break;
     }
 

@@ -176,9 +176,7 @@ std::string cutscene::format_string(std::string& input) {
     return output;
 } 
 
-void cutscene::play(sf::RenderWindow& screen) {
-    audioManager am(base_dir+"/sound/uw.ad","","");
-    am.playMusic(base_dir + "/sound/aw01.xmi");
+void cutscene::play(sf::RenderWindow& screen, audioManager& am) {
     sf::Sprite spr;
     spr.scale(1,1.2);
     sf::Text txt("", cs_font, 10);
@@ -399,10 +397,12 @@ std::string cutscene::cut_cmd::tostring() {
 int main(int argc, char *argv[]) {
     //2 args: directory containing game data (cuts+sound), and a cutscene number.
     sf::RenderWindow window(sf::VideoMode(320, 240), "SFML window");
+    audioManager am(std::string(argv[1])+"/sound/uw.ad","","");
+    am.playMusic(std::string(argv[1]) + "/sound/aw01.xmi");
     cutscene c;
     if(!c.load(argv[1], std::stoi(argv[2]))) {
         std::cerr<<"Failed to load files using path "<<argv[1]<<std::endl;
     }
-    c.play(window);
+    c.play(window, am);
 }
 #endif
